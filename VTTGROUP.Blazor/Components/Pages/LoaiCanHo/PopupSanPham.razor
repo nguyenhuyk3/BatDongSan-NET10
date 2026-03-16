@@ -1,0 +1,225 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.LoaiCanHo
+@using VTTGROUP.Domain.Model.SanPham
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject LoaiCanHoService LoaiCanHoService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupViewSanPham" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title ms-1">
+                    Danh sách sản phẩm thuộc loại diện tích
+                    <strong class="ms-1">@Nhom?.TenLoaiCanHo</strong>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm mb-3 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-[320px] md:w-[420px]">
+                            <InputSearch @bind-Value="search" OnSearch="Search" />
+                        </div>
+                        <div class="ml-auto h-11 flex items-center">
+                            <Pagination Page="@_page"
+                                        TotalPages="@totalPage"
+                                        TotalItems="@totalCount"
+                                        OnPageChanged="HandlePageChanged"
+                                        OnPageSizeChanged="HandlePageSizeChanged" />
+                        </div>
+                    </div>
+
+                    <!-- TABLE (match Trục) -->
+                    <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+                        <div class="max-h-[60vh] overflow-auto">
+                            <table id="table-data" class="min-w-full text-sm border-collapse">
+                                <thead class="sticky top-0 z-10 bg-gray-50 text-gray-700">
+                                    <tr>
+                                        <th class="w-[60px]  px-3 py-2 text-center font-semibold border border-gray-200">STT</th>
+                                        <th class="w-[200px] px-3 py-2 text-left   font-semibold border border-gray-200">Sản phẩm</th>
+                                        <th class="w-[150px] px-3 py-2 text-left   font-semibold border border-gray-200">Block</th>
+                                        <th class="w-[120px] px-3 py-2 text-left   font-semibold border border-gray-200">Tầng</th>
+                                        <th class="w-[120px] px-3 py-2 text-left   font-semibold border border-gray-200">Trục</th>
+                                        <th class="w-[140px] px-3 py-2 text-left   font-semibold border border-gray-200">Vị trí</th>
+                                        <th class="w-[120px] px-3 py-2 text-left   font-semibold border border-gray-200">View</th>
+                                        <th class="w-[140px] px-3 py-2 text-left   font-semibold border border-gray-200">Loại góc</th>
+                                        <th class="w-[140px] px-3 py-2 text-left   font-semibold border border-gray-200">Mặt khối</th>
+                                        <th class="w-[140px] px-3 py-2 text-right  font-semibold border border-gray-200">Hệ số căn hộ</th>
+                                        <th class="w-[60px]  px-3 py-2 text-center font-semibold border border-gray-200">
+                                            <input type="checkbox"
+                                                   class="form-check-input"
+                                                   checked="@IsSelectAll"
+                                                   @onchange="OnCheckboxAllChanged" />
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @if (listSP != null && listSP.Count > 0)
+                                    {
+                                        var i = 1;
+                                        foreach (var item in listSP)
+                                        {
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-3 py-2 text-center border border-gray-200">@i</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenSanPham</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenBlock</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenTang</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenTruc</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenViTri</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenView</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenLoaiGoc</td>
+                                                <td class="px-3 py-2 border border-gray-200">@item.TenMatKhoi</td>
+                                                <td class="px-3 py-2 text-right border border-gray-200">
+                                                    @string.Format("{0:N2}", item.HeSoCanHo)
+                                                </td>
+                                                <td class="px-3 py-2 text-center border border-gray-200">
+                                                    <input type="checkbox"
+                                                           class="form-check-input"
+                                                           checked="@item.IsSelected"
+                                                           @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                                </td>
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td class="px-3 py-3 text-gray-500 border border-gray-200 text-center" colspan="11">
+                                                Không có dữ liệu
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                @if (LoaiXuLy == "1")
+                {
+                    <button type="button" class="button button-action button-huy" @onclick="TriggerChoose">
+                        Sản phẩm
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">
+                        Lưu
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter] public EventCallback<List<SanPhamPagingDto>?> OnSelected { get; set; }
+    public LoaiCanHoPagingDto? Nhom { get; set; } = new();
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<SanPhamPagingDto> listSP = new();
+    List<SanPhamPagingDto> listSelecteds = new();
+    private bool IsSelectAll = false;
+    private string LoaiXuLy = "";
+    public async Task ShowPopupAsync(LoaiCanHoPagingDto nhom, string loaiXuLy)
+    {
+        Nhom = nhom;
+        _page = 1;
+        LoaiXuLy = loaiXuLy;//=1 thì là remove căn hộ đó ra khỏi loại căn hộ, =2 thì add sản phẩm đố vô loại căn hộ đó
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupViewSanPham");
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await LoaiCanHoService.GetPagingSanPhamAsync(Nhom?.MaDuAn, LoaiXuLy == "1" ? Nhom?.MaLoaiCanHo : string.Empty, _page, _pageSize, search);
+            listSP = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+
+    private void OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in listSP)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(SanPhamPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listSP.All(x => x.IsSelected);
+    }
+
+    private async Task TriggerChoose()
+    {
+        var selectedSPs = listSP
+            .Where(x => x.IsSelected)
+            .ToList();
+        if (selectedSPs.Any())
+        {
+            listSelecteds = selectedSPs;
+            await OnSelected.InvokeAsync(listSelecteds);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Xóa sản phẩm thành công", true);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Không có sản phẩm nào được chọn", false);
+        }
+    }
+
+    public Task RemoveProductsAsync(List<string> maSPs)
+    {
+        listSP.RemoveAll(x => maSPs.Contains(x.MaSanPham));
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+}
+

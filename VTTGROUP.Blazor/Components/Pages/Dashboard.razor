@@ -1,0 +1,53 @@
+﻿@page "/dashboard"
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<PageTitle>Dashboard</PageTitle>
+<h1 class="legend-title" data-page-class="dashboard"></h1>
+<div class="wraper-dashboard flex items-center align-items-center justify-center w-full h-full">
+	<div class="w-full">
+		<div class="title mb-5 text-center">CHÀO MỪNG BẠN ĐẾN VỚI <span>NEWSTAR</span></div>
+		<div class="box-dashboard flex items-center align-items-center justify-center gap-5">
+			<div class="box-item" @onclick="@(() => GotoPage(1))">
+				<div class="wrapper-img">
+					<div class="wrapper-icon">
+						<img src="../assets/images/giohang.svg" />
+					</div>
+				</div>
+				<div class="flex items-center align-items-center justify-content-between bg-white title-link">
+					<span>Xem giỏ hàng</span>
+					<i class="bi bi-arrow-right"></i>
+				</div>
+			</div>
+			<div class="box-item" @onclick="@(() => GotoPage(2))">
+				<div class="wrapper-img">
+					<div class="wrapper-icon">
+						<img src="../assets/images/thietke.svg" />
+					</div>
+				</div>
+				<div class="flex items-center align-items-center justify-content-between bg-white title-link">
+					<span>Hình ảnh thiết kế</span>
+					<i class="bi bi-arrow-right"></i>
+				</div>
+			</div>
+			<div class="box-item" @onclick="@(() => GotoPage(3))">
+				<div class="wrapper-img">
+					<div class="wrapper-icon">
+						<img src="../assets/images/thamquan.svg" />
+					</div>
+				</div>
+				<div class="flex items-center align-items-center justify-content-between bg-white title-link">
+					<span>Đăng ký tham quan</span>
+					<i class="bi bi-arrow-right"></i>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	private void GotoPage(int? page)
+	{
+		if (page == 1)
+			Nav.NavigateTo("/giohanggroup/view");
+	}
+}

@@ -1,0 +1,650 @@
+﻿@page "/phieuxacnhanthanhtoan/edit/{id}"
+@using System.Globalization
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.HopDongChuyenNhuong
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Domain.Model.PhieuXacNhanThanhToan
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject HopDongChuyenNhuongService HopDongChuyenNhuongService
+@inject PhieuXacNhanThanhToanService PhieuXacNhanThanhToanService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Phiếu xác nhận thanh toán</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Công nợ phải thu</li>
+                        <li class="tab-item" data-id="3" id="linkTab3">Nguồn chuyển đổi</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab @((Record.FlagTong == true) ? "" : "wraper-duyet")">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số chứng từ <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="SoChungTu" name="SoChungTu" type="text" @bind="@Record.SoChungTu">
+                                    <span class="error-validation">Vui lòng nhập số chứng từ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày hạch toán</span>
+                                    <FlatpickrInput Id="NgayHachToan" Name="NgayHachToan" @bind-Value="Record.NgayHachToan"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại chứng từ</span>
+                                    <DisableTextBox Value="@(Record.LoaiPhieu == "T" ? "Thu" : "Chi")" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hình thức thanh toán <i class="point-validate">*</i></span>
+                                    <DisableTextBox Value="@Record.TenHinhThucTT" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã khách hàng </span>
+                                    <div class="item-phieu" @onclick="() => OnMaKHRecord(Record.MaKhachHang.ToString())">@Record.MaKhachHang</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên khách hàng </span>
+                                    <DisableTextBox Value="@Record.TenKhachHang" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader @ref="uploaderRef" AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input " cols="20" id="GhiChu" rows="3" tabindex="2" @bind="Record.NoiDung"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            @if (!Record.IsXacNhan && Record?.NguoiLap?.MaNhanVien == maNhanVienHT)
+                            {
+                                <div class="button-action-title" style="margin-left: 0;">
+                                    <div class="icon-button" @onclick="AddCongNo">
+                                        <i class="mdi mdi-playlist-plus"></i>
+                                    </div>
+                                    <span>Chi tiết</span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; align-items: center;">
+                                </div>
+                            }
+                        </div>
+                        <table class="tbl table table-hover table-form table-detail" id="tblNhanViens">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Mã phiếu tham chiếu
+                                    </th>
+                                    <th style="width: 250px" class="text-center">
+                                        Nội dung
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Số tiền
+                                    </th>
+                                    <th style="width: 40px" class="text-center">
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (ListCN != null && ListCN.Any() == true)
+                                {
+                                    <Virtualize ItemsProvider="LoadChiTietCongNoProvider" Context="x" ItemSize="40" @ref="virtualizeRef">
+                                        <tr>
+                                            <td class="text-center">@((x.index + 1))</td>
+                                            <td>
+                                                <span class="item-phieu" @onclick="() => OnViewPCN(x.item.MaPhieuCongNo)">@x.item.MaPhieuCongNo</span>
+                                            </td>
+                                            <td>@(x.item.NoiDung)</td>
+                                            <td>
+                                                @*  <InputCurrency T="decimal"
+                                                               Id=@($"SoTien{x.index + 1}")
+                                                               Format="#,##0"
+                                                               CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                               @bind-Value="x.item.SoTien" /> *@
+                                                <InputCurrency T="decimal"
+                                                               Id=@($"SoTien{x.index + 1}")
+                                                               Format="#,##0"
+                                                               CssClass="input-form form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                               @bind-Value="x.item.SoTien"
+                                                               @bind-Value:after="() => ClampSoTien(x.item)" />
+                                            </td>
+                                            <td class="text-center">
+                                                @if (!Record.IsXacNhan && Record?.NguoiLap?.MaNhanVien == maNhanVienHT)
+                                                {
+                                                    <div class="icon-button" data-title="Xóa" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => DeleteRowPCN(x.item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    </Virtualize>
+                                }
+                                @if (ListCN != null && ListCN.Any())
+                                {
+                                    var tongSoTienTT = ListCN.Sum(x => (decimal?)x.SoTien ?? 0m);
+                                    <tr class="row-total">
+                                        <td></td>
+                                        <td colspan="2" class="text-left">Tổng cộng</td>
+                                        <td class="text-right">@string.Format("{0:N0}", tongSoTienTT)</td>
+                                        <td></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @* @if (Record.IsCanTruNguonKhac)
+                { *@
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            @if (!Record.IsXacNhan && Record?.NguoiLap?.MaNhanVien == maNhanVienHT)
+                            {
+                                <div class="button-action-title" style="margin-left: 0;">
+                                    <div class="icon-button" @onclick="AddNCD">
+                                        <i class="mdi mdi-playlist-plus"></i>
+                                    </div>
+                                    <span>Nguồn</span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; align-items: center;">
+                                </div>
+                            }
+                        </div>
+                        <table class="tbl table table-hover table-form table-detail" id="tblNhanViens">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Số phiếu
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Ngày
+                                    </th>
+                                    <th style="width: 250px" class="text-center">
+                                        Nội dung
+                                    </th>
+                                    <th style="width: 100px" class="text-center">Số tiền</th>
+                                    <th style="width: 50px"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (ListNCD != null && ListNCD.Any() == true)
+                                {
+                                    <Virtualize ItemsProvider="LoadChiTietNguonCDProvider" Context="x" ItemSize="40" @ref="virtualizeNCDRef">
+                                        <tr>
+                                            <td class="text-center">@((x.index + 1))</td>
+                                            <td>
+                                                <span class="item-phieu" @onclick="() => OnViewPGC(x.item.MaPhieu)">@x.item.MaPhieu</span>
+                                            </td>
+                                            <td>
+                                                @string.Format("{0:dd/MM/yyyy}", x.item.Ngay)
+                                            </td>
+                                            <td>@(x.item.NoiDung)</td>
+                                            <td class="text-right">@($"{x.item.SoTien:#,##0.##}")</td>
+                                            <td class="text-center">
+                                                @if (!Record.IsXacNhan && Record?.NguoiLap?.MaNhanVien == maNhanVienHT)
+                                                {
+                                                    <div class="icon-button" data-title="Xóa" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => DeleteRowNCD(x.item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    </Virtualize>
+                                }
+                                @if (ListNCD != null && ListNCD.Any())
+                                {
+                                    var tongSoTienTT = ListNCD.Sum(x => (decimal?)x.SoTien ?? 0m);
+                                    var tongSoTienCD = ListNCD.Sum(x => (decimal?)x.SoTienConLai ?? 0m);
+                                    <tr class="row-total">
+                                        <td></td>
+                                        <td colspan="2" class="text-left">Tổng cộng</td>
+                                        <td class="text-right">@string.Format("{0:N0}", tongSoTienTT)</td>
+                                        <td class="text-right">@string.Format("{0:N0}", tongSoTienCD)</td>
+                                        <td></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @*  } *@
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            @if (!Record.IsXacNhan && Record?.NguoiLap?.MaNhanVien == maNhanVienHT)
+            {
+                <AppButton Label="Xác nhận"
+                           Class="button button-action"
+                           IconClass="mdi mdi-telegram"
+                           OnClick="() => XacNhanPhieuDK()" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+        </div>
+
+    </div>
+    <div class="modal fade" id="confirmPDKModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Xác nhận phiếu thanh toán</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    Bạn có chắc muốn xác nhận phiếu thanh toán này hay không?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmPTT">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+<PopupChiTietCongNo @ref="congNoModalRef" OnSelectedCTCN="SelectedCongNo" />
+<PopupChiTietNguonChuyenDoi @ref="nguonCDModalRef" OnSelectedNCD="SelectedNCD" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private PhieuXacNhanThanhToanModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<PhieuXacNhanThanhToanPhieuCongNoModel> ListCN = new();
+    private List<PhieuXacNhanThanhToanNguonChuyenDoiModel> ListNCD = new();
+    private List<HtDanhMucHinhThucThanhToan> ListHTTT = new();
+    private string selectedHTTTRaw;
+    private PopupKhachHang? khachHangModalRef;
+    private PopupChiTietCongNo? congNoModalRef;
+    private PopupChiTietNguonChuyenDoi? nguonCDModalRef;
+    private string[] allowedExtensions = FileTypeSets.Document;
+    private Virtualize<(PhieuXacNhanThanhToanPhieuCongNoModel item, int index)>? virtualizeRef;
+    private Virtualize<(PhieuXacNhanThanhToanNguonChuyenDoiModel item, int index)>? virtualizeNCDRef;
+
+    int currentTab = 1;
+    void SwitchTab(int id) => currentTab = id;
+    private string? maNhanVienHT;
+    private FileUploader uploaderRef;
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+
+    private List<InfoItem> InfoItems = new();
+    private bool HasHopDong => !string.IsNullOrWhiteSpace(Record?.MaKhachHang);
+    protected override async Task OnInitializedAsync()
+    {
+        Record ??= new PhieuXacNhanThanhToanModel();
+        // Record.NguoiLap ??= new NguoiLapModel(); // tránh
+        editContext = new EditContext(Record);
+        maNhanVienHT = await BaseService.MaNhanVienHienTai();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("XacNhanThanhToan", VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+            var result = await PhieuXacNhanThanhToanService.GetByIdAsync(id);
+            if (result.Status)
+            {
+                Record = (PhieuXacNhanThanhToanModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                      new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+                if (Record?.Files?.Any() == true)
+                {
+                    await uploaderRef.RenderInitialFiles(Record.Files, (Record.FlagTong == true ? false : true));
+                }
+                uploaderRef.IsDuyet = (Record.FlagTong == true ? false : true);
+                var resultCN = await PhieuXacNhanThanhToanService.GetDanhSachCongNoAsync(Record.MaPhieu, Record.MaDuAn, Record.LoaiPhieu, Record.MaKhachHang, null, null, string.Empty);
+                ListCN = resultCN.Data;
+
+                var resultNCD = await PhieuXacNhanThanhToanService.GetDanhSachNguonChuyenDoiAsync(Record.MaPhieu, Record.MaDuAn, Record.LoaiPhieu, Record.MaKhachHang, null, null, string.Empty);
+                ListNCD = resultNCD.Data;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        if (!ValidateBeforeSave(out var msg))
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", msg, false);
+            return;
+        }
+        Loading.Show();
+        try
+        {
+            var result = await PhieuXacNhanThanhToanService.UpdateByIdAsync(Record, ListCN, ListNCD);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/phieuxacnhanthanhtoan/edit/{result.Id}");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/phieuxacnhanthanhtoan");
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+
+    private async Task SelectedCongNo(List<PhieuXacNhanThanhToanPhieuCongNoModel?> listCH)
+    {
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = ListCN.Any(x => x.MaPhieuCongNo == item.MaPhieuCongNo);
+            if (!isExist)
+            {
+                ListCN.Add(new PhieuXacNhanThanhToanPhieuCongNoModel
+                {
+                    MaPhieuCongNo = item.MaPhieuCongNo,
+                    NoiDung = item.NoiDung,
+                    IdChungTu = item.IdChungTu,
+                    SoTien = item.SoTien,
+                });
+            }
+        }
+        if (virtualizeRef != null)
+        {
+            await virtualizeRef.RefreshDataAsync();
+        }
+    }
+
+    private async Task SelectedNCD(List<PhieuXacNhanThanhToanNguonChuyenDoiModel?> listCH)
+    {
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = ListNCD.Any(x => x.MaPhieu == item.MaPhieu);
+            if (!isExist)
+            {
+                ListNCD.Add(new PhieuXacNhanThanhToanNguonChuyenDoiModel
+                {
+                    MaPhieu = item.MaPhieu,
+                    Ngay = item.Ngay,
+                    NoiDung = item.NoiDung,
+                    SoTien = item.SoTien,
+                    SoTienConLai = item.SoTienConLai,
+                });
+            }
+        }
+        if (virtualizeNCDRef != null)
+        {
+            await virtualizeNCDRef.RefreshDataAsync();
+        }
+    }
+
+
+    private async Task AddNCD()
+    {
+        await nguonCDModalRef?.Show(Record.MaDuAn, Record.LoaiPhieu, Record.MaKhachHang);
+    }
+
+    private async Task AddCongNo()
+    {
+        await congNoModalRef?.Show(Record.MaDuAn, Record.LoaiPhieu, Record.MaKhachHang);
+    }
+
+    private async Task DeleteRowPCN(PhieuXacNhanThanhToanPhieuCongNoModel? item)
+    {
+        ListCN.Remove(item);
+        await virtualizeRef?.RefreshDataAsync();
+    }
+
+    private async Task DeleteRowNCD(PhieuXacNhanThanhToanNguonChuyenDoiModel? item)
+    {
+        ListNCD.Remove(item);
+        await virtualizeNCDRef?.RefreshDataAsync();
+    }
+
+    private async Task OnViewPCN(string maPhieu)
+    {
+        if (string.IsNullOrWhiteSpace(maPhieu) || string.IsNullOrWhiteSpace(Record?.MaDuAn))
+            return;
+
+        string url;
+
+        if (Record.LoaiPhieu == "T")
+        {
+            url = $"/phieucongnophaithu/edit/{maPhieu}?maDuAn={Uri.EscapeDataString(Record.MaDuAn)}";
+        }
+        else
+        {
+            url = $"/phieutonghopcongnophaitra/edit/{maPhieu}?maDuAn={Uri.EscapeDataString(Record.MaDuAn)}";
+        }
+
+        await JS.InvokeVoidAsync("openInNewTab", url);
+    }
+
+
+    private async Task OnViewPGC(string maPhieu)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieugiucho/edit/" + maPhieu);
+    }
+
+    private async ValueTask<ItemsProviderResult<(PhieuXacNhanThanhToanPhieuCongNoModel item, int index)>> LoadChiTietCongNoProvider(ItemsProviderRequest request)
+    {
+        var items = ListCN
+            .Skip(request.StartIndex)
+            .Take(request.Count)
+            .Select((item, i) => (item, request.StartIndex + i))
+            .ToList();
+
+        return new ItemsProviderResult<(PhieuXacNhanThanhToanPhieuCongNoModel item, int index)>(items, ListCN.Count);
+    }
+
+    private async ValueTask<ItemsProviderResult<(PhieuXacNhanThanhToanNguonChuyenDoiModel item, int index)>> LoadChiTietNguonCDProvider(ItemsProviderRequest request)
+    {
+        var items = ListNCD
+            .Skip(request.StartIndex)
+            .Take(request.Count)
+            .Select((item, i) => (item, request.StartIndex + i))
+            .ToList();
+
+        return new ItemsProviderResult<(PhieuXacNhanThanhToanNguonChuyenDoiModel item, int index)>(items, ListNCD.Count);
+    }
+
+    private async Task OnMaKHRecord(string maKH)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/khachhang/edit/" + maKH);
+    }
+
+    private async Task ConfirmPTT()
+    {
+        var result = await PhieuXacNhanThanhToanService.XacNhanPhieuTTAsync(Record.MaPhieu);
+        if (result.Status)
+        {
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        await JS.InvokeVoidAsync("showToast", "Thông báo", "Xác nhận phiếu đăng ký chọn căn thất bại", false);
+    }
+
+    private async Task XacNhanPhieuDK()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmPDKModal");
+    }
+
+    private void ClampSoTien(PhieuXacNhanThanhToanPhieuCongNoModel item)
+    {
+        if (item.SoTien < 0) item.SoTien = 0;
+
+        var max = item.SoTienGoc; // hoặc SoTienConLai
+        if (item.SoTien > max)
+        {
+            item.SoTien = max;
+            _ = JS.InvokeVoidAsync("showToast", "Cảnh báo",
+                $"Số tiền không được vượt quá {max:N0}.", false);
+        }
+        // nếu cần update tổng tức thời
+        StateHasChanged();
+    }
+
+    private bool ValidateBeforeSave(out string message)
+    {
+        message = "";
+
+        if (ListCN is null || ListCN.Count == 0) return true;
+
+        // 1) không vượt gốc
+        var over = ListCN.FirstOrDefault(x => x.SoTien > x.SoTienGoc);
+        if (over != null)
+        {
+            message = $"Phiếu {over.MaPhieuCongNo}: Số tiền ({over.SoTien:N0}) vượt quá số tiền gốc ({over.SoTienGoc:N0}).";
+            return false;
+        }
+
+        // 2) không âm
+        if (ListCN.Any(x => x.SoTien < 0))
+        {
+            message = "Số tiền không hợp lệ (âm).";
+            return false;
+        }
+
+        return true;
+    }
+}
+<style>
+    .input-wraper-choose {
+        position: relative;
+    }
+
+        .input-wraper-choose .input-form {
+            padding-left: 2.2rem;
+            padding-right: 2.2rem;
+        }
+
+        .input-wraper-choose .icon-choose {
+            font-size: 0.95rem;
+            border-radius: 50%;
+            color: var(--theme-color);
+            cursor: pointer;
+            transition: all 300ms ease-in-out;
+            position: absolute;
+            top: 3px;
+            z-index: 2;
+        }
+
+            .input-wraper-choose .icon-choose.left {
+                left: 0px;
+            }
+
+            .input-wraper-choose .icon-choose.right {
+                right: 5px;
+            }
+
+    .line-bot-nav-animated {
+        pointer-events: none;
+    }
+
+    .input-currency {
+        text-align: right !important;
+    }
+    /* để underline không chặn click */
+</style>

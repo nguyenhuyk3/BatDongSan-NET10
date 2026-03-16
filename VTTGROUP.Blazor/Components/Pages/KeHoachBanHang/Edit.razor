@@ -1,0 +1,630 @@
+﻿@page "/kehoachbanhang/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.DuAn
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject NhanVienService NhanVienService
+@inject CanHoService CanHoService
+@inject KeHoachBanHangService KeHoachBanHangService
+@inject LoadingService Loading
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Kế hoạch bán hàng</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2" @onclick="ClickTab2">Căn hộ</li>
+                        <li class="tab-item" data-id="3" id="linkTab3">Giá bán theo đợt</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3" tabindex="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="multiple-infor-item">
+                            <InfoList Items="@InfoItems" />
+                            @if (Record.FlagTong)
+                            {
+                                <InfoList Items="@InfoNumberItems" OnItemClick="OnInfoClick" OnItemUpdate="OnUpdateDonGiaTb" />
+                            }
+                            else
+                            {
+                                <InfoList Items="@InfoNumberItems" OnItemClick="OnInfoClick" />
+                            }
+                        </div>
+                        <input id="TongSoLuongCanHo" name="TongSoLuongCanHo" type="hidden" @bind="Record.TongSoLuongCanHo">
+                        <input id="DonGiaTB" name="DonGiaTB" type="hidden" @bind="Record.DonGiaTB">
+                        <input id="DoanhThuDuKien" name="DoanhThuDuKien" type="hidden" @bind="Record.DoanhThuDuKien">
+                    </div>
+                    <div class="col-lg-12 mx-auto">
+                        <div class="wraper-listdot overflow-auto" id="container-table-fixed">
+                            <table class="tbl table table-hover table-form table-detail table-dot" id="table-data" style="min-width:@(width_1)px">
+                                <thead>
+                                    <tr style="background-color: #cce5ff;">
+                                        @foreach (var dot in ListDMBCanHo)
+                                        {
+                                            <th colspan="3" class="text-center" style="background-color:@dot.MaMau!important">
+                                                <div class="d-flex justify-content-center align-items-center gap-2">
+                                                    @dot.TenDot
+                                                    @if (Record.FlagTong == true)
+                                                    {
+                                                        <div class="icon-button hover-button" style="float:left" @onclick="() => AddCanHo(dot, Record.MaDuAn, Record.MaPhieuKH)">
+                                                            <i class="mdi mdi-playlist-plus"></i>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </th>
+                                        }
+                                    </tr>
+                                    <tr>
+                                        @foreach (var dot in ListDMBCanHo)
+                                        {
+                                            <th style="background:@dot.MaMau!important;width: 170px">Mã căn hộ</th>
+                                            <th style="background:@dot.MaMau!important;width: 150px">Hệ số căn hộ</th>
+                                            <th style="background:@dot.MaMau!important;width: 100px">Diện tích</th>
+                                            @*  <th></th> *@
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @{
+                                        var maxRow = GetDotMoBan().Any()
+                                        ? GetDotMoBan().Max(dot => GetCanHoByDot(dot).Count)
+                                        : 0;
+                                        if (maxRow > 0)
+                                        {
+                                            for (int i = 0; i < maxRow; i++)
+                                            {
+                                                <tr>
+                                                    @foreach (var dot in ListDMBCanHo)
+                                                    {
+                                                        var list = GetCanHoByDot(dot.MaDot);
+                                                        if (i < list.Count)
+                                                        {
+                                                            <td>@list[i].MaSanPham</td>
+                                                            <td style="text-align:right">@string.Format("{0:N4}", @list[i].HeSoCanHo) </td>
+                                                            <td style="text-align:right">@string.Format("{0:N2}", @list[i].DienTichCanHo)</td>
+                                                            // <td style="text-align:center">
+                                                            //     <button class="btn btn-sm btn-danger" title="Xoá căn hộ"
+                                                            //             @onclick="() => RemoveCanHo(list[i].MaDotMoBan, list[i].MaSanPham)">
+                                                            //         <i class="bi bi-x-circle-fill"></i>
+                                                            //     </button>
+                                                            // </td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                            // <td></td>
+                                                        }
+                                                    }
+                                                </tr>
+                                            }
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="multiple-infor-item">
+                            <InfoList Items="@InfoItems" />
+                            @if (Record.FlagTong)
+                            {
+                                <InfoList Items="@InfoNumberItems" OnItemClick="OnInfoClick" OnItemUpdate="OnUpdateDonGiaTb" />
+                            }
+                            else
+                            {
+                                <InfoList Items="@InfoNumberItems" OnItemClick="OnInfoClick" />
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-12">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="d-flex align-items-start justify-content-end">
+                                @if (Record.FlagTong)
+                                {
+                                    <AppButton Label="Tính"
+                                               Class="button button-action"
+                                               IconClass="mdi mdi-calculator"
+                                               OnClick="() => TinhGiaBanTheoDot()" />
+                                }
+                            </div>
+                        </div>
+                        <div class="container-table-detail">
+                            <div class="container-table-fixed overflow-auto">
+                                <table class="tbl table table-hover table-form table-detail table-dot" id="table-data-2" style="min-width:@(width_2)px">
+                                    <thead>
+                                        <tr style="background-color: #cce5ff;">
+                                            <th style="width:160px"></th>
+                                            @foreach (var dot in ListGBTD)
+                                            {
+                                                <th class="text-center" style="background:@(dot.MaMau)!important;width:160px">@dot.TenDotMoBan</th>
+                                            }
+                                            <th class="text-danger text-center" style="width:160px">Tổng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        <tr>
+                                            <td>Diện tích</td>
+                                            @foreach (var dot in ListGBTD)
+                                            {
+                                                <td style="text-align:right">@dot.TongDienTichCanHo.ToString("N2")</td>
+                                            }
+                                            <td class="text-danger fw-semibold" style="text-align:right">
+                                                @ListGBTD.Sum(x => x.TongDienTichCanHo).ToString("N2")
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Số lượng căn mở bán</td>
+                                            @foreach (var dot in ListGBTD)
+                                            {
+                                                <td style="text-align:right">@dot.SoCanMoBanTheoDot</td>
+                                            }
+                                            <td class="text-danger fw-semibold" style="text-align:right">
+                                                @ListGBTD.Sum(x => x.SoCanMoBanTheoDot)
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Đơn giá TB</td>
+                                            @*  @foreach (var dot in ListGBTD)
+                                            {
+                                                var isLocked = dot.IsXacNhan; // bạn đang Readonly theo IsXacNhan
+                                                                              <td style="text-align:right">
+                                                                                  <div class="d-flex align-items-center">                                                                                      
+                                                                                      <input type="checkbox"
+                                                                                             checked="@dot.IsXacNhan"
+                                                                                             disabled="@dot.IsDonGiaDaDuyet"
+                                                                                             @onchange="@(e => OnCheckboxChanged(dot, (bool)e.Value))" />
+                                                                                      <UiNumber T="decimal"
+                                                                                                Id=@($"DonGia_{dot.MaDot}")
+                                                                                                Format="#,##0"
+                                                                                                CssClass="@($"input-form form-control input-validation select-on-click w-100 p-1 ms-2 {(isLocked ? "dot-dongia-locked" : "")}")"
+                                                                                                @bind-Value="dot.DonGia"
+                                                                                                @bind-Value:event="oninput"
+                                                                                                ValueChanged="(val) => OnDonGiaChanged(dot, val)"
+                                                                                                Readonly="@(dot.IsXacNhan)" MaxLength="18" />
+                                                                                  </div>
+                                                                              </td>
+                                            }    *@                                        
+                                            @foreach (var dot in ListGBTD)
+                                            {
+                                                var isLocked = dot.IsXacNhan;
+
+                                                <td style="text-align:right">
+                                                    <div class="d-flex align-items-center dot-checkbox-scope">
+                                                        <input type="checkbox"
+                                                               checked="@dot.IsXacNhan"
+                                                               disabled="@dot.IsDonGiaDaDuyet"
+                                                               @onchange="@(e => OnCheckboxChanged(dot, (bool)e.Value))" />
+
+                                                        <UiNumber T="decimal"
+                                                                  @key="@($"{_gtdRenderKey}-{dot.MaDot}")"
+                                                                  Id=@($"DonGia_{dot.MaDot}")
+                                                                  Format="#,##0"
+                                                                  CssClass="@($"input-form form-control input-validation select-on-click w-100 p-1 ms-2 {(isLocked ? "dot-dongia-locked" : "")}")"
+                                                                  @bind-Value="dot.DonGia"
+                                                                  @bind-Value:event="oninput"
+                                                                  ValueChanged="(val) => OnDonGiaChanged(dot, val)"
+                                                                  Readonly="@(dot.IsXacNhan)"
+                                                                  MaxLength="18" />
+                                                    </div>
+                                                </td>
+                                            }
+
+                                            <td class="text-danger">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Doanh thu dự kiến</td>
+                                            @foreach (var dot in ListGBTD)
+                                            {
+                                                <td style="text-align:right">
+                                                    @dot.DoanhThuDuKien.ToString("N0")
+                                                </td>
+                                            }
+                                            <td class="text-danger fw-semibold" style="text-align:right">
+                                                @(ListGBTD.Sum(x => x.DoanhThuDuKien).ToString("N0"))
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            @if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+            {
+                <AppButton Label="Gửi duyệt"
+                           Class="button button-action"
+                           IconClass="mdi mdi-telegram"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieuKH, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+            else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+            {
+                <AppButton Label="Duyệt"
+                           Class="button button-action"
+                           IconClass="mdi mdi-check-circle"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieuKH, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,1)" />
+                <AppButton Label="Trả lại"
+                           Class="button button-action"
+                           IconClass="mdi mdi-replay"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieuKH, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,2)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+        </div>
+    </div>
+    <ConfirmDeleteModal ModalId="confirmCapNhatDonGiaTBModal"
+                        Title="Cập nhật đơn giá trung bình">
+        <Description>
+            <p class="delete-desc">
+                @* Bạn có chắc muốn cập nhật đơn giá trung bình <strong>@selectedMaPhieu</strong> có số thự tự là <strong>@soThuTuTD</strong> hay không? *@
+                Bạn có chắc muốn cập nhật đơn giá trung bình <strong>@Record.DonGiaTB.ToString("N2")</strong> thành <strong>@DonGiaTBGoc.ToString("N2")</strong> hay không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmCapNhatDGTB">
+                Xác nhận
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</EditForm>
+<PopupSoDoCH @ref="canHoModalRef" OnReloadCanHo="ReloadCanHoTheoDot" />
+<PopupGuiDuyet @ref="guiDuyetModalRef" OnReloadGuiDuyet="ReloadForm" />
+<PopupLichSu @ref="lichSuModalRef" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private PopupSoDoCH? canHoModalRef;
+    private EditContext editContext;
+    private KeHoachBanHangModel? Record = new();
+    private List<DotMoBanCanHoTheoDuAn> ListDMBCanHo = new();
+    private List<KeHoachBanHangChiTietCanHo> ListCTCH = new();
+    private List<GiaBanTheoDotDto> ListGBTD = new();
+    private List<InfoItem> InfoItems = new();
+    private List<InfoItem> InfoNumberItems = new();
+    private int width_1 = 0;
+    private int width_2 = 0;
+    private PopupGuiDuyet? guiDuyetModalRef;
+    private PopupLichSu? lichSuModalRef;
+    private string MaCongViec = "KHBH";
+    private string? maNhanVienHT;
+    private decimal DonGiaTBGoc = 0;
+    private bool loadingTab2;
+    private int _gtdRenderKey = 0;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Loading.Show();
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DonGiaTB", 18, 2);
+            var result = await KeHoachBanHangService.FindGetByKeHoachBHAsync(id);
+            if (result.Status)
+            {
+                Record = (KeHoachBanHangModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieuKH},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+                InfoNumberItems = new()
+                {
+                    new() { Text="Tổng số lượng căn hộ", Value=string.Format("{0:#,#0.##}", Record.TongSoLuongCanHo)},
+                   // new() { Text="Đơn giá trung bình", Value=string.Format("{0:#,#0.##}", Record.DonGiaTB)},
+                      new() {
+        Text="Đơn giá trung bình",
+        Value=string.Format("{0:#,#0.##}", Record.DonGiaTB),
+        IsClickable=true,
+        Key="DON_GIA_TB",
+        Tooltip="Xem lịch sử đơn giá"
+    },
+                    new() { Text="Doanh thu dự kiến", Value=string.Format("{0:#,#0}", Record.DoanhThuDuKien) },
+                };
+
+                ListDMBCanHo = await KeHoachBanHangService.GetDotMoBanTheoDuAnAsync(Record.MaPhieuKH);
+                ListCTCH = await KeHoachBanHangService.GeChiTietCanHoAsync(Record.MaPhieuKH);
+                ListGBTD = await KeHoachBanHangService.GeChiTietGiaBanTheoDotAsync(Record.MaPhieuKH, Record.MaDuAn, false);
+                width_1 = ListDMBCanHo.Count() * 420;
+                width_2 = (ListDMBCanHo.Count() * 160) + 320;
+            }
+            maNhanVienHT = await BaseService.MaNhanVienHienTai();
+
+            if (ListGBTD.Any())
+            {
+                var config = new List<FixColumnConfig>
+                {
+                    new FixColumnConfig { left = 1 }
+                };
+                await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data-2", config);
+            }
+            StateHasChanged();
+        }
+        if (loadingTab2)
+        {
+            loadingTab2 = false;
+            await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 55);
+        }
+        Loading.Hide();
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await KeHoachBanHangService.UpdateKHBHAsync(Record, ListGBTD);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/kehoachbanhang/edit/{result.Id}");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/kehoachbanhang");
+    }
+
+    private async Task AddCanHo(DotMoBanCanHoTheoDuAn Dot, string MaDuAn, string MaPhieuKH)
+    {
+        await canHoModalRef?.Show(Dot, MaDuAn, MaPhieuKH);
+    }
+
+    private async Task GuiDuyetPhieu(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        var tong = Record.DoanhThuDuKien - ListGBTD.Sum(x => x.DoanhThuDuKien);
+        tong = tong < 0 ? (tong * -1) : tong;
+        bool flagDK = true;
+        int tongSLCMB = 0;
+        tongSLCMB = @ListGBTD.Sum(x => x.SoCanMoBanTheoDot);
+        if (Record.TongSoLuongCanHo != tongSLCMB)
+        {
+            flagDK = false;
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Tổng số lượng  căn hộ với tổng số lượng căn mở bán không bằng nhau. Bạn không được gửi duyệt phiếu", false);
+        }
+        if (tong > (Record.SaiSoDoanhThuChoPhepKHBH ?? 0) && flagDK == true)
+        {
+            flagDK = false;
+            Record.SaiSoDoanhThuChoPhepKHBH = Record.SaiSoDoanhThuChoPhepKHBH ?? 0;
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Giá trị tuyệt tối (doanh thu dự kiến " + string.Format("{0:#,#0.##}", Record.DoanhThuDuKien) + " - Tổng giá trị doanh thu dự kiến của các đợt " + (ListGBTD.Sum(x => x.DoanhThuDuKien).ToString("N0")) + ") < " + Record.SaiSoDoanhThuChoPhepKHBH.Value.ToString("N0") + "", false);
+        }
+        if (flagDK)
+        {
+            await guiDuyetModalRef?.ShowQTD(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh, flag);
+        }
+    }
+
+    private List<string> GetDotMoBan()
+    {
+        return ListCTCH.Select(x => x.MaDotMoBan).Distinct().ToList();
+    }
+
+    private List<KeHoachBanHangChiTietCanHo> GetCanHoByDot(string dot)
+    {
+        return ListCTCH.Where(x => x.MaDotMoBan == dot).ToList();
+    }
+
+    //Sau khi đã chọn dữ liệu trên popup thì sẽ load lại form
+    private async Task ReloadCanHoTheoDot()
+    {
+        ListCTCH = await KeHoachBanHangService.GeChiTietCanHoAsync(Record.MaPhieuKH);
+        ListGBTD = await KeHoachBanHangService.GeChiTietGiaBanTheoDotAsync(Record.MaPhieuKH, Record.MaDuAn, false);
+        TinhTongDoanhThuDuKien();
+        StateHasChanged();
+    }
+
+    private async Task ReloadForm()
+    {
+        // Nav.NavigateTo($"/kehoachbanhang/edit/{Record.MaPhieuKH}");
+        // StateHasChanged();
+        await JS.InvokeVoidAsync("location.reload");
+    }
+
+    private void OnDonGiaChanged(GiaBanTheoDotDto dot, decimal value)
+    {
+        dot.DonGia = value;
+        OnDonGiaOrXacNhanChanged(dot); // gọi hàm chính
+    }
+
+    private void OnCheckboxChanged(GiaBanTheoDotDto dot, bool value)
+    {
+        dot.IsXacNhan = value;
+        // Gọi render lại UI để cập nhật readonly
+        StateHasChanged();
+    }
+
+    private void OnDonGiaOrXacNhanChanged(GiaBanTheoDotDto dot)
+    {
+        StateHasChanged();
+    }
+
+    private async Task TinhGiaBanTheoDot()
+    {
+        int tongSLCMB = 0;
+        tongSLCMB = @ListGBTD.Sum(x => x.SoCanMoBanTheoDot);
+        if (Record.TongSoLuongCanHo != tongSLCMB)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Tổng số lượng  căn hộ với tổng số lượng căn mở bán không bằng nhau. Bạn không được tính giá", false);
+            return;
+        }
+        ListGBTD = await KeHoachBanHangService.GeChiTietGiaBanTheoDotAsync(Record.MaPhieuKH, Record.MaDuAn, true);
+        _gtdRenderKey++;                 // <<< QUAN TRỌNG: ép UiNumber render lại
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void TinhTongDoanhThuDuKien()
+    {
+        Record.DoanhThuDuKien = ListGBTD.Sum(dot => dot.TongDienTichCanHo) * Record.DonGiaTB;
+    }
+
+    private async Task RemoveCanHo(string maDot, string maSanPham)
+    {
+        // bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Bạn có chắc muốn xoá căn hộ {maSanPham}?");
+        // if (!confirmed) return;
+
+        await KeHoachBanHangService.RemoveCanHoTrongDot(Record.MaPhieuKH, maDot, maSanPham);
+        ReloadCanHoTheoDot();
+    }
+
+    private async Task RemoveAllCanHoTheoDot(string maDot, string tenDot)
+    {
+        // bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Bạn có chắc muốn xoá đợt {tenDot}?");
+        // if (!confirmed) return;
+
+        await KeHoachBanHangService.RemoveAllCanHoTrongDot(Record.MaPhieuKH, maDot);
+        ReloadCanHoTheoDot();
+    }
+
+    private async Task ClickTab2()
+    {
+        loadingTab2 = true;
+    }
+
+    private async Task OnInfoClick(InfoItem item)
+    {
+        if (item.Key != "DON_GIA_TB") return;
+        ConfigFieldDto itemDTO = new ConfigFieldDto();
+        itemDTO.FieldName = "DonGiaTb";
+        itemDTO.DisplayName = "Đơn giá bán";
+        await lichSuModalRef?.Show(Record?.MaDuAn, itemDTO);
+    }
+
+    private async Task OnUpdateDonGiaTb(InfoItem item)
+    {
+        if (item.Key != "DON_GIA_TB") return;
+
+        // TODO: mở popup cập nhật đơn giá TB
+        var result = await KeHoachBanHangService.LayDonGiaTrungBinh(Record.MaDuAn);
+        // await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            DonGiaTBGoc = result.GiaTri;
+            await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmCapNhatDonGiaTBModal");
+        }
+    }
+
+    private async Task ConfirmCapNhatDGTB()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await KeHoachBanHangService.CapNhatDonGiaTrungBinh(Record.MaPhieuKH, Record.MaDuAn);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Loading.Hide();
+                // Record.DonGiaTB = result.GiaTri;
+                // DonGiaTBGoc = 0;
+                // TinhTongDoanhThuDuKien();
+                await ReloadForm();
+            }
+            await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmCapNhatDonGiaTBModal");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    // private void CloseHistory()
+    // {
+    //     _showDonGiaHistory = false;
+    // }
+}
+<style>
+    /* Chỉ checkbox DISABLED trong khu vực dot-checkbox-scope -> xám như hình */
+    .dot-checkbox-scope input[type="checkbox"]:disabled {
+        background-color: #9E9E9E !important; /* xám đúng màu bạn muốn */
+        border-color: #9E9E9E !important;
+        opacity: 1 !important; /* đừng bị mờ */
+        cursor: not-allowed !important;
+    }
+
+        /* Nếu disabled mà vẫn checked thì cũng xám y vậy (đè rule :checked màu vàng) */
+        .dot-checkbox-scope input[type="checkbox"]:disabled:checked {
+            background-color: #9E9E9E !important;
+            border-color: #9E9E9E !important;
+        }
+
+    /* (Tuỳ chọn) nếu bạn muốn vẫn có dấu tick khi disabled+checked thì bật dòng dưới
+                    .dot-checkbox-scope input[type="checkbox"]:disabled:checked{
+                        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3 6-7'/%3e%3c/svg%3e") !important;
+                        background-repeat: no-repeat !important;
+                        background-position: center !important;
+                        background-size: 70% 70% !important;
+                    }
+                    */
+
+</style>

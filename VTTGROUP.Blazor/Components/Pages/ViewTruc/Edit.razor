@@ -1,0 +1,195 @@
+﻿@page "/truc/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.ViewTruc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using System.Globalization
+@inject ViewTrucService ViewTrucService
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Trục</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án</span>
+                                    <DisableTextBox Value="@Record.TenDuAn" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Block</span>
+                                    <DisableTextBox Value="@Record.TenBlock" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã trục</span>
+                                    <DisableTextBox Value="@Record.MaTruc" />
+                                    <InputText @bind-Value="Record.MaTruc" id="MaTruc" type="hidden" />
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên trục <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" id="TenTruc" @bind-Value="Record.TenTruc" />
+                                    <span class="error-validation">Vui lòng nhập tên trục</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mặt khối</span>
+                                    <DisableTextBox Value="@Record.TenMatKhoi" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hướng</span>
+                                    <DisableTextBox Value="@Record.TenHuong" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">View</span>
+                                    <DisableTextBox Value="@Record.TenView" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại góc</span>
+                                    <DisableTextBox Value="@Record.TenLoaiGoc" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Vị trí</span>
+                                    <DisableTextBox Value="@Record.TenViTri" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="HeSoTruc" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.HeSoTruc" />
+                                    <span class="error-validation">Vui lòng nhập hệ số</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Thứ tự hiển thị <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="ThuTuHienThi" name="ThuTuHienThi" style="width:40px;text-align:right" type="text" @bind="@Record.ThuTuHienThi">
+                                    <span class="error-validation">Vui lòng nhập thứ tự hiên thị</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private ViewTrucModel? Record = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("TraCanHoVeKho", VuViec.CapNhat.GetDescription());
+            var result = await ViewTrucService.GetByIdAsync(id ?? string.Empty);
+            if (result.Status)
+            {
+                Record = (ViewTrucModel?)result.Data;
+                if (Record == null)
+                {
+                    Record = new ViewTrucModel();
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+                Record = new ViewTrucModel();
+            }
+            // // ⚠️ Phải khởi tạo lại editContext ở đây
+            // editContext = new EditContext(Record);
+            StateHasChanged(); // ép render lại để EditForm cập nhật model
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "ThuTuHienThi", 18, 0);
+            await ReapplyCurrencyFormat();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await ViewTrucService.UpdateByIdAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    //Format định dạng số thập phân
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 4);
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/truc");
+
+    }
+}

@@ -1,0 +1,108 @@
+﻿@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using System.Globalization
+@inject IJSRuntime JS
+@typeparam T
+@inherits InputBase<T?>
+
+<input value="@_displayValue"
+       class="@CssClass @(Readonly ? "readonly-mode" : "")"
+       style="@Style"
+       id="@Id"
+       @oninput="HandleInput"
+       readonly="@Readonly" />
+
+@code {
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "text-align:right";
+    [Parameter] public string Format { get; set; } = "#,##0.####"; // default 4 số thập phân
+    [Parameter] public bool Readonly { get; set; } = false;
+    private string _displayValue = "";
+    
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _displayValue = FormatDisplay(CurrentValue);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("InputUtils.selectAllOnClickByClass", "select-on-click");
+        }
+    }
+    protected override string FormatValueAsString(T? value)
+    {
+        return FormatDisplay(value);
+    }
+
+    protected override bool TryParseValueFromString(string value, out T? result, out string validationErrorMessage)
+    {
+        var cleaned = value?.Replace(",", "").Trim();
+
+        try
+        {
+            if (typeof(T) == typeof(int))
+                result = (T?)(object)int.Parse(cleaned);
+            else if (typeof(T) == typeof(double))
+                result = (T?)(object)double.Parse(cleaned, CultureInfo.InvariantCulture);
+            else if (typeof(T) == typeof(decimal))
+                result = (T?)(object)decimal.Parse(cleaned, CultureInfo.InvariantCulture);
+            else
+                throw new InvalidOperationException($"Unsupported type {typeof(T)}");
+
+            validationErrorMessage = null;
+            return true;
+        }
+        catch
+        {
+            result = default;
+            validationErrorMessage = "Giá trị không hợp lệ.";
+            return false;
+        }
+    }
+
+    private void HandleInput(ChangeEventArgs e)
+    {
+        if (Readonly)
+            return; // 🚫 Không xử lý nếu readonly
+        var input = e.Value?.ToString()?.Trim() ?? "";
+        var cleaned = input.Replace(",", "");
+
+        // Nếu parse được thì cập nhật giá trị
+        if (TryParseValueFromString(cleaned, out var parsed, out _))
+        {
+            CurrentValue = parsed;
+        }
+
+        _displayValue = FormatDisplay(cleaned);
+    }
+
+    private string FormatDisplay(object value)
+    {
+        if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
+            return "";
+
+        try
+        {
+            var raw = value.ToString();
+            var hasDot = raw.Contains(".");
+            var parts = raw.Split('.');
+            var intPart = int.Parse(parts[0]);
+            var formattedInt = string.Format(CultureInfo.InvariantCulture, "{0:N0}", intPart);
+            return parts.Length > 1 ? $"{formattedInt}.{parts[1]}" : formattedInt;
+        }
+        catch
+        {
+            return value.ToString();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _displayValue = FormatDisplay(CurrentValue);
+    }
+}

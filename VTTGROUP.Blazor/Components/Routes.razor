@@ -1,0 +1,17 @@
+﻿@* @rendermode InteractiveServer *@
+@using VTTGROUP.Blazor.Components.CompChilds
+ @using VTTGROUP.Blazor.Components.Layout
+ @using VTTGROUP.Blazor.Components.Pages
+ @using Microsoft.AspNetCore.Components.Routing
+<Router AppAssembly="@typeof(Program).Assembly">
+	<Found Context="routeData">
+		<RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+	</Found>
+	<NotFound>
+		<LayoutView Layout="@typeof(MainLayout)">
+			<Page404 />
+		</LayoutView>
+	</NotFound>
+</Router>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link href="css/app.css" rel="stylesheet" />

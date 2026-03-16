@@ -1,0 +1,135 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Domain.Model.TongHopBooking
+@using VTTGROUP.Infrastructure.Services
+@inject GioHangService GioHangService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+<div class="modal fade" tabindex="-1" id="ImportPGCModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nhập dữ liệu căn hộ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <button type="button" class="btn btn-download-file" @onclick="OnTaiFileMau" disabled="@IsLoadingDownload">
+                    @if (IsLoadingDownload)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Đang tải...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-download me-1"></i>
+                        <span>Tải file mẫu</span>
+                    }
+                </button>
+                <div class="wraper-select-file">
+                    <div class="mb-3 mt-3">
+                        <label for="formFile" class="form-label">Chọn file để nhập dữ liệu</label>
+                        <InputFile OnChange="OnFileSelected" class="form-control" accept=".xlsx,.csv" id="formFile" />
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-confirm-upload" @onclick="Upload" disabled="@(IsLoadingUpload || !CanUpload)">
+                    @if (IsLoadingUpload)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Đang xử lý...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-upload me-1"></i>
+                        <span>Tải lên</span>
+                    }
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="Close">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<List<GioHangCanHoModel>?> OnUploaded { get; set; }
+    private IBrowserFile? SelectedFile;
+    private string? SelectedFileName;
+    private bool IsLoadingUpload = false;
+    private bool IsLoadingDownload = false;
+    private string MaDuAn = string.Empty;
+    private string MaDotMB = string.Empty;
+    private string MaNhanVien = string.Empty;
+    private string MaGioHang = string.Empty;
+    private string SelectedMaPhieuKeHoach = string.Empty;
+    private string SelectedMaPhieuDuyetGia = string.Empty;
+    private decimal SelectedGiaBan = 0;
+    private async Task Close()
+    {
+        SelectedFile = null;
+        SelectedFileName = null;
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportPGCModal");
+        StateHasChanged();
+    }
+
+    private bool CanUpload => SelectedFile != null;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        SelectedFileName = e.File.Name;
+    }
+    private async Task OnTaiFileMau()
+    {
+        IsLoadingDownload = true;
+        try
+        {
+            var fullPath = Path.Combine(_env.WebRootPath, "templates", "MauImport_GioHang_DanhSachCanHo.xlsx");
+            var fileBytes = await GioHangService.GenerateTemplateWithDataAsync(fullPath, MaDuAn, MaDotMB);
+            var base64 = Convert.ToBase64String(fileBytes);
+
+            await JS.InvokeVoidAsync("downloadFileFromBytes", "MauImport_GioHang_DanhSachCanHo.xlsx", base64);
+        }
+        finally
+        {
+            IsLoadingDownload = false;
+        }
+    }
+    private async Task Upload()
+    {
+        if (SelectedFile != null)
+        {
+            IsLoadingUpload = true;
+            try
+            {
+                var result = await GioHangService.ImportFromExcelAsync(SelectedFile,MaDuAn, SelectedMaPhieuKeHoach,MaDotMB, SelectedMaPhieuDuyetGia, SelectedGiaBan);
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+                if (result.Status)
+                {
+                    var listCT = (List<GioHangCanHoModel>)result.Data;
+                    await OnUploaded.InvokeAsync(listCT);
+                    await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportSanPhamModal");
+                }
+            }
+            finally
+            {
+                IsLoadingUpload = false;
+            }
+        }
+    }
+
+    public async Task ShowFileModal(string maNhanVien, string maDuAn, string maDotMoBan, string maGioHang, string maPhieuKeHoach, string maPhieuDuyetGia, decimal giaBan)
+    {
+        MaNhanVien = maNhanVien;
+        MaDotMB = maDotMoBan;
+        MaDuAn = maDuAn;
+        MaGioHang = maGioHang;
+        SelectedMaPhieuKeHoach = maPhieuKeHoach;
+        SelectedMaPhieuDuyetGia = maPhieuDuyetGia;
+        SelectedGiaBan = giaBan;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#ImportPGCModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+}

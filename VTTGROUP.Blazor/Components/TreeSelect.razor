@@ -1,0 +1,142 @@
+﻿@using VTTGROUP.Domain.Model
+@inject IJSRuntime JS
+<div class="relative inline-block w-72 select-tree-container select-tree-element" @onclick:stopPropagation="true">
+	<div class="d-flex align-items-center cursor-pointer select-selected"
+	@onclick="ToggleDropdown">
+		<span class="input-text-select @(!string.IsNullOrEmpty(selectedItem?.TenCongViec) ? "has-selected" : "" )">@SelectedText</span>
+		<span class="d-flex mr-auto align-items-center">
+			@if (!string.IsNullOrEmpty(selectedItem?.TenCongViec))
+			{
+				<i class="mdi mdi-close icon-remove-selected" @onclick="() => OnItemClicked(null)"></i>
+			}
+			<i class="mdi mdi-arrow-bottom-drop-circle"></i>
+		</span>
+	</div>
+
+	@if (showDropdown)
+	{
+		<div class="absolute droplist-popup mt-3 max-h-80 overflow-y-auto w-full border bg-white shadow rounded text-sm animate-fade-in start-0"
+		@ref="DropdownRef">
+			<div class="sticky top-0 bg-white border-b z-10 p-2 text-search-popup">
+				<input class="w-full border px-2 py-2 text-sm rounded"
+				@bind="searchTerm"
+				@bind:event="oninput"
+				placeholder="Tìm công việc..." />
+			</div>
+			@foreach (var item in FilteredItems)
+			{
+				if (IsVisible(item))
+				{
+					<div class="flex items-center p-2 hover:bg-blue-100 cursor-pointer tree-node"
+					style="padding-left:@((item.LevelCay+1) * 16)px!important"
+					@onclick="() => OnItemClicked(item)">
+						<span class="text-gray-500 item-name" @onclick:stopPropagation="true" @onclick="() => Toggle(item.MaCongViec)">
+							@if (HasChildren(item))
+							{
+								<i class="mdi @(expanded.Contains(item.MaCongViec!) ? "mdi-chevron-down" : "mdi-chevron-right")"></i>
+							}
+							else
+							{
+								<text><span class="dot-item">•</span></text>
+							}
+						</span>
+						<span class="@(SelectedText==item.TenCongViec ? "selected-name": "")">@item.TenCongViec</span>
+					</div>
+				}
+			}
+		</div>
+	}
+</div>
+
+@code {
+	[Parameter] public List<CongViecModel> Items { get; set; } = new();
+	[Parameter] public CongViecModel ItemSelected { get; set; } = new();
+	[Parameter] public EventCallback<CongViecModel> OnSelected { get; set; }
+	private string searchTerm = "";
+	private List<CongViecModel> FilteredItems => string.IsNullOrWhiteSpace(searchTerm)
+		? Items
+		: Items.Where(x => x.TenCongViec?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+	private HashSet<string> expanded = new();
+	private CongViecModel? selectedItem;
+	private bool showDropdown = false;
+	private ElementReference DropdownRef;
+
+	private string SelectedText => selectedItem?.TenCongViec ?? "Chọn công việc...";
+
+	private void ToggleDropdown() => showDropdown = !showDropdown;
+
+	private void Toggle(string? id)
+	{
+		if (string.IsNullOrEmpty(id)) return;
+		if (expanded.Contains(id)) expanded.Remove(id);
+		else expanded.Add(id);
+	}
+
+	protected override void OnParametersSet()
+	{
+		if (ItemSelected != null)
+		{
+			selectedItem = ItemSelected;
+		}
+	}
+
+	private bool HasChildren(CongViecModel item) =>
+		Items.Any(x => x.MaCha == item.MaCongViec);
+
+	private bool IsVisible(CongViecModel item)
+	{
+		if (string.IsNullOrWhiteSpace(searchTerm))
+		{
+			if (item.LevelCay == 0) return true;
+			var cha = item.MaCha;
+			while (!string.IsNullOrEmpty(cha))
+			{
+				if (!expanded.Contains(cha)) return false;
+				cha = Items.FirstOrDefault(x => x.MaCongViec == cha)?.MaCha;
+			}
+			return true;
+		}
+		// Nếu có search: chỉ hiện item matching + cha của nó
+		return item.TenCongViec?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+			|| IsAncestorMatch(item.MaCha);
+	}
+
+	[JSInvokable]
+	public Task CloseDropdown()
+	{
+		if (showDropdown)
+		{
+			showDropdown = false;
+			StateHasChanged();
+		}
+		return Task.CompletedTask;
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await JS.InvokeVoidAsync("treeSelectHelper.registerOutsideClick", ".select-tree-element", DotNetObjectReference.Create(this));
+		}
+	}
+
+	private bool IsAncestorMatch(string? parentId)
+	{
+		if (string.IsNullOrEmpty(parentId)) return false;
+		var parent = Items.FirstOrDefault(x => x.MaCongViec == parentId);
+		if (parent == null) return false;
+		if (parent.TenCongViec?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true)
+			return true;
+		return IsAncestorMatch(parent.MaCha);
+	}
+
+	private async Task OnItemClicked(CongViecModel item)
+	{
+		if (item == null) item = new();
+		selectedItem = item;
+		showDropdown = false;
+		expanded.Add(item.MaCongViec);
+		await OnSelected.InvokeAsync(item);
+	}
+}

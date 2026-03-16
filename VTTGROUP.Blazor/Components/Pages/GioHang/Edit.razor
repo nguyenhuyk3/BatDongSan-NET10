@@ -1,0 +1,482 @@
+﻿@page "/giohang/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject GioHangService GioHangService
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Giỏ hàng</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <MessageErrorForm />
+            <div class="wapper-content-tab @(Record.FlagTong == true ? "" : "wraper-duyet")">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Thông tin giỏ hàng</span>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Mã giỏ hàng</span>
+                                    <DisableTextBox Value="@Record.MaSoGioHang" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-3">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Đợt mở bán</span>
+                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnViewPDG(Record.MaPhieuDuyetGia)">@Record.TenDotMoBan</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-3">
+                            <div class="row">
+                                <div class="form-group d-flex align-items-center group-input-grid">
+                                    <label class="switch-toggle mb-0">
+                                        <input type="checkbox" @bind="Record.LoaiGioHang" />
+                                        <span class="slider"></span>
+                                    </label>
+
+                                    <span class="label-text ms-2 mb-0">@((Record.LoaiGioHang ?? false) ? "Giỏ hàng chung" : "Giỏ hàng riêng")</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Đơn giá</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaBan)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Sàn giao dịch</span>
+                                    <select id="MaSanGiaoDich" name="MaSanGiaoDich" class="form-control" @bind="Record.MaSanGiaoDich">
+                                        <option value=""></option>
+                                        @foreach (var item in ListSanGiaoDich)
+                                        {
+                                            <option value="@item.MaSanGiaoDich">
+                                                @item.TenSanGiaoDich
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Nội dung</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Danh sách căn hộ</span>
+                            </div>
+                        </div>
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            @if (Record.FlagTong)
+                            {
+                                <div class="action-buttons" style="display: flex;">
+                                    <div class="button-action-title" style="margin-left: 0;">
+                                        <div class="icon-button" @onclick="AddCanHo">
+                                            <i class="mdi mdi-playlist-plus"></i>
+                                        </div>
+                                        <span>Căn hộ</span>
+                                    </div>
+                                    <div class="button-action-title" style="display: flex;">
+                                        <div class="icon-button" id="btnThem" data-title="Import file" data-position="left" @onclick="Import">
+                                            <i class="mdi mdi-cloud-upload"></i>
+                                        </div>
+                                        <span>Import</span>
+                                    </div>
+                                    <div style="margin-left: auto; display: flex; align-items: center;">
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="table-responsive table-responsive-soft overflow-auto" id="container-table-fixed">
+                            <table class="tbl table table-hover table-form table-detail table-dot" id="table-data">
+                                <thead>
+                                    <tr>
+                                        <th style="width:50px" class="text-center">
+                                            STT
+                                        </th>
+                                        <th style="width:120px" class="text-center">
+                                            Tên căn hộ
+                                        </th>
+                                        <th style="width:90px" class="text-center">
+                                            Hệ số
+                                        </th>
+                                        <th style="width:120px" class="text-center">
+                                            Diện tích
+                                        </th>
+                                        <th style="width:120px" class="text-center">
+                                            Diện tích phân bổ
+                                        </th>
+                                        <th style="width:150px" class="text-center">
+                                            Giá bán sau phân bổ
+                                        </th>
+                                        <th style="width:50px">
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (Record.ListCanHo != null && Record.ListCanHo.Any() == true)
+                                    {
+                                        <Virtualize ItemsProvider="LoadCanHoProvider" Context="x" ItemSize="40" @ref="virtualizeRef">
+                                            <tr>
+                                                <td class="text-center">@((x.index + 1))</td>
+                                                <td>@x.item.TenCanHo</td>
+                                                <td class="text-right">@string.Format("{0:N4}", x.item.HeSoCanHo)</td>
+                                                <td class="text-right">@string.Format("{0:N2}", x.item.DienTichCanHo)</td>
+                                                <td class="text-right">@string.Format("{0:N2}", x.item.DienTichPhanBo)</td>
+                                                <td class="text-right">@string.Format("{0:N0}", x.item.GiaBanSauPhanBo)</td>
+                                                <td class="text-center">
+                                                    @if (Record.FlagTong)
+                                                    {
+                                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                                            <a href="javascript:void(0)" @onclick="() => DeleteRow(x.item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                        </div>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </Virtualize>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            @if (Record.IsDong == false)
+            {
+                if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+                {
+                    <AppButton Label="Gửi duyệt"
+                               Class="button button-action"
+                               IconClass="mdi mdi-telegram"
+                               OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                    <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+                }
+                else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+                {
+                    <AppButton Label="Duyệt"
+                               Class="button button-action"
+                               IconClass="mdi mdi-check-circle"
+                               OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,1)" />
+                    <AppButton Label="Trả lại"
+                               Class="button button-action"
+                               IconClass="mdi mdi-replay"
+                               OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,2)" />
+                    <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+                }
+                else if (Record.TrangThaiDuyetCuoi > 0 && Record.TrangThaiDuyet == Record.TrangThaiDuyetCuoi)
+                {
+                    if (QuyenDongGH)
+                    {
+                        <AppButton Label=" Đóng giỏ hàng"
+                                   Class="button button-action button-create-orther-dong"
+                                   OnClick="() => DongGioHang()" />
+                    }
+                }
+            }
+        </div>
+    </div>
+</EditForm>
+
+<div class="modal fade" id="confirmDongGioHangModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Đóng giỏ hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc muốn đóng giỏ hàng này không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDong">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+<PopupGuiDuyet @ref="guiDuyetModalRef" OnReloadGuiDuyet="ReloadForm" />
+<PopupCanHo @ref="canHoModalRef" OnSelected="SelectedCanHo" />
+<ImportFileModal @ref="importFileModalRef" OnUploaded="HandleFileUpload" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private GioHangModel? Record = new();
+    private List<DmSanGiaoDich> ListSanGiaoDich = new();
+    private ImportFileModal? importFileModalRef;
+    private Dictionary<bool?, string> loaiGioHangOptions = new()
+    {
+        { true, "Giỏ hàng chung" },
+        { false, "Giỏ hàng riêng" }
+    };
+
+    private string MaCongViec = "GioHang";
+    private string? maNhanVienHT;
+    private PopupGuiDuyet? guiDuyetModalRef;
+    private PopupCanHo? canHoModalRef;
+    private bool loadingTab2;
+    private bool QuyenDongGH;
+    private Virtualize<(GioHangCanHoModel item, int index)>? virtualizeRef;
+    private bool _isRendered = false;
+    private List<InfoItem> InfoItems = new();
+    private int width_1 = 0;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            maNhanVienHT = await BaseService.MaNhanVienHienTai();
+            QuyenDongGH = await BaseService.CheckPermissionTraVeAsync(MaCongViec, VuViec.DongPhieu.GetDescription());
+            ListSanGiaoDich = await GioHangService.GetSanGiaoDichAsync();
+            var result = await GioHangService.FindGetByPhieuAsync(id);
+            if (result.Status)
+            {
+                Record = (GioHangModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+                width_1 = Record.ListCanHo.Count() * 420;
+            }
+            // 2) Bắt Blazor render lại để <option> xuất hiện
+            await InvokeAsync(StateHasChanged);
+            await Task.Yield(); // hoặc Task.Delay(0)
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaSanGiaoDich", "Chọn sàn giao dịch", true);
+            if (!string.IsNullOrEmpty(Record?.MaSanGiaoDich?.ToString()))
+            {
+                await JS.InvokeVoidAsync("select2Helper.setValue", "MaSanGiaoDich", Record.MaSanGiaoDich.ToString());
+            }
+            await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 50);
+        }
+
+        // if (loadingTab2)
+        // {
+        //     loadingTab2 = false;
+        //     await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 50);
+        // }
+        //StateHasChanged();
+    }
+
+    private async ValueTask<ItemsProviderResult<(GioHangCanHoModel item, int index)>> LoadCanHoProvider(ItemsProviderRequest request)
+    {
+        var items = Record.ListCanHo
+            .Skip(request.StartIndex)
+            .Take(request.Count)
+            .Select((item, i) => (item, request.StartIndex + i))
+            .ToList();
+
+        return new ItemsProviderResult<(GioHangCanHoModel item, int index)>(items, Record.ListCanHo.Count);
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    private async Task DongGioHang()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDongGioHangModal");
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await GioHangService.UpdatePhieuAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private string GiaBanThucTeText
+    {
+        get => string.Format("{0:#,##0}", Record.GiaBan);
+        set
+        {
+            if (decimal.TryParse(value.Replace(",", ""), out var gia))
+            {
+                Record.GiaBan = gia;
+            }
+        }
+    }
+    private async Task OnSanGiaoDichChanged(ChangeEventArgs e)
+    {
+        Record.MaSanGiaoDich = e.Value?.ToString();
+    }
+    private async Task HandlePressDienTich(KeyboardEventArgs e, GioHangCanHoModel item)
+    {
+        var id = $"input-dientich-{item.Id}";
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", id, 18, 2);
+        var valueStr = await JS.InvokeAsync<string>("getInputValueById", id);
+        if (decimal.TryParse(valueStr, out decimal dienTich))
+        {
+            item.GiaBanSauPhanBo = dienTich * Record.GiaBan;
+            item.DienTichPhanBo = dienTich;
+        }
+    }
+
+    private async Task HandleLoaiGioHangChanged(bool? selectedValue)
+    {
+        Record.LoaiGioHang = selectedValue;
+    }
+
+    private void CreatePhieuDangKy()
+    {
+        Nav.NavigateTo($"/phieudangky/create/{Record.MaPhieu}");
+    }
+
+    private async Task GuiDuyetPhieu(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        await guiDuyetModalRef?.ShowQTD(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh, flag);
+    }
+    private async Task ClickTab2()
+    {
+        loadingTab2 = true;
+    }
+    private async Task ReloadForm()
+    {
+        await JS.InvokeVoidAsync("location.reload");
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/giohang");
+    }
+
+    private async Task OnViewPDG(string maPhieuDuyetGia)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieuduyetgia/edit/" + maPhieuDuyetGia);
+    }
+
+    private async Task ConfirmDong()
+    {
+        var response = await GioHangService.DongGioHangAsyn(Record.MaPhieu);
+        if (response == false)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Đóng giỏ hàng thất bại", false);
+            return;
+        }
+        await ReloadForm();
+    }
+
+    private async Task SelectedCanHo(List<GioHangCanHoModel?> listCH)
+    {
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = Record.ListCanHo.Any(x => x.MaCanHo == item.MaCanHo);
+            if (!isExist)
+            {
+                Record.ListCanHo.Add(new GioHangCanHoModel
+                {
+                    MaCanHo = item.MaCanHo,
+                    TenCanHo = item.TenCanHo,
+                    HeSoCanHo = item.HeSoCanHo,
+                    DienTichCanHo = item.DienTichCanHo,
+                    DienTichPhanBo = item.DienTichPhanBo,
+                    GiaBanSauPhanBo = item.GiaBanSauPhanBo,
+                    GiaBan = item.GiaBan
+                });
+            }
+        }
+        if (virtualizeRef != null)
+        {
+            await virtualizeRef.RefreshDataAsync();
+        }
+    }
+
+    private async Task AddCanHo()
+    {
+        await canHoModalRef?.Show(Record.MaDotMoBan, Record.MaDuAn, string.Empty);
+    }
+
+    private async Task DeleteRow(GioHangCanHoModel? item)
+    {
+        Record.ListCanHo.Remove(item);
+        await virtualizeRef?.RefreshDataAsync();
+    }
+
+    private async Task Import()
+    {
+        await importFileModalRef?.ShowFileModal(Record.MaNhanVien, Record.MaDuAn, Record.MaDotMoBan, Record.MaPhieu, Record.MaPhieuKH, Record.MaPhieuDuyetGia, Record.GiaBan ?? 0);
+    }
+
+    private async Task HandleFileUpload(List<GioHangCanHoModel?> listCH)
+    {
+        //Record.ListCT = listCH;
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = Record.ListCanHo.Any(x => x.MaCanHo == item.MaCanHo);
+            if (!isExist)
+            {
+                Record.ListCanHo.Add(new GioHangCanHoModel
+                {
+                    MaCanHo = item.MaCanHo,
+                    TenCanHo = item.TenCanHo,
+                    HeSoCanHo = item.HeSoCanHo,
+                    DienTichCanHo = item.DienTichCanHo,
+                    DienTichPhanBo = item.DienTichPhanBo,
+                    GiaBan = item.GiaBan,
+                    GiaBanSauPhanBo = item.GiaBanSauPhanBo
+                });
+            }
+        }
+        if (virtualizeRef != null)
+        {
+            await virtualizeRef.RefreshDataAsync();
+        }
+    }
+}

@@ -1,0 +1,359 @@
+﻿@page "/template"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.KeHoachBanHang
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.Template
+@using VTTGROUP.Domain.Model.PhieuDatCoc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject TemplateService TemplateService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Template</h1>
+<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm mb-3 space-y-3">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex items-center">
+                <div class="result-label-icon">
+                    <i class="mdi mdi-calendar-today"></i>
+                    <DateRangePicker OnDateRangeChanged="OnDateRangeChanged" @ref="dateRangeRef" />
+                </div>
+            </div>
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn dự án"
+                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                      @bind-Value="selectedDuAn"
+                      OnChange="OnDTKHChanged" />
+
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Template" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center">
+                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                        </th>
+                        <th style="width: 50px" class="text-center">STT</th>
+                        <th style="width: 130px" class="text-center">Hệ thống</th>
+                        <th style="width: 150px" class="text-center">
+                            Số phiêu
+                        </th>
+                        <th style="width: 150px" class="text-center">
+                            Tên template
+                        </th>
+                        <th style="width: 200px" class="text-center">
+                            Dự án
+                        </th>
+                        <th style="width: 200px" class="text-center">
+                            Tiêu đề
+                        </th>
+                        <th style="width: 90px">
+                            &nbsp;
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (listTemplate != null && listTemplate.Count > 0)
+                    {
+                        @foreach (var item in listTemplate)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@item.IsSelected"
+                                           @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                </td>
+                                <td style="text-align:center">
+                                    <span>@item.STT</span>
+                                </td>
+                                <td>
+                                    <div class="item-phieu" @onclick="() => OnEditRecord(item.MaTemplate.ToString())"><i class="bi bi-file-earmark-bar-graph"></i> @item.MaTemplate</div>
+                                    <div><i class="bi bi-calendar4-event me-1"></i> @string.Format("{0:dd/MM/yyyy}", item.NgayLap)</div>
+                                    <span><i class="bi bi-person-fill me-1"></i> @item.HoVaTen</span>
+                                </td>
+                                <td>@item.SoPhieu</td>
+                                <td>@item.TenTemplate</td>
+                                <td>
+                                    <span>@item.TenDuAn</span>
+                                </td>
+                                <td>
+                                    <span>@item.TieuDe</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void()" @onclick="() => OnEditRecord(item.MaTemplate!)">
+                                                <span>
+                                                    <i class="mdi mdi-pencil">
+                                                    </i>
+                                                </span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaTemplate!)"><span><i class="mdi mdi-delete "></i></span></a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (listTemplate == null || !listTemplate.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa template <strong>@selectedMaPhieu</strong> không?
+            </p>
+        </Description>
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+
+    <ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa danh sách template này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</div>
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private string? selectedDuAn;
+    private string? selectedMaPhieu;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    private string? tuNgay { get; set; } = DateTime.Now.AddMonths(-1).ToString("dd/MM/yyyy");
+    private string? denNgay { get; set; } = DateTime.Now.ToString("dd/MM/yyyy");
+
+    List<TemplatePagingDto> listTemplate = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+
+    private string? selectedTrangThaiDuyet;
+    private PopupLichSuDuyetPhieu? guiDuyetModalRef;
+    DateRangePicker dateRangeRef;
+    MoreFilterPopup morePopupRef;
+    private string maCongViec = "Template";
+    int SelectedCount => listTemplate?.Count(x => x.IsSelected) ?? 0;
+    private bool IsSelectAll = false;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(maCongViec, VuViec.Xem.GetDescription());
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("tooltipHelper.init");
+            ListDA = await CanHoService.GetByDuAnAsync();
+            await LoadTemplate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowConfirmDelete(string maPhieu)
+    {
+        await BaseService.CheckPermissionAsync(maCongViec, VuViec.Xoa.GetDescription());
+        selectedMaPhieu = maPhieu;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaPhieu == null || string.IsNullOrEmpty(selectedMaPhieu))
+        {
+            return;
+        }
+        var result = await TemplateService.DeleteTemplateAsync(selectedMaPhieu, _env.WebRootPath);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadTemplate();
+        selectedMaPhieu = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task OnDTKHChanged(ChangeEventArgs e)
+    {
+        var newDA = e.Value?.ToString();
+        if (newDA == selectedDuAn || isLoading)
+        {
+            return;
+        }
+        selectedDuAn = newDA;
+        _page = 1;
+        await LoadTemplate();
+    }
+
+    private async Task OnDTKHChanged(string? maDuAn)
+    {
+        if (isLoading) return;
+
+        selectedDuAn = string.IsNullOrWhiteSpace(maDuAn) ? null : maDuAn;
+        _page = 1;
+        await LoadTemplate();
+    }
+
+    private async Task LoadTemplate()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await TemplateService.GetPagingAsync(selectedDuAn, _page, _pageSize, search, tuNgay, denNgay);
+            listTemplate = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadTemplate();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadTemplate();
+    }
+    private async Task OnDateRangeChanged((string? Start, string? End) range)
+    {
+        tuNgay = range.Start;
+        denNgay = range.End;
+        await LoadTemplate();
+    }
+
+
+    private async Task OnEditRecord(string maPhieu)
+    {
+        Nav.NavigateTo($"/template/edit/{maPhieu}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo("/template/create");
+        return;
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadTemplate();
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+
+    private async Task ResetAllParam()
+    {
+        _page = 1;
+        _pageSize = 10;
+        search = null;
+        selectedDuAn = null;
+        tuNgay = null;
+        denNgay = null;
+        await LoadTemplate();
+        await dateRangeRef.ResetAsync();
+        StateHasChanged();
+    }
+
+    private async Task ResetMore()
+    {
+        _page = 1;
+        _pageSize = 10;
+        await LoadTemplate();
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in listTemplate)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        var selected = listTemplate.Where(d => d.IsSelected).ToList();
+        if (selected.Count == 0) return;
+         var result = await TemplateService.DeleteListAsync(selected, _env.WebRootPath);
+         await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+        await LoadTemplate();
+        StateHasChanged();
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in listTemplate)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(TemplatePagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listTemplate.All(x => x.IsSelected);
+    }
+}

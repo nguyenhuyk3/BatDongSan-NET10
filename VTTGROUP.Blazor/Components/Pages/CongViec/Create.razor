@@ -1,0 +1,264 @@
+﻿@page "/congviec/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject CongViecService CongViecService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Công việc</h1>
+<div class="container-form">
+	<div class="container-tabs">
+		<div class="row">
+			<div class="col-md-12">
+				<ul class="tab-element">
+					<li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+					<li class="tab-item" data-id="2" id="linkTab2">Vụ việc</li>
+					<div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+					</div>
+				</ul>
+			</div>
+		</div>
+		<MessageErrorForm />
+		<div class="wapper-content-tab" id="formCongViec">
+			<div data-id="1" class="tab-content-item actived-tab" id="tab1">
+				<div class="col-lg-10 mx-auto row">
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Mã công việc <i class="point-validate">*</i></span>
+								<input class="input-form input-validation" id="maCongViec" name="maCongViec" type="text" value="">
+								<span class="error-validation">Vui lòng nhập mã công việc</span>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Tên công việc <i class="point-validate">*</i></span>
+								<input class="input-form input-validation" id="tenCongViec" name="tenCongViec" type="text" value="">
+								<span class="error-validation">Vui lòng nhập tên công việc</span>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Tên Controller (VD: Controler là HomeController -&gt; Home) <i class="point-validate">*</i></span>
+								<input class="input-form input-validation" id="tenController" name="tenController" type="text" value="">
+								<span class="error-validation">Vui lòng nhập Controller</span>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Tên Action <i class="point-validate">*</i></span>
+								<input class="input-form input-validation" id="tenAction" name="tenAction" type="text" value="">
+								<span class="error-validation">Vui lòng nhập tên action</span>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Tiền tố phiếu <i class="point-validate">*</i></span>
+								<input class="input-form input-validation" id="tienTo" name="tienTo" type="text" value="">
+								<span class="error-validation">Vui lòng nhập tên tiền tố phiếu</span>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Công việc cha</span>
+								<TreeSelect Items="@DanhSach" OnSelected="OnSelected" ItemSelected="@Selected" />
+								<input type="hidden" name="maCha" value="@Selected.MaCongViec" />
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-12">
+						<div class="row">
+							<div class="form-group-input">
+								<div class="form-group-input-flex">
+									<span class="title-field">Hiển thị trên menu</span>
+									<input checked="checked" class="form-check-input" id="hienThiTrenMenu" name="hienThiTrenMenu" type="checkbox" value="true">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Độ ưu tiên</span>
+								<input class="input-form" id="doUuTien" maxlength="2" name="doUuTien" style="width:40px" type="text" value="0">
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-6">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Trạng thái <i class="point-validate">*</i></span>
+								<input class="auto {mNum:1} input-form input-validation" id="trangThaiHienThi" maxlength="1" name="trangThaiHienThi" style="width:40px" type="text" value="1">
+								<span class="error-validation">Vui lòng nhập trạng thái</span>
+							</div>
+						</div>
+					</div>
+					<div class="wapper-input col-lg-12">
+						<div class="row">
+							<div class="form-group-input">
+								<span class="title-field">Ghi chú</span>
+								<textarea class="textarea-input" cols="20" id="ghiChu" name="ghiChu" rows="5" tabindex="2"></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div data-id="2" class="tab-content-item" id="tab2">
+				<div class="col-lg-6 mx-auto">
+					<table class="tbl table table-hover table-form table-detail" id="tblVuViecs">
+						<thead>
+							<tr>
+								<th width="5%" align="center" class="text-center">
+									STT
+								</th>
+								<th align="center" width="35%" class="text-center">
+									Mã vụ việc
+								</th>
+								<th align="center" width="50%" class="text-center">
+									Tên vụ việc
+								</th>
+								<th width="10%" align="center" class="text-center">
+									Chọn
+								</th>
+							</tr>
+						</thead>
+						<tbody class="content-table">
+							@if (VuViecs != null && VuViecs.Any() == true)
+							{
+								var i = 1;
+								foreach (var item in VuViecs)
+								{
+									<tr>
+										<td class="text-center">
+											@i
+										</td>
+										<td class="text-center">
+											@item.MaVuViec
+										</td>
+										<td>
+											<span class="pl-2">
+												@item.TenVuViec
+											</span>
+										</td>
+										<td class="text-center">
+											<input type="checkbox" class="form-check-input mt-1 mb-1" name="maVuViec" value="@item.MaVuViec">
+										</td>
+									</tr>
+									i++;
+								}
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="container-button">
+	<div class="actions-left">
+		<UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+	</div>
+	<div class="actions-right">
+		<UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+	</div>
+</div>
+
+@code {
+	private List<CongViecModel> DanhSach = new();
+	private List<VuViecModel> VuViecs = new();
+	private CongViecModel? Selected = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		DanhSach = await CongViecService.GetTreeAllAsync();
+		VuViecs = await CongViecService.GetVuViecAsync();
+
+	}
+
+	private async Task OnSelected(CongViecModel item)
+	{
+		Selected = item;
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await BaseService.CheckPermissionAsync("DMCongViec", VuViec.Them.GetDescription());
+			await JS.InvokeVoidAsync("tabHelper.initTabs");
+			await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "trangThaiHienThi", false);
+			await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "doUuTien", false);
+			await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "maCongViec");
+		}
+	}
+
+	private async Task SubmitFormJs()
+	{
+		var dotNetRef = DotNetObjectReference.Create(this);
+		await JS.InvokeVoidAsync("validateForm", "formCongViec", dotNetRef);
+
+	}
+
+	[JSInvokable]
+	public async Task SubmitForm(Dictionary<string, JsonElement> data)
+	{
+		var model = new CongViecModel
+			{
+				MaCongViec = data.GetValueOrDefault("maCongViec").GetString(),
+				TenCongViec = data.GetValueOrDefault("tenCongViec").GetString(),
+				TenController = data.GetValueOrDefault("tenController").GetString(),
+				TenAction = data.GetValueOrDefault("tenAction").GetString(),
+				TienTo = data.GetValueOrDefault("tienTo").GetString(),
+				DoUuTien = Convert.ToInt32(data.GetValueOrDefault("doUuTien").GetString()),
+				TrangThaiHienThi = Convert.ToInt32(data.GetValueOrDefault("trangThaiHienThi").GetString()),
+				GhiChu = data.GetValueOrDefault("ghiChu").GetString(),
+				MaCha = data.GetValueOrDefault("maCha").GetString(),
+				HienThiTrenMenu = Convert.ToBoolean(data.GetValueOrDefault("hienThiTrenMenu").GetBoolean())
+			};
+
+		var danhSachMaVuViec = new List<string>();
+		if (data.TryGetValue("maVuViec", out var listCheckbox))
+		{
+			if (listCheckbox.ValueKind == JsonValueKind.Array)
+				danhSachMaVuViec = listCheckbox.EnumerateArray().Select(x => x.GetString() ?? "").ToList();
+			else if (listCheckbox.ValueKind == JsonValueKind.String)
+				danhSachMaVuViec.Add(listCheckbox.GetString() ?? "");
+		}
+
+		var listMaps = danhSachMaVuViec
+		.Select(maVuViec => new VuViecOfCongViecModel
+			{
+				MaCongViec = model.MaCongViec,
+				MaVuViec = maVuViec
+			})
+		.ToList();
+		model.vuViecs = listMaps;
+
+		var result = await CongViecService.SaveCongViecAsync(model);
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+
+		if (result.Status)
+		{
+			Nav.NavigateTo($"/congviec/edit/{model.MaCongViec}");
+		}
+	}
+	private void BackUrl()
+	{
+		Nav.NavigateTo("/congviec");
+
+	}
+}

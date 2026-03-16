@@ -1,0 +1,140 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+
+@inject IBaseService BaseService
+@inject PhieuGiuChoService PhieuGiuChoService
+@inject IJSRuntime JS
+
+<div class="button-search-more" @ref="popupRef">
+    <div class="wraper-button-filter @(countFilter > 0 ? "had-filter" : "had-filter")">
+        <AppButton Label="@(FilterLabel)"
+                   Class="button button-action btn-toggle-popup-more"
+                   IconClass="mdi mdi-filter-outline"
+                   OnClick="TogglePopup" />
+
+        <div class="reset-button" @onclick="OnResetClicked">
+            <i class="mdi mdi-close"></i>
+        </div>
+    </div>
+
+    <div class="wraper-popup-filter content-search-more @(showPopup ? "show" : "")" id="popupFilter">
+        <div class="header-search-more">
+            <div class="title-search-more">
+                Bộ lọc
+                <div class="close-button-popup" @onclick="OnOffPopupClicked">
+                    <i class="mdi mdi-close"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔹 Chỉ còn SÀN GIAO DỊCH cho tab 2 -->
+        <div class="wappert-item-more container-form">
+            <div class="title-item-more">Sàn giao dịch</div>
+            <div class="content-item-more">
+                <select name="MaSanGiaoDich" id="MaSanGiaoDich" class="form-control" @onchange="OnChangeSGG">
+                    <option value=""> Chọn sàn giao dịch </option>
+                    @foreach (var item in ListSGG)
+                    {
+                        <option value="@item.MaSanGiaoDich">@item.TenSanGiaoDich</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="wraper-button-bottom">
+            <UiButton Text="Áp dụng" Variant="primary" OnClick="OnAgreeFilter" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool showPopup = false;
+    private ElementReference popupRef;
+
+    [Parameter] public EventCallback<string> OnSanGiaoDichChanged { get; set; }
+
+    private List<DmSanGiaoDich> ListSGG = new();
+    private string? selectedSGD;
+    private int countFilter = 0;
+
+    private bool _select2Inited = false;
+
+    private string FilterLabel => $"Bộ lọc{(countFilter > 0 ? $" ({countFilter})" : "")}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 1) Load data Sàn Giao Dịch 1 lần
+            ListSGG = await PhieuGiuChoService.GetBySanGiaoDichAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        // 2) Khi popup đang mở & Select2 chưa init thì init (đảm bảo DOM đã có select)
+        if (showPopup && !_select2Inited && ListSGG.Count > 0)
+        {
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange",
+                "MaSanGiaoDich", "Chọn sàn giao dịch", true);
+            _select2Inited = true;
+        }
+    }
+
+    private async Task TogglePopup()
+    {
+        showPopup = !showPopup;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnChangeSGG(ChangeEventArgs e)
+    {
+        selectedSGD = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnResetClicked()
+    {
+        selectedSGD = string.Empty;
+        await ResetCountFilter();
+
+        // reset select2
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "MaSanGiaoDich" });
+
+        await OnSanGiaoDichChanged.InvokeAsync(string.Empty);
+    }
+
+    private Task ResetCountFilter()
+    {
+        countFilter = string.IsNullOrEmpty(selectedSGD) ? 0 : 1;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnAgreeFilter()
+    {
+        await ResetCountFilter();
+        await OnSanGiaoDichChanged.InvokeAsync(selectedSGD ?? string.Empty);
+
+        showPopup = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task RestAllMore()
+    {
+        selectedSGD = string.Empty;
+        await ResetCountFilter();
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "MaSanGiaoDich" });
+    }
+
+    private async Task OnOffPopupClicked()
+    {
+        showPopup = false;
+        selectedSGD = string.Empty;
+        await ResetCountFilter();
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "MaSanGiaoDich" });
+        await OnSanGiaoDichChanged.InvokeAsync(string.Empty);
+        StateHasChanged();
+    }
+}
+
+

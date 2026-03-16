@@ -1,0 +1,183 @@
+﻿@page "/tang/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.Tang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject BlockService BlockService
+@inject TangService TangService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Tầng</h1>
+<div class="container-form">
+    <div class="container-tabs">
+        <div class="row">
+            <div class="col-md-12">
+            </div>
+        </div>
+        <MessageErrorForm />
+        <div class="wapper-content-tab">
+            <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                <div class="col-lg-10 mx-auto row">
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Dự án </span>
+                                <DisableTextBox Value="@Record.TenDuAn" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Block </span>
+                                <DisableTextBox Value="@Record.TenBlock" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Mã tầng</span>
+                                <DisableTextBox Value="@Record.MaTang" />
+                                <input id="MaTang" name="MaTang" type="hidden" value="@Record.MaTang">
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Tên tầng <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="TenTang" name="TenTang" type="text" value="@Record.TenTang">
+                                <span class="error-validation">Vui lòng nhập tên tầng</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="HeSoTang" name="HeSoTang" style="width:40px;text-align:right" type="text" value="@string.Format("{0:#,#0.####}", Record.HeSo)">
+                                <span class="error-validation">Vui lòng nhập hệ số</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">STT <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="STTTang" name="STTTang" style="width:40px;text-align:right" type="text" value="@string.Format("{0:#,#0}", Record.STTTang)">
+                                <span class="error-validation">Vui lòng nhập STT tầng</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-12">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Hình ảnh</span>
+                                <div class="contatiner-upload-files">
+                                    <FileUploader @ref="uploaderRef1" AllowExtensions="allowedExtensions"
+                                                  MaxFileSize="10485760"
+                                                  AllowMultiple="false"
+                                                  OnFilesChanged="HinhAnhHandleFiles" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-button">
+    <div class="actions-left">
+        <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+    </div>
+    <div class="actions-right">
+        <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+    </div>
+</div>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private TangModel? Selected = new();
+    private TangModel? Record = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+    private FileUploader uploaderRef1;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("LoTang", VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "HeSoTang", 18, 2);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "STTTang", 18, 0);
+
+            var result = await TangService.GetByIdAsync(id ?? string.Empty);
+            if (result.Status)
+            {
+                Record = (TangModel?)result.Data;
+                if (Record == null)
+                {
+                    Record = new TangModel();
+                }
+                if (Record.HinhAnh.Any())
+                {
+                    await uploaderRef1.RenderInitialFiles(Record.HinhAnh);
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            }
+            StateHasChanged();
+            // await JS.InvokeVoidAsync("select2Helper.initWithPlaceholder", "MaBlock", "Chọn mã block", true);
+            // if (!string.IsNullOrEmpty(Record.MaBlock))
+            // {
+            //     await JS.InvokeVoidAsync("select2Helper.setValue", "MaBlock", Record.MaBlock.ToString());
+            // }
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "tab1", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm(Dictionary<string, JsonElement> data)
+    {
+        var model = new TangModel
+        {
+            MaTang = data.GetValueOrDefault("MaTang").GetString(),
+            TenTang = data.GetValueOrDefault("TenTang").GetString(),
+            //  MaBlock = data.GetValueOrDefault("MaBlock").GetString(),
+            HeSo = Convert.ToDecimal(data.GetValueOrDefault("HeSoTang").GetString()),
+            STTTang = Convert.ToInt32(data.GetValueOrDefault("STTTang").GetString()),
+            HinhAnh = Record.HinhAnh
+        };
+        var result = await TangService.UpdateByIdAsync(model, _env.WebRootPath);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    public void HinhAnhHandleFiles(List<UploadedFileModel> file)
+    {
+        Record.HinhAnh = file;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/tang");
+
+    }
+}

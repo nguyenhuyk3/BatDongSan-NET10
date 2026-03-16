@@ -1,0 +1,135 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using VTTGROUP.Domain.Model.TongHopBooking
+@using VTTGROUP.Infrastructure.Services
+@inject TongHopBookingService TongHopBookingService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+<div class="modal fade import-file-popup" tabindex="-1" id="ImportPGCModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nhập dữ liệu booking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="import-file-alert">
+                    <div class="content">
+                        <ul>
+                            <li>Đối tượng KH, Tên KH, Loại ID, Số ID Card bắt buộc phải nhập vào.</li>
+                        </ul>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-download-file" @onclick="OnTaiFileMau" disabled="@IsLoadingDownload">
+                    @if (IsLoadingDownload)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Đang tải...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-download"></i>
+                        <span>Tải file mẫu</span>
+                    }
+                </button>
+                <div class="wraper-select-file">
+                    <div class="mb-3 mt-3">
+                        <label for="formFile" class="form-label">Chọn tập tin để nhập dữ liệu</label>
+                        <InputFile OnChange="OnFileSelected" class="form-control file-input" accept=".xlsx,.csv" id="formFile" />
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-confirm-upload" @onclick="Upload" disabled="@(IsLoadingUpload || !CanUpload)">
+                    @if (IsLoadingUpload)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Đang xử lý...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-upload me-1"></i>
+                        <span>Tải lên</span>
+                    }
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="Close">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<List<TongHopBookingCTModel>?> OnUploaded { get; set; }
+    private IBrowserFile? SelectedFile;
+    private string? SelectedFileName;
+    private bool IsLoadingUpload = false;
+    private bool IsLoadingDownload = false;
+    private string MaDuAn = string.Empty;
+    private string MaSanGD = string.Empty;
+    private string MaNhanVien = string.Empty;
+    private string MaTongHopBK = string.Empty;
+    private async Task Close()
+    {
+        SelectedFile = null;
+        SelectedFileName = null;
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportPGCModal");
+        StateHasChanged();
+    }
+
+    private bool CanUpload => SelectedFile != null;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        SelectedFileName = e.File.Name;
+    }
+    private async Task OnTaiFileMau()
+    {
+        IsLoadingDownload = true;
+        try
+        {
+            var fullPath = Path.Combine(_env.WebRootPath, "templates", "MauImport_BangTongHopBooking.xlsx");
+            var fileBytes = await TongHopBookingService.GenerateTemplateWithDataAsync(fullPath);
+            var base64 = Convert.ToBase64String(fileBytes);
+
+            await JS.InvokeVoidAsync("downloadFileFromBytes", "MauImport_BangTongHopBooking.xlsx", base64);
+        }
+        finally
+        {
+            IsLoadingDownload = false;
+        }
+    }
+    private async Task Upload()
+    {
+        if (SelectedFile != null)
+        {
+            IsLoadingUpload = true;
+            try
+            {
+                var result = await TongHopBookingService.ImportFromExcelAsync(SelectedFile, MaSanGD, MaNhanVien, MaDuAn, MaTongHopBK);
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+                if (result.Status)
+                {
+                    var listCT = (List<TongHopBookingCTModel>)result.Data;
+                    await OnUploaded.InvokeAsync(listCT);
+                    await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportPGCModal");
+                }
+            }
+            finally
+            {
+                IsLoadingUpload = false;
+            }
+        }
+    }
+
+    public async Task ShowFileModal(string maNhanVien, string maSanGD, string maDuAn, string maTongHopBK)
+    {
+        MaNhanVien = maNhanVien ?? string.Empty;
+        MaSanGD = maSanGD;
+        MaDuAn = maDuAn;
+        MaTongHopBK = maTongHopBK;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#ImportPGCModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+}

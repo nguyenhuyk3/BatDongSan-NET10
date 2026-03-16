@@ -1,0 +1,206 @@
+﻿@using Microsoft.JSInterop
+
+@using VTTGROUP.Domain.Model.DMSanGiaoDich
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+
+@inject VTTGROUP.Infrastructure.Services.DMSanGiaoDichService DMSanGiaoDichService
+
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupAddSanGiaoDich" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                @*Header*@
+                <h5 class="modal-title">Danh sách Sàn giao dịch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Ðóng" @onclick="OnClosePopup"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="flex items-center gap-3 my-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        @*Ô tìm kiếm*@
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        @*Hiển thị số lượng sàn và phân trang*@
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">STT</th>
+                                    <th style="width: 200px" class="text-center">Mã sàn</th>
+                                    <th style="width: 300px" class="text-center">Tên sàn</th>
+                                    <th style="width: 100px" class="text-center">Địa chỉ</th>
+                                    @*Chọn tất cả sàn*@
+                                    <th style="width: 80px" class="text-center">
+                                        <input type="checkbox" class="form-check-input" checked="@IsSelectAll" @onchange="OnCheckboxAllChanged" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listSGG != null && listSGG.Count > 0)
+                                {
+                                    @*STT được tính toán dựa trên trang hiện tại và kích thước trang*@
+                                    var i = 1 + (_page - 1) * _pageSize;
+
+                                    @foreach (var item in listSGG)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center"><span>@i</span></td>
+                                            <td>@item.MaSanGiaoDich</td>
+                                            <td>@item.TenSanGiaoDich</td>
+                                            <td>@item.DiaChi</td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input" checked="@item.IsSelected" @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                            </td>
+                                        </tr>
+
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (listSGG == null || !listSGG.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">Chọn</button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="OnClosePopup">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<List<SanGiaoDichPagingDto>?> OnSelected { get; set; }
+
+    int _page = 1;
+    // Kích thước trang mặc định là 10
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    string? _maDuAn;
+    List<SanGiaoDichPagingDto> listSGG = new();
+    private bool IsSelectAll = false;
+
+    public async Task ShowPopupAsync(string? maDuAn)
+    {
+        _maDuAn = maDuAn;
+        _page = 1;
+
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupAddSanGiaoDich");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+
+        StateHasChanged();
+    }
+
+    public async Task OnClosePopup()
+    {
+        IsSelectAll = false;
+
+        foreach (var item in listSGG)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupAddSanGiaoDich");
+
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        List<SanGiaoDichPagingDto> data;
+        int total;
+
+        if (!string.IsNullOrWhiteSpace(_maDuAn))
+        {
+            (data, total) = await DMSanGiaoDichService.GetPagingAvailableForDuAnAsync(_maDuAn, _page, _pageSize, search);
+        }
+        else
+        {
+            (data, total) = await DMSanGiaoDichService.GetPagingAsync(null, null, _page, _pageSize, search);
+        }
+
+        listSGG = data;
+        totalCount = total;
+        totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        IsSelectAll = listSGG.All(x => x.IsSelected);
+    }
+
+    private async Task TriggerChoose()
+    {
+        var selecteds = listSGG.Where(x => x.IsSelected).ToList();
+
+        if (selecteds.Any())
+        {
+            await OnSelected.InvokeAsync(selecteds);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Thêm sàn giao dịch thành công", true);
+            await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupAddSanGiaoDich");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Chưa chọn sàn giao dịch", false);
+        }
+    }
+
+    private void OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+
+        foreach (var item in listSGG)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private void OnCheckboxChanged(SanGiaoDichPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listSGG.All(x => x.IsSelected);
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+
+        await LoadData();
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+
+        await LoadData();
+    }
+}

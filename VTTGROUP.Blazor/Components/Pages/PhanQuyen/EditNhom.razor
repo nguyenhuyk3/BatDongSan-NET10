@@ -1,0 +1,233 @@
+﻿@page "/phanquyen/nhom/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Infrastructure.Services
+@inject PhanQuyenService PhanQuyenService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Nhóm người sử dụng</h1>
+<EditForm id="formDuAn" EditContext="@editContext">
+    <div class="container-form">
+        <div class="col-lg-11 mx-auto">
+            <div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="container-mess-error">
+                            <div class="content-mess-error">
+                                <span class="icon-mess-error"><i class="mdi mdi-alert"></i></span>
+                                <div class="wapper-mess-error" id="mess-error">
+                                </div>
+                            </div>
+                            <span class="close-mess-error"><i class="mdi mdi-close"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Danh sách nhân viên</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <div class="wapper-content-tab" id="formCongViec">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-6 mx-auto row">
+                        <div class="col-lg-12 mx-auto row">
+                            <div class="wapper-input col-lg-12 mb-3">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Mã nhóm</span>
+                                        <DisableTextBox Value="@NhomUserSave.MaNhomUser" />
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="wapper-input col-lg-12 mb-3">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Tên nhóm <i class="point-validate">*</i></span>
+                                        <InputText class="form-control input-validation" @bind-Value="NhomUserSave.TenNhomUser" id="TenNhomUser" />
+                                        <span class="error-validation">Vui lòng nhập tên nhóm</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input col-lg-12 mb-3">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Ghi chú</span>
+                                        <textarea class="textarea-input" cols="20" id="GhiChu" @bind="NhomUserSave.GhiChu" rows="5" tabindex="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="button-action-title" style="margin-left: 0;">
+                                <div class="icon-button" @onclick="AddNhanVien">
+                                    <i class="mdi mdi-playlist-plus"></i>
+                                </div>
+                                <span>Nhân viên</span>
+                            </div>
+                            <div style="margin-left: auto; display: flex; align-items: center;">
+                            </div>
+                        </div>
+                        <table class="tbl table table-hover table-form table-detail" id="tblNhanViens">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width:200px" class="text-center">
+                                        Tên đăng nhập
+                                    </th>
+                                    <th style="width:200px" class="text-center">
+                                        Họ và tên
+                                    </th>
+                                    <th style="width:200px" class="text-center">
+                                        Email
+                                    </th>
+                                    <th style="width:120px" class="text-center">
+                                        Số điện thoại
+                                    </th>
+                                    <th style="width:50px" class="text-center">
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (NhomUserSave.ListNhanVien != null && NhomUserSave.ListNhanVien.Any() == true)
+                                {
+                                    var i = 1;
+                                    foreach (var item in NhomUserSave.ListNhanVien)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                @i
+                                            </td>
+                                            <td>
+                                                @item.TenDangNhap
+                                            </td>
+                                            <td>
+                                                @item.HoVaTen
+                                            </td>
+                                            <td>
+                                                @item.Email
+                                            </td>
+                                            <td>
+                                                @item.SoDienThoai
+                                            </td>
+
+                                            <td class="text-center">
+                                                <div class="icon-button" data-title="Xóa" data-position="left">
+                                                    <a href="javascript:void(0)" @onclick="() => DeleteRow(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupAddNhanVienUser OnSelected="SelectedNhanVien" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private NhomUserModel? NhomUserSave = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(NhomUserSave);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            var result = await PhanQuyenService.GetNhomUserByMaNhomAsync(id);
+            if (result.Status)
+            {
+                NhomUserSave = (NhomUserModel)result.Data;
+                StateHasChanged();
+            }
+        }
+    }
+    private async Task AddNhanVien()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupAddNhanVien");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+
+    }
+    private async Task DeleteRow(NhanVienModel? item)
+    {
+        NhomUserSave.ListNhanVien.Remove(item);
+        StateHasChanged();
+    }
+
+    private async Task SelectedNhanVien(List<NhanVienUserPagingDto?> listNV)
+    {
+        foreach (var nv in listNV)
+        {
+            bool isExist = NhomUserSave.ListNhanVien.Any(x => x.MaNhanVien == nv.MaNhanVien);
+            if (!isExist)
+            {
+                NhomUserSave.ListNhanVien.Add(new NhanVienModel
+                {
+                    UserId = nv.UserId,
+                    MaNhanVien = nv.MaNhanVien,
+                    HoVaTen = nv.TenNhanVien,
+                    TenDangNhap = nv.TenDangNhap,
+                    Email = nv.Email,
+                    SoDienThoai = nv.SoDienThoai
+                });
+            }
+        }
+        StateHasChanged();
+
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await PhanQuyenService.UpdateNhomUserAsync(NhomUserSave);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/phanquyen/nhom");
+
+    }
+}

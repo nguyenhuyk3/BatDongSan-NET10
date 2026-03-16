@@ -1,0 +1,182 @@
+﻿@page "/login"
+@layout LoginLayout
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+@using System.ComponentModel.DataAnnotations
+@using VTTGROUP.Infrastructure.Services
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ISessionKiller SessionKiller
+
+@using VTTGROUP.Blazor.Components.Layout
+@using System.Diagnostics
+<PageTitle>Đăng Nhập</PageTitle>
+
+<div class="h-screen container-form-login">
+    <!-- Background trái -->
+    @* <div class="hidden lg:block w-1/2">
+        <img src="../assets/images/bg-login.png" alt="Background" class="h-full w-full object-cover" />
+    </div> *@
+
+    <!-- Form phải -->
+    <div class="flex items-center align-items-center justify-center w-full h-full">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+            <div class="text-center mb-2">
+                <img src="../assets/images/logo.png" alt="Logo" class="w-36 mx-auto mb-3 mt-3" />
+                <h2 class="title-form-login">Đăng Nhập</h2>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="bg-red-100 text-red-700 text-sm p-3 mb-3 mt-3 rounded">
+                    @errorMessage
+                </div>
+            }
+
+            <EditForm EditContext="@editContext" FormName="login">
+                <DataAnnotationsValidator />
+                @* <ValidationSummary /> *@
+                <div class="title-filed-login">Tên đăng nhập</div>
+                <div class="mb-3 relative">
+                    <span class="mdi mdi-account-outline icon-input text-base absolute left-2 top-2"></span>
+                    <InputText @bind-Value="loginModel.Username" class="input-text w-full px-9 py-2 border border-gray-300 rounded-md " placeholder="Nhập tên đăng nhập"
+                               @onkeydown="HandleKeyDown" />
+                    <ValidationMessage For="@(() => loginModel.Username)" class=" mt-1 text-sm text-red-600" />
+                </div>
+
+                <div class="title-filed-login">Mật khẩu</div>
+                <div class="mb-3 relative">
+                    <span class="mdi mdi-lock-outline icon-input text-base absolute left-2 top-2"></span>
+                    <InputText @bind-Value="loginModel.Password" type="@(showPassword ? "text" : "password")" class="input-text w-full px-9 py-2 border border-gray-300 rounded-md" placeholder="Nhập mật khẩu"
+                               @onkeydown="HandleKeyDown" />
+                    <button type="button" class="show-password absolute right-3 top-2 text-gray-500" @onclick="TogglePassword">
+                        <i class="mdi @(showPassword ? "mdi-eye-outline" : "mdi-eye-off-outline")"></i>
+                    </button>
+                    <ValidationMessage For="@(() => loginModel.Password)" class=" mt-1 text-sm text-red-600" />
+                </div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="d-flex align-items-center remember-area gap-2">
+                        <input type="checkbox">
+                        <span>Ghi nhớ</span>
+                    </div>
+                    <div class="text-right text-sm ml-auto">
+                        <a href="#" class="label-forget-password">Quên mật khẩu?</a>
+                    </div>
+                </div>
+
+                
+
+                <div class="d-flex justify-center">
+                    <button @onclick="ValidateAndLogin"
+                            class="button-login @ButtonCss"
+                            disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="loader animate-spin">
+                                <i class="mdi mdi-spin mdi-loading"></i>
+                            </span>
+                        }
+                        else
+                        {
+                            <span>Đăng nhập</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private EditContext editContext;
+    private string errorMessage = string.Empty;
+    private bool showPassword = false;
+
+    private bool IsLoading = false;
+
+    private string ButtonCss =>
+        IsLoading
+            ? "w-12 h-12 text-white flex items-center justify-center rounded-full transition-all duration-300"
+            : "w-full text-white py-2 transition-all duration-300";
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(loginModel);
+    }
+    private async Task ValidateAndLogin()
+    {
+        if (!editContext.Validate())
+        {
+            return;
+        }
+        IsLoading = true;
+        //await Task.Delay(300);
+        errorMessage = string.Empty;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/auth/loginhome", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var token = await response.Content.ReadFromJsonAsync<TokenResponse>();
+                if (token is not null && !string.IsNullOrEmpty(token.AccessToken))
+                {
+                    // Lưu token trong cookie (JS có thể đọc để gán Authorization header cho HttpClient)
+                    await JS.InvokeVoidAsync("blazorSetCookie", "accessToken", token.AccessToken, 60 * 24 * 1);
+                    await JS.InvokeVoidAsync("blazorSetCookie", "refreshToken", token.RefreshToken, 60 * 24 * 7);
+
+                    var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                    var jwt = handler.ReadJwtToken(token.AccessToken);
+                    var currentSid = jwt.Id;
+                    var username = jwt.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value
+                           ?? string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(currentSid))
+                    {
+                        // Đá các phiên khác của cùng user (nếu có)
+                        await SessionKiller.ForceLogoutOthersAsync(username, currentSid);
+                    }
+
+                    // Điều hướng sau khi đăng nhập thành công
+                    Navigation.NavigateTo($"/logincallback-html?token={token.AccessToken}", forceLoad: true);
+                }
+            }
+            else
+            {
+                errorMessage = "Tên đăng nhập hoặc mật khẩu không đúng.";
+                IsLoading = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Đã xảy ra lỗi: {ex.Message}";
+            IsLoading = false;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await ValidateAndLogin();
+        }
+    }
+
+    private void TogglePassword() => showPassword = !showPassword;
+
+    public class LoginRequest
+    {
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class TokenResponse
+    {
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
+    }
+}

@@ -1,0 +1,140 @@
+﻿@using System.Globalization
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Infrastructure.Services
+@inject GioHangService GioHangService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupLichSuModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Lịch sử cập nhật @(selectedLoaiLS == 1 ? "Giỏ hàng" : "Sàn giao dịch") @selectedMaPhieu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width:50px" class="text-center">STT</th>
+
+                                    @if (selectedLoaiLS == 1)
+                                    {
+                                        <th style="width: 250px" class="text-center">Giỏ hàng (Cũ → Mới)</th>
+                                    }
+                                    else
+                                    {
+                                        <th style="width: 300px" class="text-center">Sàn giao dịch (Cũ → Mới)</th>
+                                    }
+
+                                    <th style="width: 200px" class="text-center">Nhân viên</th>
+                                    <th style="width: 170px" class="text-center">Ngày cập nhật</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @if (listLSConfig is { Count: > 0 })
+                                {
+                                    var i = 1;
+                                    foreach (var item in listLSConfig)
+                                    {
+                                        <tr class="initialized">
+                                            <td class="px-3 py-2 text-center">@i</td>
+
+                                            @if (selectedLoaiLS == 1)
+                                            {
+                                                <td class="px-3 py-2">
+                                                    <span class="fw-600">@ToLoaiGioHangText(item.LoaiGioHangCu)</span>
+                                                    <span class="mx-1">→</span>
+                                                    <span class="fw-700">@ToLoaiGioHangText(item.LoaiGioHangMoi)</span>
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td class="px-3 py-2">
+                                                    <span class="fw-600">@ToSafeText(item.TenSanGiaoDichCu)</span>
+                                                    <span class="mx-1">→</span>
+                                                    <span class="fw-700">@ToSafeText(item.TenSanGiaoDichMoi)</span>
+                                                </td>
+                                            }
+
+                                    <td class="px-3 py-2">@ToSafeText(item.NguoiCapNhat)</td>
+
+                                    <td class="px-3 py-2 text-center">
+                                        @(item.NgayCapNhat.HasValue
+                                                                                ? item.NgayCapNhat.Value.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture)
+                                                                                : "")
+                                    </td>
+                                </tr>
+
+                                                                i++;
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td class="px-3 py-3 text-gray-500 text-center" colspan="4">
+                                            Không có dữ liệu
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? selectedMaPhieu;
+    private int selectedLoaiLS;
+    private List<LichSuGioHangDTO> listLSConfig = new();
+
+    // ===== Helpers =====
+    private static string ToSafeText(string? s)
+        => string.IsNullOrWhiteSpace(s) ? "(Không có)" : s.Trim();
+
+    // false=Riêng, true=Chung, null=Không rõ
+    private static string ToLoaiGioHangText(bool? value)
+        => value switch
+        {
+            true => "Giỏ hàng chung",
+            false => "Giỏ hàng riêng",
+            _ => "(Không rõ)"
+        };
+
+    // ===== Public API để component khác gọi mở popup =====
+    public async Task Show(string maPhieu, int loaiLS)
+    {
+        selectedMaPhieu = maPhieu;
+        selectedLoaiLS = loaiLS;
+
+        // show modal trước
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupLichSuModal");
+
+        // load data
+        await LoadData();
+
+        StateHasChanged();
+    }
+
+    private async Task LoadData()
+    {
+        listLSConfig.Clear();
+
+        if (string.IsNullOrWhiteSpace(selectedMaPhieu))
+            return;
+
+        listLSConfig = await GioHangService.GetLichSuByMaPhieuAsync(selectedMaPhieu, selectedLoaiLS);
+    }
+}

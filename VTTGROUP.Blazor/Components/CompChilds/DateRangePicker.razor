@@ -1,0 +1,194 @@
+﻿@using Microsoft.JSInterop
+@using System.Globalization
+
+@* DateRangePicker với UI giống UiSelect – GIỮ NGUYÊN LOGIC *@
+
+<div class="ui-select @(IsOpen ? "ui-select--open" : null)"
+     style="width:280px"
+     role="combobox"
+     aria-expanded="@IsOpen"
+     aria-haspopup="dialog"
+     tabindex="0"
+     @onfocusout="HandleFocusOut"
+     @onmousedown="()=> _keepOpenOnBlur = true">
+
+    <!-- Icon trái (giống UiSelect) -->
+    @* <i class="mdi mdi-calendar-today ui-select__icon" aria-hidden="true"></i> *@
+
+    <!-- Nút hiển thị -->
+    <button type="button"
+            class="ui-select__display"
+            @onclick="ToggleDropdown"
+            @onclick:stopPropagation="true"
+            aria-label="Chọn khoảng ngày">
+        <span class="truncate">
+            @if (!string.IsNullOrWhiteSpace(StartDateText) || !string.IsNullOrWhiteSpace(EndDateText))
+            {
+                @DisplayText
+            }
+            else
+            {
+                <span class="ui-select__placeholder">Ngày</span>
+            }
+        </span>
+    </button>
+
+    <!-- Clear (x) giống UiSelect -->
+    @if (!string.IsNullOrWhiteSpace(StartDateText) || !string.IsNullOrWhiteSpace(EndDateText))
+    {
+        <button type="button"
+                class="ui-select__clear"
+                aria-label="Xóa chọn"
+                @onclick="ClearSelection">
+            ×
+        </button>
+    }
+
+    @if (IsOpen)
+    {
+        <div class="ui-select__panel"
+             id="@DropdownId"
+             @onmousedown:stopPropagation="true">
+
+            <div class="flex items-center justify-center ">
+                <input id="@StartInputId" class="form-control" style="width: 100%;" />
+                <span>-</span>
+                <input id="@EndInputId" class="form-control" style="width: 100%;" />
+            </div>
+
+            <div class="ui-select__actions flex gap-2" style="padding-top: 12px;">
+                <button type="button" class="btn-mini" @onclick="SelectToday">Hôm nay</button>
+                <button type="button" class="btn-mini" @onclick="SelectThisWeek">Tuần</button>
+                <button type="button" class="btn-mini" @onclick="SelectThisMonth">Tháng</button>
+            </div>
+        </div>
+    }
+
+    <!-- Hidden input (tham gia form submit nếu cần) -->
+    <input type="hidden" value="@StartDateText" />
+    <input type="hidden" value="@EndDateText" />
+</div>
+
+@code {
+    [Parameter] public EventCallback<(string? Start, string? End)> OnDateRangeChanged { get; set; }
+
+    // STATE/LOGIC GIỮ NGUYÊN
+    private bool IsOpen { get; set; }
+    private string? StartDateText { get; set; } = DateTime.Now.AddMonths(-1).ToString("dd/MM/yyyy");
+    private string? EndDateText { get; set; } = DateTime.Now.ToString("dd/MM/yyyy");
+
+    private string DisplayText
+    {
+        get
+        {
+            var hasStart = !string.IsNullOrWhiteSpace(StartDateText);
+            var hasEnd = !string.IsNullOrWhiteSpace(EndDateText);
+            if (hasStart && hasEnd) return $"{StartDateText} - {EndDateText}";
+            else if (hasStart) return $"{StartDateText}";
+            else if (hasEnd) return $"{EndDateText}";
+            else return "Ngày";
+        }
+    }
+
+    private string StartInputId = $"start-{Guid.NewGuid()}";
+    private string EndInputId = $"end-{Guid.NewGuid()}";
+    private string DropdownId = $"dropdown-{Guid.NewGuid()}";
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+    private DotNetObjectReference<DateRangePicker>? _dotNetRef;
+    private bool ShouldInitializeFlatpickr = false;
+
+    // giữ nguyên: khởi tạo flatpickr khi mở
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (ShouldInitializeFlatpickr)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("flatpickrInitRange",
+                StartInputId,
+                EndInputId,
+                StartDateText,
+                EndDateText,
+                _dotNetRef);
+
+            ShouldInitializeFlatpickr = false;
+        }
+    }
+
+    private bool _keepOpenOnBlur; // để không đóng panel khi click bên trong giống UiSelect
+
+    private async Task ToggleDropdown()
+    {
+        IsOpen = !IsOpen;
+        if (IsOpen) ShouldInitializeFlatpickr = true;
+    }
+
+    private void HandleFocusOut(FocusEventArgs _)
+    {
+        if (_keepOpenOnBlur) { _keepOpenOnBlur = false; return; }
+        IsOpen = false;
+    }
+
+    [JSInvokable]
+    public async Task UpdateDateRange(string start, string end)
+    {
+        StartDateText = string.IsNullOrWhiteSpace(start) ? null : start;
+        EndDateText = string.IsNullOrWhiteSpace(end) ? null : end;
+
+        await OnDateRangeChanged.InvokeAsync((StartDateText, EndDateText));
+        StateHasChanged();
+        IsOpen = false;
+    }
+
+    [JSInvokable]
+    public void CloseFromJs()
+    {
+        IsOpen = false;
+        StateHasChanged();
+    }
+
+    private async Task ClearSelection()
+    {
+        StartDateText = null;
+        EndDateText = null;
+        await OnDateRangeChanged.InvokeAsync((null, null));
+    }
+
+    private async Task SelectToday()
+    {
+        var today = DateTime.Now.ToString("dd/MM/yyyy");
+        StartDateText = today;
+        EndDateText = today;
+        await OnDateRangeChanged.InvokeAsync((StartDateText, EndDateText));
+        IsOpen = false;
+    }
+
+    private async Task SelectThisWeek()
+    {
+        var today = DateTime.Now;
+        var start = today.AddDays(-7);
+        var end = today;
+        StartDateText = start.ToString("dd/MM/yyyy");
+        EndDateText = end.ToString("dd/MM/yyyy");
+        await OnDateRangeChanged.InvokeAsync((StartDateText, EndDateText));
+        IsOpen = false;
+    }
+
+    private async Task SelectThisMonth()
+    {
+        var today = DateTime.Now;
+        var start = today.AddMonths(-1);
+        var end = today;
+        StartDateText = start.ToString("dd/MM/yyyy");
+        EndDateText = end.ToString("dd/MM/yyyy");
+        await OnDateRangeChanged.InvokeAsync((StartDateText, EndDateText));
+        IsOpen = false;
+    }
+
+    public async Task ResetAsync()
+    {
+        StartDateText = null;
+        EndDateText = null;
+        StateHasChanged();
+    }
+}

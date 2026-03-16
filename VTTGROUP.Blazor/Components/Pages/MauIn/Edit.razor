@@ -1,0 +1,173 @@
+﻿@page "/mauin/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.MauIn
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject MauInService MauInService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Mẫu in văn bản</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên mẫu in <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenMauIn" id="TenMauIn" />
+                                    <span class="error-validation">Vui lòng nhập tên mẫu in</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại mẫu in</span>
+                                    <DisableTextBox Value="@Record.TenLoaiMauIn" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader @ref="uploaderRef" AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input input-validation" cols="20" name="MoTa" id="MoTa" rows="3" tabindex="2" @bind="@Record.NoiDung"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+
+        <div class="actions-right">
+            @if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+            {
+                <UiButton Icon="mdi-telegram"
+                          Text="Gửi duyệt"
+                          Variant="primary"
+                          OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaMauIn, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+            else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+            {
+                <UiButton Icon="mdi-check"
+                          Text="Duyệt"
+                          Variant="primary"
+                          OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaMauIn, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, Record.MaQuiTrinhDuyet, 1)" />
+
+                <UiButton Icon="mdi-undo"
+                          Text="Trả lại"
+                          Variant="secondary"
+                          OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaMauIn, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, Record.MaQuiTrinhDuyet, 2)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+        </div>
+    </div>
+</EditForm>
+<PopupGuiDuyet @ref="guiDuyetModalRef" OnReloadGuiDuyet="ReloadForm" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private MauInModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<HtLoaiMauIn> ListLMI = new();
+    private string[] allowedExtensions = FileTypeSets.Document;
+    private PopupGuiDuyet? guiDuyetModalRef;
+    private string? maNhanVienHT;
+    private string MaCongViec = "MauIn";
+    private FileUploader uploaderRef;
+    private List<InfoItem> InfoItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.CapNhat.GetDescription());
+            var result = await MauInService.GetByIdAsync(id);
+            if (result.Status)
+            {
+                Record = (MauInModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaMauIn},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+                if (Record?.Files?.Any() == true)
+                {
+                    await uploaderRef.RenderInitialFiles(Record.Files);
+                }
+            }
+            maNhanVienHT = await BaseService.MaNhanVienHienTai();
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await MauInService.UpdateByIdAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/mauin");
+    }
+
+    private async Task GuiDuyetPhieu(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        await guiDuyetModalRef?.ShowQTD(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh, flag);
+    }
+
+    private async Task ReloadForm()
+    {
+        await JS.InvokeVoidAsync("location.reload");
+    }
+}

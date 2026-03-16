@@ -1,0 +1,213 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject KhachHangTamService KhachHangTamService
+@inject PhieuGiuChoService PhieuGiuChoService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupChonKHModalTam" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                @* <div class="container-search-home">
+                <div class="search-row" style="margin-bottom: 15px;">
+                <div class="col-search wapper-congtrinh container-form">
+                <div class="result-label-icon">
+                <i class="mdi mdi-file-document"></i>
+                <select name="LoaiKH" id="LoaiKH" class="form-control" @onchange="OnDTKHChanged">
+                <option value=""> Chọn đối tượng </option>
+                @foreach (var item in ListDTKH)
+                {
+                <option value="@(item.MaDoiTuongKhachHang)">@item.TenDoiTuongKhachHang</option>
+                }
+                </select>
+                </div>
+                </div>
+                <div class="wapper-congtrinh container-form">
+                <div class="result-label-icon">
+                <InputSearch @bind-Value="search" OnSearch="Search" />
+                </div>
+                </div>
+                </div>
+                </div> *@
+                <div class="flex items-center gap-3 mb-3">
+                    <UiSelect Icon="mdi mdi-file-document"
+                              Placeholder="Chọn đối tượng"
+                              Items="ListDTKH.Select(x => new UiSelect.SelectItem(x.MaDoiTuongKhachHang!, x.TenDoiTuongKhachHang!))"
+                              @bind-Value="selectedLoaiKhachHang"
+                              OnChange="OnDTKHChanged" />
+                </div>
+                <div class="flex items-center gap-3 my-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Mã khách hàng
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Tên khách hàng
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Số ĐT/Email
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Địa chỉ
+                                    </th>
+                                    <th style="width: 90px">
+                                        &nbsp;
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listKH != null && listKH.Count > 0)
+                                {
+                                    @foreach (var item in listKH)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@item.STT</span>
+                                            </td>
+                                            <td><div class="item-phieu">@item.MaKhachHangTam</div></td>
+                                            <td>
+                                                <span>@item.TenKhachHang</span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex wraper-2"><span class="icon-index me-1"><i class="bi bi-telephone"></i></span>@item.SoDienThoai</div>
+                                                <div class="mt-1 d-flex wraper-1"><span class="icon-index me-1"><i class="bi bi-envelope"></i></span>@item.Email</div>
+                                            </td>
+                                            <td>
+                                                <span>@item.DiaChiThuongTru</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center align-items-center">
+                                                    <div class="icon-button" data-title="Chọn" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => TriggerChoose(item)"><span><i class="bi bi-check-circle"></i></span></a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (listKH == null || !listKH.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<KhachHangPagingDto?> OnSelected { get; set; }
+    private List<KhDmdoiTuongKhachHang> ListDTKH = new();
+    private string? selectedLoaiKhachHang;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<KhachHangPagingDto> listKH = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListDTKH = await KhachHangTamService.GetByLoaiKhachHangPopupAsync();
+        await LoadKhachHang();
+    }
+
+    private async Task TriggerChoose(KhachHangPagingDto? item)
+    {
+        await OnSelected.InvokeAsync(item);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupChonKHModalTam");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "LoaiKH", "Chọn đối tượng khách hàng", true);
+        }
+    }
+
+    // private async Task OnDTKHChanged(ChangeEventArgs e)
+    // {
+    //     var newKH = e.Value?.ToString();
+    //     if (newKH == selectedLoaiKhachHang || isLoading)
+    //     {
+    //         return;
+    //     }
+    //     selectedLoaiKhachHang = newKH;
+    //     _page = 1;
+    //     await LoadKhachHang();
+    // }
+
+    private async Task OnDTKHChanged(string value)
+    {
+        selectedLoaiKhachHang = string.IsNullOrWhiteSpace(value) ? null : value;
+        _page = 1;
+        await LoadKhachHang();
+    }
+
+    private async Task LoadKhachHang()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await PhieuGiuChoService.GetPagingKhachHangPopupAsync(selectedLoaiKhachHang, _page, _pageSize, search);
+            listKH = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadKhachHang();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        await LoadKhachHang(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadKhachHang();
+    }
+}

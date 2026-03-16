@@ -1,0 +1,126 @@
+﻿<div class="wrapper-button-head-table mb-2 w-100">
+    <div class="section-header">
+        <!-- Click vào mũi tên + text để sổ / thu -->
+        <div class="section-title" @onclick="Toggle">
+            <i class="mdi @(isExpanded ? "mdi-chevron-down" : "mdi-chevron-right") arrow-toggle"></i>
+            <span>@Title</span>
+        </div>
+
+        <div class="section-actions">
+            @if (OnAdd.HasDelegate)
+            {
+                <button type="button"
+                        class="icon-button"
+                        data-title="Thêm"
+                        data-position="right"
+                        @onclick="OnAddClicked">
+                    <i class="mdi mdi-playlist-plus"></i>
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@if (isExpanded)
+{
+    <div class="section-body">
+        @ChildContent
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public EventCallback OnAdd { get; set; }
+
+    [Parameter] public bool DefaultExpanded { get; set; } = true;
+
+    private bool isExpanded;
+
+    protected override void OnInitialized()
+    {
+        isExpanded = DefaultExpanded;
+    }
+
+    private void Toggle()
+    {
+        isExpanded = !isExpanded;
+    }
+
+    private async Task OnAddClicked()
+    {
+        // Nếu đang đóng thì mở ra trước
+        if (!isExpanded)
+        {
+            isExpanded = true;
+            StateHasChanged();
+        }
+
+        if (OnAdd.HasDelegate)
+        {
+            await OnAdd.InvokeAsync();
+        }
+    }
+}
+
+<style>
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 4px 0;
+    }
+
+    .section-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 6px; /* nút + cách chữ Block một xíu */
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 600;
+        color: #333;
+    }
+
+        .section-title span {
+            font-size: 14px;
+        }
+
+    .arrow-toggle {
+        font-size: 18px;
+        color: #f6a623;
+        transition: transform 0.2s ease;
+    }
+
+    /* icon-button dùng chung */
+    .icon-button {
+        background: none;
+        border: none;
+        padding: 3px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s ease, transform 0.1s ease;
+        color: #f6a623;
+    }
+
+        .icon-button i {
+            font-size: 18px;
+        }
+
+        .icon-button:hover {
+            background: #fff3d6;
+            transform: translateY(-1px);
+        }
+
+</style>

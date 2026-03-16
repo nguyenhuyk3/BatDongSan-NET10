@@ -1,0 +1,615 @@
+﻿@page "/canho"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.CanHo
+@using VTTGROUP.Domain.Model.View
+@using System.Data
+@using System.Linq
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject ViewService ViewService
+@inject CanHoService CanHoService
+@inject BlockService BlockService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Danh sách căn hộ</h1>
+<div class="rounded-xl bg-white wraper-content-page page-giohang" style="overflow: hidden;">
+	<div class="relative z-50">
+		<div class="flex flex-wrap align-items-center gap-3 px-4 py-3 wrapper-infor-top">
+			<UiSelect Icon="mdi mdi-file-document"
+					  Placeholder="Chọn dự án"
+					  Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+					  @bind-Value="selectedMaDuAn"
+					  OnChange="OnDuAnChanged" />
+
+			<div class="col-search wapper-congtrinh container-form droplist-index">
+				<div class="result-label-icon">
+					<i class="mdi mdi-file-document"></i>
+					<select id="MaBlock" class="form-control" multiple @ref="selectBlockRef">
+						@foreach (var item in ListBlock)
+						{
+							<option value="@(item.MaBlock)">@item.TenBlock</option>
+						}
+					</select>
+				</div>
+			</div>
+
+			@* <div class="ml-auto">
+				<div class="container-filter-home">
+					<div class="flex items-center gap-2">
+						<ZoomSlider Min="10" Max="200" ZoomValue="@zoom" OnZoomChanged="HandleZoomChange" />
+						<div class="icon-button" data-title="Toàn màn hình" data-position="left" @onclick="() => EnableFullScreen()">
+							<i class="mdi mdi-arrow-expand"></i>
+						</div>
+					</div>
+				</div>
+			</div> *@
+		</div>
+		<div class="wrapper-status px-4 py-3">
+			<div class="ml-auto">
+				<div id="scrollWrapper" class="wraper-list-dot trangthai-canho trangthai-giohang">
+					@if (DanhSachCanHo != null && DanhSachCanHo.Any() && ListHienTrang != null && ListHienTrang.Any())
+					{
+						<ul>
+							@foreach (var d in ListHienTrang)
+							{
+								<li><span style="background-color:@d.MaMau; border-color:@d.MaMau"></span>@d.TenTrangThai @($"({string.Format("{0:#,#0}", d.SoLuong)})")</li>
+							}
+						</ul>
+					}
+				</div>
+			</div>
+		</div>
+	</div>
+	@* 	<div class="view-canho" id="container-view-canho">
+		@if (DanhSachCanHo != null && DanhSachCanHo.Any())
+		{
+			bool coCanHoThuc = DanhSachCanHo.Any(x => !string.IsNullOrWhiteSpace(x.TenTang) && !string.IsNullOrWhiteSpace(x.TenSanPham) && !string.IsNullOrWhiteSpace(x.TenTruc));
+			if (coCanHoThuc)
+			{
+				<table class="floor-table">
+					<thead>
+						<tr>
+							<th class="floor-label-header">Tầng</th>
+							@for (int i = 0; i < blocks.Count; i++)
+							{
+								var block = blocks[i];
+								var isLastBlock = i == blocks.Count - 1;
+								var totalCol = MatCanHo.Sum(mat => GetTrucs(block, mat).Count) + (MatCanHo.Count - 1);
+								<th colspan="@totalCol" class="th-block border text-center uppercase">Block @block</th>
+
+								if (!isLastBlock)
+								{
+									<th class="bg-white space-block"></th>
+								}
+							}
+						</tr>
+					</thead>
+
+					<tbody>
+						@foreach (var tang in TangList)
+						{
+							<tr>
+								<td class="floor-label">@tang</td>
+								@for (int i = 0; i < blocks.Count; i++)
+								{
+									var block = blocks[i];
+									var isLastBlock = i == blocks.Count - 1;
+
+									foreach (var mat in MatCanHo)
+									{
+										var trucList = GetTrucs(block, mat);
+										foreach (var truc in trucList)
+										{
+											var canHo = GetCanHo(block, tang, truc, mat);
+											<td class="border text-center">
+												@if (canHo != null)
+												{
+													<div class="apartment default" @onclick="() => OnViewCH(canHo)">
+														@canHo.TenSanPham
+													</div>
+												}
+												else
+												{
+													<div class="no-default"></div>
+												}
+											</td>
+										}
+
+										if (mat != MatCanHo.Last())
+										{
+											<td class="bg-white space-truc"></td>
+										}
+									}
+
+									if (!isLastBlock)
+									{
+										<td class="bg-white space-block"></td>
+									}
+								}
+							</tr>
+						}
+					</tbody>
+
+					<!-- 4. Footer: TRỤC LẦN NỮA -->
+					<tfoot>
+						<tr>
+							<td class="floor-label-footer"></td>
+							@for (int i = 0; i < blocks.Count; i++)
+							{
+								var block = blocks[i];
+								var isLastBlock = i == blocks.Count - 1;
+
+								foreach (var mat in MatCanHo)
+								{
+									var trucList = GetTrucs(block, mat);
+									foreach (var truc in trucList)
+									{
+										<td class="td-truc bg-white border text-center">@truc</td>
+									}
+
+									if (mat != MatCanHo.Last())
+									{
+										<td class="bg-white space-truc"></td>
+									}
+								}
+
+								if (!isLastBlock)
+								{
+									<td class="bg-white space-block"></td>
+								}
+							}
+						</tr>
+						<tr>
+							<td class="floor-label-footer"></td>
+							@for (int i = 0; i < blocks.Count; i++)
+							{
+								var block = blocks[i];
+								var isLastBlock = i == blocks.Count - 1;
+
+								foreach (var mat in MatCanHo)
+								{
+									var trucList = GetTrucs(block, mat);
+									<td colspan="@trucList.Count" class="td-mat bg-white text-center border">@mat</td>
+
+									if (mat != MatCanHo.Last())
+									{
+										<td class="bg-white space-truc"></td>
+									}
+								}
+
+								if (!isLastBlock)
+								{
+									<td class="bg-white space-block"></td>
+								}
+							}
+						</tr>
+					</tfoot>
+				</table>
+			}
+			else
+			{
+				<div class="flex justify-center items-center relative wraper-no-apartment">
+					<img src="assets/images/no-department.png" alt="Chưa có sơ đồ căn hộ"
+						 class="max-w-full max-h-full object-contain" />
+				</div>
+			}
+		}
+		else
+		{
+			<div class="flex justify-center items-center relative wraper-no-apartment">
+				<img src="assets/images/no-department.png" alt="Chưa có sơ đồ căn hộ"
+					 class="max-w-full max-h-full object-contain" />
+			</div>
+		}
+	</div>
+ *@
+	<div class="view-canho view-giohang" id="container-view-canho">
+		@if (DanhSachCanHo != null && DanhSachCanHo.Any())
+		{
+			bool coCanHoThuc = DanhSachCanHo.Any(x => !string.IsNullOrWhiteSpace(x.TenTang) && !string.IsNullOrWhiteSpace(x.TenSanPham) && !string.IsNullOrWhiteSpace(x.MaTruc));
+			if (coCanHoThuc)
+			{
+				if (SelectedBlockList.Count == 1)
+				{
+					var blockFirst = blocks[0];
+					var totalCol = MatCanHo.Sum(mat => GetTrucs(blockFirst, mat.MaView).Count) + (MatCanHo.Count - 1) - 1;
+					<table class="floor-table">
+						<thead>
+							<tr><th class="floor-label-header">Tầng</th><th colspan="@totalCol" class="th-block border text-center">Block @blockFirst</th></tr>
+						</thead>
+
+						<tbody>
+							@foreach (var tang in TangList)
+							{
+								<tr>
+									<td class="floor-label @blockFirst-tang-@tang">@tang</td>
+									@for (int i = 0; i < blocks.Count; i++)
+									{
+										var block = blocks[i];
+										var isLastBlock = i == blocks.Count - 1;
+
+										foreach (var mat in MatCanHo)
+										{
+											var trucList = GetTrucs(block, mat.MaView);
+											foreach (var truc in trucList)
+											{
+												var canHo = GetCanHo(block, tang, truc.MaTruc, mat.MaView);
+												<td class="border text-center">
+													@if (canHo != null)
+													{
+														<div class="apartment default @(canHo.IsGoc == true ? "canho-goc" : "")" @onclick="() => OnViewCH(canHo)" id-block="@canHo.TenBlock" id-truc="truc-@(canHo.MaTruc)" id-tang="tang-@(canHo.TenTang)" style="background-color:@(canHo.MaMauTrangThai)!important; color:@(canHo.MaMauChu)!important">
+															<span>@canHo.TenSanPham</span>
+															<div class="label-dongia" style="color:@(canHo.MaMauChu)!important">@(canHo.GiaBan > 0 ? string.Format("{0:#,##0}", canHo.GiaBan) : "")</div>
+															@if (canHo.IsGoc == true)
+															{
+																<span class="rg-goc" style="border-top-color:@(canHo.MaMauGoc)!important"></span>
+															}
+														</div>
+													}
+													else
+													{
+														<div class="no-default">&nbsp;</div>
+													}
+												</td>
+											}
+										}
+									}
+								</tr>
+							}
+						</tbody>
+
+						<!-- 4. Footer: TRỤC LẦN NỮA -->
+						<tfoot>
+							<tr>
+								<td class="floor-label-footer"></td>
+								@foreach (var mat in MatCanHo)
+								{
+									var trucList = GetTrucs(blockFirst, mat.MaView);
+									foreach (var truc in trucList)
+									{
+										<td class="td-truc border text-center @blockFirst-truc-@(truc.MaTruc)">Trục @truc.TenTruc</td>
+									}
+								}
+							</tr>
+							<tr>
+								@for (int i = 0; i < blocks.Count; i++)
+								{
+									var block = blocks[i];
+									var isLastBlock = i == blocks.Count - 1;
+
+									foreach (var mat in MatCanHo)
+									{
+										var trucList = GetTrucs(block, mat.MaView);
+										<th colspan="@trucList.Count" class="td-mat text-center border">@mat.TenView</th>
+									}
+								}
+							</tr>
+						</tfoot>
+					</table>
+				}
+				else
+				{
+					@for (int i = 0; i < blocks.Count; i++)
+					{
+						var blockFirst = blocks[i];
+						var totalCol = MatCanHo.Sum(mat => GetTrucs(blockFirst, mat.MaView).Count) + (MatCanHo.Count - 1) - 1;
+						var tangHienThi = GetTangForBlock(blockFirst);
+
+						<table class="floor-table multi-block">
+							<thead>
+								<tr><th class="floor-label-header">Tầng</th><th colspan="@totalCol" class="th-block border text-center">Block @blockFirst</th></tr>
+							</thead>
+							<tbody>
+								@foreach (var tang in tangHienThi)
+								{
+									var isLastBlock = i == blocks.Count - 1;
+
+									<tr>
+										<td class="floor-label @blockFirst-tang-@tang">@tang</td>
+										@foreach (var mat in MatCanHo)
+										{
+											var trucList = GetTrucs(blockFirst, mat.MaView);
+											foreach (var truc in trucList)
+											{
+												var canHo = GetCanHo(blockFirst, tang, truc.MaTruc, mat.MaView);
+												<td class="border text-center">
+													@if (canHo != null)
+													{
+														<div class="apartment default @(canHo.IsGoc == true ? "canho-goc" : "")" @onclick="() => OnViewCH(canHo)" id-block="@canHo.TenBlock" id-truc="truc-@(canHo.MaTruc)" id-tang="tang-@(canHo.TenTang)" style="background-color:@(canHo.MaMauTrangThai)!important; color:@(canHo.MaMauChu)!important">
+															<span>@canHo.TenSanPham</span>
+															<div class="label-dongia" style="color:@(canHo.MaMauChu)!important">@(canHo.GiaBan > 0 ? string.Format("{0:#,##0}", canHo.GiaBan) : "")</div>
+															@if (canHo.IsGoc == true)
+															{
+																<span class="rg-goc" style="border-top-color:@(canHo.MaMauGoc)!important"></span>
+															}
+														</div>
+													}
+													else
+													{
+														<div class="no-default">&nbsp;</div>
+													}
+												</td>
+											}
+										}
+									</tr>
+								}
+							</tbody>
+
+							<!-- 4. Footer: TRỤC LẦN NỮA -->
+							<tfoot>
+								<tr>
+									<td class="floor-label-footer" style="padding:0">
+										@if (!ExpandedBlocks.Contains(blockFirst) && TangList.Count > offset)
+										{
+											<button class="title-label tn-show-all-floor" @onclick="() => ShowAllTangForBlock(blockFirst)" data-title="Xem tất cả" data-position="right">
+												<span class="triple-arrow">
+													<i class="bi bi-chevron-double-down"></i>
+													<i class="bi bi-chevron-double-down"></i>
+												</span>
+											</button>
+										}
+										@if (ExpandedBlocks.Contains(blockFirst))
+										{
+											<button class="title-label tn-show-all-floor" @onclick="() => HideAllTangForBlock(blockFirst)" data-title="Thu gọn" data-position="right">
+												<span class="triple-arrow-up">
+													<i class="bi bi-chevron-double-up"></i>
+													<i class="bi bi-chevron-double-up"></i>
+												</span>
+											</button>
+										}
+									</td>
+									@foreach (var mat in MatCanHo)
+									{
+										var trucList = GetTrucs(blockFirst, mat.MaView);
+										foreach (var truc in trucList)
+										{
+											<td class="td-truc border text-center @blockFirst-truc-@(truc.MaTruc)">Trục @truc.TenTruc</td>
+										}
+									}
+								</tr>
+								<tr>
+									<th class="floor-label-header"></th>
+									@foreach (var mat in MatCanHo)
+									{
+										var trucList = GetTrucs(blockFirst, mat.MaView);
+										<th colspan="@trucList.Count" class="td-mat text-center border">@mat.TenView</th>
+									}
+								</tr>
+							</tfoot>
+						</table>
+					}
+				}
+			}
+			else
+			{
+				<div class="flex justify-center items-center relative wraper-no-apartment">
+					<img src="assets/images/no-department.png" alt="Chưa có sơ đồ căn hộ"
+						 class="max-w-full max-h-full object-contain" />
+				</div>
+			}
+		}
+		else
+		{
+			<div class="flex justify-center items-center relative wraper-no-apartment">
+				<img src="assets/images/no-department.png" alt="Chưa có sơ đồ căn hộ"
+					 class="max-w-full max-h-full object-contain" />
+			</div>
+		}
+	</div>
+</div>
+
+<CanHoDetails @ref="canHoModalRef" />
+@code {
+	private List<SoDoCanHoModel> DanhSachCanHo = new();
+	private List<ViewModel> MatCanHo = new();
+	private Dictionary<string, List<SoDoCanHoModel>> GroupByBlock = new();
+	private List<string> TangList = new();
+	private List<string> blocks = new();
+	private List<DaDanhMucDuAn> ListDA = new();
+	private List<DaDanhMucBlock> ListBlock = new();
+	private List<HienTrangKinhDoanDto> ListHienTrang = new();
+	Dictionary<string, List<CanHoModel>>? CanHoByTang;
+	private string? searchCanHo;
+	private string? selectedMaDuAn;
+	private string? selectedBlock;
+	private DataTable? DataTable;
+	private ElementReference selectBlockRef;
+	public List<string> SelectedBlockList { get; set; } = new();
+	private CanHoDetails? canHoModalRef;
+
+	private bool _shouldScaleAfterRender;
+
+	private int zoom = 100;
+	protected override async Task OnInitializedAsync()
+	{
+		ListDA = await CanHoService.GetByDuAnAsync();
+		if (ListDA != null && ListDA.Any())
+		{
+			selectedMaDuAn = ListDA?.FirstOrDefault()?.MaDuAn;
+		}
+
+		MatCanHo = await ViewService.GetByDuAnAsync(selectedMaDuAn);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await BaseService.CheckPermissionAsync("ViewTongQuan", VuViec.Xem.GetDescription());
+			await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+			await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "MaBlock", "Chọn block", true, DotNetObjectReference.Create(this));
+			if (!string.IsNullOrEmpty(selectedMaDuAn))
+			{
+				await JS.InvokeVoidAsync("select2Helper.setValue", "MaDuAn", selectedMaDuAn);
+			}
+		}
+		if (_shouldScaleAfterRender)
+		{
+			_shouldScaleAfterRender = false;
+			//await JS.InvokeVoidAsync("autoScaleSoDoCanHo");
+			await JS.InvokeVoidAsync("soDoCanHo.init", "#container-view-canho");
+		}
+	}
+
+	private async Task OnDuAnChanged(string value)
+	{
+		selectedMaDuAn = string.IsNullOrWhiteSpace(value) ? null : value;
+		ListBlock.Clear();
+		selectedBlock = null;
+		SelectedBlockList = new();
+		ListBlock = await BlockService.GetBlocksByMaDuAnAsync(selectedMaDuAn);
+		MatCanHo = await ViewService.GetByDuAnAsync(selectedMaDuAn);
+		_shouldScaleAfterRender = true;
+		ResetAllTangForBlock();
+		await GetSoDoCanHo();
+	}
+
+	// private async Task OnBlockChanged(ChangeEventArgs e)
+	// {
+	// 	selectedBlock = e.Value?.ToString();
+	// 	await GetSoDoCanHo();
+	// }
+	[JSInvokable]
+	public async Task OnSelectMultiChanged(string id, string[] selectedBlocks)
+	{
+		SelectedBlockList = selectedBlocks.ToList();
+		selectedBlock = string.Join(',', SelectedBlockList.ToArray());
+		_shouldScaleAfterRender = true;
+		ResetAllTangForBlock();
+		await GetSoDoCanHo();
+	}
+
+	private async Task GetSoDoCanHo()
+	{
+		DanhSachCanHo = await CanHoService.GetSoDoCanHoAsync(selectedMaDuAn, selectedBlock);
+		GroupByBlock = DanhSachCanHo
+		.GroupBy(x => x.TenBlock ?? string.Empty)
+		.ToDictionary(g => g.Key ?? string.Empty, g => g.OrderBy(x => x.ThuTuHienThi ?? 1).ToList());
+
+		blocks = GroupByBlock.Keys.ToList();
+
+		TangList = DanhSachCanHo
+		.Select(x => x.TenTang)
+		.Distinct()
+		.OrderByDescending(x => int.TryParse(x, out var t) ? t : 0)
+		.ToList();
+
+		ListHienTrang = DanhSachCanHo
+		.GroupBy(x => new { x.TrangThai, x.MaMauTrangThai, x.TenTrangThai })
+		.Select(g => new HienTrangKinhDoanDto
+			{
+				MaTrangThai = g.Key.TrangThai,
+				MaMau = g.Key.MaMauTrangThai,
+				TenTrangThai = g.Key.TenTrangThai,
+				SoLuong = g.Count()
+			})
+		.OrderBy(x => x.MaTrangThai)
+		.ToList();
+
+		//DataTable = await CanHoService.GetSoDoCanHoAsync(selectedMaDuAn, selectedBlock);
+		// var result = await CanHoService.GetSoDoCanHoAsync(selectedMaDuAn, selectedBlock);
+		// CanHoByTang = result
+		// 	.Where(x => x.Tang != null && !string.IsNullOrEmpty(x.Tang.TenTang))
+		// 	.GroupBy(x => x.Tang!.TenTang!)
+		// 	.ToDictionary(g => g.Key, g => g.OrderBy(x => x.TenCanHo).ToList());
+		//_shouldScaleAfterRender = true;
+		StateHasChanged();
+	}
+
+	private List<TrucSoDoModel> GetTrucs(string block, string matCanHo)
+	{
+		if (!GroupByBlock.ContainsKey(block)) return new();
+
+		return GroupByBlock[block]
+			.Where(x => x.MaView?.Trim() == matCanHo?.Trim())
+			.OrderBy(x => x.ThuTuHienThi)
+			.Select(x => new TrucSoDoModel
+				{
+					MaTruc = x.MaTruc,
+					TenTruc = x.TenTruc
+				})
+			.DistinctBy(x => x.MaTruc)
+			.ToList();
+	}
+
+	private SoDoCanHoModel? GetCanHo(string block, string tang, string truc, string mat)
+	{
+		return GroupByBlock[block].FirstOrDefault(x =>
+			x.TenTang?.Trim() == tang?.Trim() &&
+			x.MaTruc?.Trim() == truc?.Trim() &&
+			x.MaView?.Trim() == mat?.Trim()
+		);
+	}
+
+	private async Task EnableFullScreen()
+	{
+		await JS.InvokeVoidAsync("fullscreenHelper.enableFullScreen", "container-view-canho");
+	}
+	private async Task OnViewCH(SoDoCanHoModel? ch)
+	{
+		await canHoModalRef.Show(ch);
+	}
+
+	private void Insert()
+	{
+		Nav.NavigateTo("/canho/create");
+	}
+
+	private void HandleZoomChange(int value)
+	{
+		zoom = value;
+		StateHasChanged();
+	}
+
+	private async Task OnHoverCanHo(string maTruc, string tenTang)
+	{
+		await JS.InvokeVoidAsync("soDoCanHo.highlight", maTruc, tenTang);
+	}
+
+	private async Task OnLeaveCanHo()
+	{
+		await JS.InvokeVoidAsync("soDoCanHo.clearHighlight");
+	}
+
+	private HashSet<string> ExpandedBlocks { get; set; } = new();
+	private int offset = 5;
+	private void ShowAllTangForBlock(string block)
+	{
+		if (!ExpandedBlocks.Contains(block))
+		{
+			ExpandedBlocks.Add(block);
+			_shouldScaleAfterRender = true;
+		}
+	}
+	private void HideAllTangForBlock(string block)
+	{
+		if (ExpandedBlocks.Contains(block))
+		{
+			ExpandedBlocks.Remove(block);
+		}
+	}
+
+	private void ResetAllTangForBlock()
+	{
+		if (SelectedBlockList.Count > 0)
+		{
+			var listBlock = ListBlock.Where(d => SelectedBlockList.Contains(d.MaBlock)).Select(d => d.TenBlock).ToList();
+			ExpandedBlocks.RemoveWhere(blockName => !listBlock.Contains(blockName));
+		}
+		else
+		{
+			ExpandedBlocks = new();
+		}
+	}
+	private IEnumerable<string> GetTangForBlock(string block)
+	{
+		if (ExpandedBlocks.Contains(block))
+			return TangList;
+
+		return TangList.Take(offset);
+	}
+}

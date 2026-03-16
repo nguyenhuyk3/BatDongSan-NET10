@@ -1,0 +1,282 @@
+﻿@page "/dotmoban"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.DMDotMoBan
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject DMDotMoBanCanHoService DMDotMoBanCanHoService
+@inject CanHoService CanHoService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">ĐỢT MỞ BÁN CĂN HỘ</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-office-building-outline"
+                      Placeholder="Chọn dự án"
+                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                      @bind-Value="selectedLoaiKhachHang"
+                      OnChange="OnDuAnChanged" />
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Đợt mở bán" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center">STT</th>
+                        <th class="text-center" style=" width: 150px">Đợt mở bán</th>
+                        <th class="text-center" style="width:200px">Dự án</th>
+                        <th style="width: 120px" class="text-center">Thứ tự hiển thị</th>
+                        <th style="width: 100px" class="text-center">Ngày</th>
+                        <th style="width: 90px">&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (danhMucDMBs != null && danhMucDMBs.Any())
+                    {
+                        foreach (var item in danhMucDMBs)
+                        {
+                            <tr class="initialized">
+                                <td style="text-align:center">
+                                    <span>@item.STT</span>
+                                </td>
+                                <td>
+                                    <div class="item-phieu cursor-pointer underline decoration-dotted"
+                                         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Tên đợt mở bán"
+                                         @onclick="() => OnEditRecord(item.MaDotMoBan)">
+                                        @item.TenDotMoBan
+                                    </div>
+                                    <div data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Tên người lập">
+                                        <i class="bi bi-person-fill me-1"></i>@item.HoVaTen
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="d-flex wraper-2">@item.TenDuAn</div>
+                                </td>
+
+                                <td style="text-align:center">
+                                    <span>@item.ThuTuHienThi</span>
+                                </td>
+
+                                <td>
+                                    <div><i class="bi bi-calendar-range me-1"></i><span>@string.Format("{0:dd/MM/yyyy}", item.NgayBatDau)</span></div>
+                                    <div><i class="bi bi-calendar-week me-1"></i><span>@string.Format("{0:dd/MM/yyyy}", item.NgayKetThuc)</span></div>
+                                </td>
+
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => OnEditRecord(item.MaDotMoBan!)">
+                                                <span><i class="mdi mdi-pencil"></i></span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaDotMoBan!)">
+                                                <span><i class="mdi mdi-delete"></i></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (danhMucDMBs == null || !danhMucDMBs.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa đợt mở bán này <strong>@selectedMaKH</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</div>
+
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string? selectedLoaiKhachHang;
+    private string? selectedMaKH;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<DanhMucDotMoBanPagingDto> danhMucDMBs = new();
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListDA = await CanHoService.GetByDuAnAsync();
+        await LoadKhachHangTamData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("DotMoBanCH", VuViec.Xem.GetDescription());
+            _dotNetRef = DotNetObjectReference.Create(this);
+            // await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+        }
+        // if (danhMucDMBs.Any())
+        // {
+        //     var config = new List<FixColumnConfig>
+        //     {
+        //         new FixColumnConfig { left = 0 },
+        //         new FixColumnConfig { right = 0 }
+        //     };
+        //     await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+        // }
+
+    }
+
+    private async Task ShowConfirmDelete(string maDotMoBan)
+    {
+        var coQuyen = await BaseService.KiemTraQuyenVuViec("DotMoBanCH", VuViec.Xoa.GetDescription());
+        if (coQuyen == false)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn không có quyền xóa. Xin vui lòng liên hệ quản trị", false);
+            return;
+        }
+        else
+        {
+            selectedMaKH = maDotMoBan;
+            await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaKH == null || string.IsNullOrEmpty(selectedMaKH))
+        {
+            return;
+        }
+        var result = await DMDotMoBanCanHoService.DeleteDMBAsync(selectedMaKH);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadKhachHangTamData();
+        selectedMaKH = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task OnDTKHChanged(ChangeEventArgs e)
+    {
+        var maDuAn = e.Value?.ToString();
+        if (maDuAn == selectedLoaiKhachHang || isLoading)
+        {
+            return;
+        }
+        selectedLoaiKhachHang = maDuAn;
+        _page = 1;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task OnDuAnChanged(string? maDuAn)
+    {
+        if (isLoading) return;
+
+        selectedLoaiKhachHang = string.IsNullOrWhiteSpace(maDuAn) ? null : maDuAn;
+
+        _page = 1;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task LoadKhachHangTamData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await DMDotMoBanCanHoService.GetPagingAsync(selectedLoaiKhachHang, _page, _pageSize, search);
+            danhMucDMBs = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadKhachHangTamData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task OnEditRecord(string maDotMoBan)
+    {
+        Nav.NavigateTo($"/dotmoban/edit/{maDotMoBan}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo("/dotmoban/create");
+        return;
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadKhachHangTamData();
+    }
+
+    async Task NextPage()
+    {
+        _page++;
+        await LoadKhachHangTamData();
+    }
+
+    async Task PreviousPage()
+    {
+        _page--;
+        await LoadKhachHangTamData();
+    }
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+}

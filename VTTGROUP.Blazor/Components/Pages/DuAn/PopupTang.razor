@@ -1,0 +1,500 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.Tang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject LoadingService Loading
+@inject DuAnService DuAnService
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupTangModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh mục tầng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="popup-tang-header">
+                    <div class="popup-tang-info">
+                        <div class="general-info">
+                            <div class="wapper-input ">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Dự án</span>
+                                        <span class="input-value">@TenDuAn</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input ">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Block</span>
+                                        <span class="input-value">@TenBlock</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="popup-tang-actions">
+                        <button type="button"
+                                class="btn-action"
+                                title="Add"
+                                @onclick="AddTang">
+                            <i class="mdi mdi-playlist-plus"></i>
+                            <span>Add</span>
+                        </button>
+
+                        <button type="button"
+                                class="btn-action"
+                                title="Import"
+                                @onclick="Import">
+                            <i class="mdi mdi-cloud-upload"></i>
+                            <span>Import</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="container-table-detail tang-table">
+                    <div class="container-table-fixed has-paging rows-10">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 70px" class="text-center">
+                                        Mã tầng
+                                    </th>
+                                    <th style="width: 65px" class="text-center">
+                                        Tên tầng
+                                    </th>
+                                    <th style="width: 65px" class="text-center">
+                                        STT hiển thị
+                                    </th>
+                                    <th style="width: 70px" class="text-center">
+                                        Hệ số
+                                    </th>
+                                    <th style="width: 300px" class="text-center">
+                                        Hình ảnh
+                                    </th>
+                                    <th style="width: 50px" class="text-center">
+                                        <button type="button"
+                                                class="icon-button icon-inline icon-save"
+                                                title="Lưu thay đổi tầng"
+                                                data-title="Lưu thay đổi tầng"
+                                                data-position="right"
+                                                @onclick="SaveTangsList">
+                                            <i class="mdi mdi-content-save save-icon"></i>
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (TangPopups != null && TangPopups.Count > 0)
+                                {
+                                    int sttTang = 0;
+                                    @foreach (var item in TangPopups)
+                                    {
+                                        <tr class="initialized">
+                                            <td>
+                                                @if (item.IsNew == false)
+                                                {
+                                                    <DisableTextBox Value="@item.MaTang" />
+                                                }
+                                                else
+                                                {
+                                                    <InputText @bind-Value="item.MaTang" class="form-control input-validation" />
+                                                }
+                                            </td>
+                                            <td><InputText @bind-Value="item.TenTang" class="form-control input-validation" /></td>
+                                            <td>
+                                                <InputCurrency T="int"
+                                                               Id=@($"STTTangAdd{sttTang+1}")
+                                                               Format="#,##0"
+                                                               CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                               @bind-Value="item.STTTang" />
+                                            </td>
+                                            <td style="text-align:right">
+                                                <InputCurrency T="decimal"
+                                                               Id=@($"HeSoTang{sttTang+1}")
+                                                               Format="#,##0.####"
+                                                               CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                               @bind-Value="item.HeSo" />
+                                            </td>
+                                            <td>
+                                                <div class="tang-image-cell">
+                                                    @if (!string.IsNullOrEmpty(item.HinhAnhUrl))
+                                                    {
+                                                        <!-- Chỉ render khi có hình -->
+                                                        <div class="tang-image-preview has-image">
+                                                            <img src="@item.HinhAnhUrl"
+                                                                 class="tang-thumb-img"
+                                                                 title="Nhấn để xem lớn"
+                                                                 @onclick="@(() => JS.InvokeVoidAsync("window.open", item.HinhAnhUrl, "_blank"))" />
+
+                                                            <!-- Nút Xóa hình -->
+                                                            <button type="button"
+                                                                    class="img-btn-close"
+                                                                    title="Xóa hình"
+                                                                    @onclick="() => RemoveImage(item)">
+                                                                <i class="mdi mdi-close"></i>
+                                                            </button>
+
+                                                            <!-- Nút Tải về (tròn vàng giữa khung) -->
+                                                            <button type="button"
+                                                                    class="img-btn-download"
+                                                                    title="Tải ảnh về"
+                                                                    @onclick="() => DownloadImage(item)">
+                                                                <i class="bi bi-download text-white"></i>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <!-- Không có hình: vẫn giữ chỗ cho cột, nhưng ẩn -->
+                                                        <div class="tang-image-preview no-image"></div>
+                                                    }
+
+                                                    <!-- Ô upload bên phải -->
+                                                    <label class="tang-upload-box">
+                                                        <i class="mdi mdi-upload tang-upload-icon"></i>
+                                                        <span>Click vào để tải ảnh</span>
+                                                        <InputFile class="d-none"
+                                                                   OnChange="@(e => OnImageSelected(item, e))"
+                                                                   accept="image/*" />
+                                                    </label>
+                                                </div>
+                                            </td>
+
+                                            <td class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-delete"
+                                                        title="Xóa"
+                                                        data-title="Xóa"
+                                                        data-position="left"
+                                                        @onclick="() => DeleteRowTang(item)">
+                                                    <i class="mdi mdi-delete"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        sttTang++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (TangPopups == null || !TangPopups.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="SaveTangsList">
+                    Lưu
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="OnClosePupop">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+<ImportFileModal @ref="importFileModalRef" OnUploaded="HandleFileUpload" />
+@code {
+    [Parameter]
+    public string? MaBlock { get; set; }
+    public string? TenBlock { get; set; }
+    public string? MaDuAn { get; set; }
+    public string? TenDuAn { get; set; }
+    private bool isLoading = false;
+    List<TangModel> TangPopups = new();
+
+    [Parameter] public EventCallback<TangSavedArgs> OnSaved { get; set; }
+    private ImportFileModal? importFileModalRef;
+    public sealed class TangSavedArgs
+    {
+        public string MaBlock { get; set; } = "";
+        public int SoLuongTang { get; set; }
+    }
+
+    private async Task LoadDanhSachTangData()
+    {
+        isLoading = true;
+        try
+        {
+            var data = await DuAnService.GetTangAsync(MaDuAn, MaBlock, string.Empty);
+            TangPopups = data;
+            await ReapplyCurrencyFormat2();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public async Task Show(string maDuAn, string tenDuAn, string maBock, string tenBlock)
+    {
+        MaDuAn = maDuAn;
+        TenDuAn = tenDuAn;
+        MaBlock = maBock;
+        TenBlock = tenBlock;
+        TangPopups = new List<TangModel>();
+
+        await LoadDanhSachTangData();
+
+        // 👉 Show popup
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupTangModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+        StateHasChanged();
+    }
+
+    public async Task OnClosePupop()
+    {
+        // IsSelectAll = false;
+        // foreach (var item in PhieuGiuChoPopups)
+        // {
+        //     item.IsSelected = IsSelectAll;
+        // }
+        // // 👉 Reset dữ liệu filter cũ
+        // search = string.Empty;
+        // StateHasChanged();
+    }
+
+    private async Task DeleteRowTang(TangModel? item)
+    {
+        TangPopups.Remove(item);
+    }
+
+    private async Task AddTang()
+    {
+        if (TangPopups == null)
+            return;
+
+        var newTang = new TangModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSo = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        TangPopups.Insert(0, newTang);
+        await ReapplyCurrencyFormat2();
+    }
+
+    private async Task Import()
+    {
+        await importFileModalRef!.ShowFileModal(MaDuAn ?? string.Empty, MaBlock ?? string.Empty);
+    }
+
+    private async Task SaveTangsList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+            "validateContainer",
+            ".tang-table",                      // id container phần Block
+            "",           // (tuỳ chọn) hộp báo lỗi đang dùng
+            "" // (tuỳ chọn) message
+    );
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveTangsAsync(MaDuAn, MaBlock, TangPopups, _env.WebRootPath);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại diện tích coi như không còn "mới" nữa
+                if (TangPopups != null)
+                {
+                    foreach (var b in TangPopups)
+                    {
+                        b.IsNew = false;
+                    }
+                    // ✅ Sắp xếp tăng dần theo STT (null xuống cuối), rồi theo MaTang để ổn định
+                    TangPopups = TangPopups
+                        .OrderBy(t => t.STTTang)
+                        .ThenBy(t => t.STTTang)
+                        .ThenBy(t => t.MaTang) // optional: tie-breaker
+                        .ToList();
+                }
+                // 🔔 báo về parent: set SoLuongTang
+                await OnSaved.InvokeAsync(new TangSavedArgs
+                {
+                    MaBlock = MaBlock!,
+                    SoLuongTang = TangPopups.Count
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+            Loading.Hide();
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task OnImageSelected(TangModel item, InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null)
+            return;
+
+        // Validate: phải là file hình
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", "File phải là hình ảnh.", false);
+            return;
+        }
+
+        try
+        {
+            // Thư mục lưu: wwwroot/uploads/tang
+            var uploadFolder = Path.Combine(_env.WebRootPath, "uploads", "Tang");
+            if (!Directory.Exists(uploadFolder))
+            {
+                Directory.CreateDirectory(uploadFolder);
+            }
+
+            var ext = Path.GetExtension(file.Name);
+            var fileName = $"{(item.MaTang ?? "Tang")}_{Guid.NewGuid():N}{ext}";
+            var physicalPath = Path.Combine(uploadFolder, fileName);
+
+            // Giới hạn ~5MB
+            await using var readStream = file.OpenReadStream(5 * 1024 * 1024);
+            await using var writeStream = File.Create(physicalPath);
+            await readStream.CopyToAsync(writeStream);
+
+            // Đường dẫn để hiển thị trên web
+            var relativePath = $"/uploads/Tang/{fileName}";
+
+            // Gán vào model
+            item.HinhAnhUrl = relativePath;
+
+            // Thông báo nhẹ
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Upload hình thành công.", true);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+    }
+
+    private Task RemoveImage(TangModel item)
+    {
+        // Chỉ cần clear URL, khi Lưu sẽ update DB luôn
+        item.HinhAnhUrl = null;
+        return Task.CompletedTask;
+    }
+
+    // private async Task DownloadImage(TangModel item)
+    // {
+    //     if (string.IsNullOrEmpty(item.HinhAnhUrl))
+    //         return;
+
+    //     // Cách đơn giản: mở tab mới, user bấm Save As
+    //     await JS.InvokeVoidAsync("open", item.HinhAnhUrl, "_blank");
+    // }
+
+    private async Task DownloadImage(TangModel item)
+    {
+        if (string.IsNullOrEmpty(item.HinhAnhUrl))
+            return;
+
+        // Lấy tên file từ URL (nếu muốn gợi ý tên file khi tải)
+        string fileName = System.IO.Path.GetFileName(item.HinhAnhUrl);
+
+        await JS.InvokeVoidAsync(
+            "downloadHelper.download",
+            item.HinhAnhUrl,
+            fileName
+        );
+    }
+
+    private async Task HandleFileUpload()
+    {
+        await LoadDanhSachTangData();
+        // 🔔 báo về parent: set SoLuongTang
+        await OnSaved.InvokeAsync(new TangSavedArgs
+        {
+            MaBlock = MaBlock!,
+            SoLuongTang = TangPopups.Count
+        });
+    }
+
+    private async Task ReapplyCurrencyFormat2()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "input-currency", 8, 4);
+    }
+
+}
+<style>
+    /* Header popup tầng */
+    .popup-tang-header {
+        display: flex;
+        flex-direction: column; /* xếp info trên, buttons dưới */
+        align-items: flex-start; /* tất cả căn trái */
+        padding: 4px 0 12px 0;
+        gap: 8px;
+    }
+
+    /* Dự án / Block */
+    .popup-tang-info {
+        display: flex;
+        flex-direction: column;
+        margin: 0 auto;
+        gap: 4px;
+    }
+
+        .popup-tang-info .general-info {
+            margin-bottom: 0;
+        }
+
+        .popup-tang-info .info-row {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #444;
+        }
+
+        .popup-tang-info .label {
+            font-weight: 600;
+            color: #666;
+            min-width: 70px; /* để “Dự án:” và “Block:” thẳng hàng, không bị sít */
+            display: inline-block;
+        }
+
+        .popup-tang-info .value {
+            font-weight: 500;
+        }
+
+    /* Hàng nút Booking + Import bên trái */
+    .popup-tang-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px; /* khoảng cách giữa 2 nút */
+    }
+
+    /* Style nút */
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #f0f0f0;
+        background: #fffdf7;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+        .btn-action i {
+            font-size: 18px;
+            color: #f4b000;
+        }
+
+        .btn-action:hover {
+            background: #fff7e0;
+        }
+</style>

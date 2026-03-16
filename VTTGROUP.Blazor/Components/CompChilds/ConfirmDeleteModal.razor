@@ -1,0 +1,47 @@
+﻿@* GIỮ NGUYÊN class & cấu trúc modal; chỉ mở 2 “slot” Description & DeleteButton *@
+<div class="modal fade" id="@ModalId" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content delete-confirm">
+            <button type="button" class="btn-close delete-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+
+            <div class="delete-head">
+                <div class="delete-badge">
+                    <i class="mdi mdi-alert-circle"></i>
+                </div>
+                <h5 class="delete-title">@Title</h5>
+
+                @if (Description is not null)
+                {
+                    @Description   @* <p class="delete-desc">...</p> do trang gọi truyền vào *@
+                }
+                else
+                {
+                    <p class="delete-desc">Bạn có chắc muốn xóa mục này không?</p>
+                }
+            </div>
+
+            <div class="delete-actions">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">@CancelText</button>
+
+                @if (DeleteButton is not null)
+                {
+                    @DeleteButton  @* <button class="btn-delete" ...>...</button> do trang gọi truyền vào *@
+                }
+                else
+                {
+                    <button type="button" class="btn-delete">Xoá vĩnh viễn</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ModalId { get; set; } = "confirmDeleteModal";  // giữ nguyên id cũ
+    [Parameter] public string Title { get; set; } = "Xác nhận xoá thông tin";
+    [Parameter] public string CancelText { get; set; } = "Huỷ thao tác";
+
+    // 2 slot cần custom
+    [Parameter] public RenderFragment? Description { get; set; }
+    [Parameter] public RenderFragment? DeleteButton { get; set; }
+}

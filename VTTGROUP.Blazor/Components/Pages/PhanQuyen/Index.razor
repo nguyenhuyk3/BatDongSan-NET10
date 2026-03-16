@@ -1,0 +1,391 @@
+﻿@page "/phanquyen"
+@using System.Text.Json
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Blazor.Components.CompChilds
+@inject CongViecService CongViecService
+@inject PhanQuyenService PhanQuyenService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Nhóm người sử dụng</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+	<div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn dự án"
+                      Items="NhomUser.Select(x => new UiSelect.SelectItem(x.MaNhomUser!, x.TenNhomUser!))"
+                      @bind-Value="SelectedMaNhomUser"
+                      OnChange="OnDTKHChanged" />
+			<div class="col-search wapper-congtrinh container-form droplist-tree-index">
+				<div class="result-label-icon">
+					<i class="mdi mdi-file-document"></i>
+					<TreeSelect Items="@CongViec" OnSelected="OnSelected" ItemSelected="@Selected" />
+				</div>
+			</div>
+
+            <div class="ml-auto flex items-center gap-2">
+				<AppButton Label="Nhóm"
+						   Class="button button-action"
+						   IconClass="mdi mdi-account-multiple-plus"
+						   OnClick="() => InsertGroup()" />
+				<AppButton Label="Gán người dùng cho nhóm"
+						   Class="button button-action"
+						   IconClass="mdi mdi-account-network"
+						   OnClick="() => AddUserForGroup()" />
+            </div>
+        </div>
+    </div>
+	<div class="container-table-detail">
+		<div class="container-table-fixed has-paging" id="container-table-fixed">
+			<table class="tbl table-form table-detail treeTable" id="table-data">
+				<thead>
+					<tr class="cls_custome_back">
+						<th style="width: 300px" class="row-tr td-left-fixed text-center">
+							Tên công việc
+						</th>
+						@if (NhomUserSelected != null && NhomUserSelected.Any() == true)
+						{
+							foreach (var item in NhomUserSelected)
+							{
+								<th align="center" class="row-tr text-center" style="width: 130px">
+									@if (item.MaNhomUser != "Admin")
+									{
+										<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Xóa nhóm người dùng" @onclick="() => OnDelGroup(item)" class="icon-remove-header"><i class="bi bi-x-circle"></i></span>
+									}
+									else
+									{
+										<span>&nbsp;</span>
+									}
+									<a class="link-group-item" href="/phanquyen/nhom/@item.MaNhomUser" target="_blank">
+										<GroupBadge GroupCode="@item.MaNhomUser" GroupName="@item.TenNhomUser" DisplayText="@item.MaNhomUser" />
+									</a>
+
+								</th>
+							}
+						}
+					</tr>
+				</thead>
+				<tbody class="content-table">
+					@if (ChiTietCongViecUser != null && ChiTietCongViecUser.Any() == true)
+					{
+						@foreach (var item in ChiTietCongViecUser)
+						{
+							if (IsVisible(item))
+							{
+								<tr id="node-@item.MaCongViec" class="initialized @(item.LevelCay == 0 ? "root-row" : "") @(item.IsCapCon == 0 ? "parent table-group-header" : !string.IsNullOrEmpty(item.TenQuyen) ? "item-row-quyen" : "item-child-row") collapsed">
+									<td style="padding-left:@((item.LevelCay+1) * 16)px!important">
+										<div class="d-flex align-items-center row-item-congviec">
+											<span class="text-gray-500 item-name" @onclick:stopPropagation="true" @onclick="() => Toggle(item.MaCongViec)">
+												@if (HasChildren(item) && string.IsNullOrEmpty(item.MaVuViec))
+												{
+													<i class="mdi @(expandedIds.Contains(item.MaCongViec!) ? "mdi-chevron-down" : "mdi-chevron-right")"></i>
+												}
+												else
+												{
+													<text><span class="dot-item pl-1"></span></text>
+												}
+											</span>
+											<span>@(!string.IsNullOrEmpty(item.TenQuyen) ? item.TenQuyen : item.TenCongViec)</span>
+										</div>
+									</td>
+
+									@if (item.IsCapCon != 0)
+									{
+										foreach (var vv in NhomUserSelected)
+										{
+											var classTong = string.IsNullOrEmpty(item.MaVuViec) ? $"congviec-parent {item.MaCongViec}{vv.MaNhomUser}" : "";
+											var data = $"{item.MaCongViec}{vv.MaNhomUser}";
+											var vvModel = item.nhomUsers?.FirstOrDefault(x => x.MaNhom == vv.MaNhomUser && x.MaCongViec == item.MaCongViec && x.MaVuViec == item.MaVuViec);
+
+											<td class="text-center">
+												@if (vvModel != null)
+												{
+													if (!string.IsNullOrEmpty(item.MaVuViec))
+													{
+														<input type="checkbox" class="form-check-input @classTong"
+															   checked="@vvModel.IsCheckedBool" data-u="@data"
+															   @onchange="(e) => OnCheckboxChanged(e, item.MaCongViec!, vv.MaNhomUser!,item.MaVuViec!)" />
+													}
+												}
+												else
+												{
+													if (!string.IsNullOrEmpty(item.MaVuViec))
+													{
+														<input type="checkbox" class="form-check-input @classTong" data-u="@data"
+															   @onchange="(e) => OnCheckboxChanged(e, item.MaCongViec!, vv.MaNhomUser!,item.MaVuViec!)" />
+													}
+													else
+													{
+														var countChecked = item.nhomUsers?.Where(x => x.MaNhom == vv.MaNhomUser && x.MaCongViec == item.MaCongViec).Count();
+														var countVuViec = ChiTietCongViecUser.Where(x => x.MaCha == item.MaCongViec).Count();
+														var checkAll = false;
+														if (countChecked >= countVuViec)
+														{
+															checkAll = true;
+														}
+														<input type="checkbox" class="form-check-input @classTong" data-u="All-@data"
+															   checked="@checkAll"
+															   @onchange="(e) => OnCheckboxChanged(e, item.MaCongViec!, vv.MaNhomUser!,item.MaVuViec!)" />
+													}
+												}
+												<input type="hidden" name="maCongViec" value="@item.MaCongViec" />
+												<input type="hidden" name="maNhomUser" value="@vv.MaNhomUser" />
+												<input type="hidden" name="maVuViec" value="@item.MaVuViec" />
+
+											</td>
+										}
+									}
+									else
+									{
+										<td colspan="@NhomUserSelected.Count()" class="text-center"></td>
+									}
+								</tr>
+							}
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="createNhomUserModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Thêm mới nhóm user</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+			</div>
+			<div class="modal-body" id="modal-body">
+				<EditForm id="formDuAn" EditContext="@editContext">
+					<div class="col-lg-12 mx-auto row">
+						<div class="wapper-input col-lg-12 mb-3">
+							<div class="row">
+								<div class="form-group-input">
+									<span class="title-field">Mã nhóm <i class="point-validate">*</i></span>
+									<InputText class="form-control input-validation" @bind-Value="NhomUserSave.MaNhomUser" id="MaNhomUser" />
+									<span class="error-validation">Vui lòng nhập mã nhóm</span>
+								</div>
+							</div>
+
+						</div>
+						<div class="wapper-input col-lg-12 mb-3">
+							<div class="row">
+								<div class="form-group-input">
+									<span class="title-field">Tên nhóm <i class="point-validate">*</i></span>
+									<InputText class="form-control input-validation" @bind-Value="NhomUserSave.TenNhomUser" id="TenNhomUser" />
+									<span class="error-validation">Vui lòng nhập tên nhóm</span>
+								</div>
+							</div>
+						</div>
+						<div class="wapper-input col-lg-12 mb-3">
+							<div class="row">
+								<div class="form-group-input">
+									<span class="title-field">Ghi chú</span>
+									<textarea class="textarea-input" cols="20" id="GhiChu" @bind="NhomUserSave.GhiChu" rows="5" tabindex="2"></textarea>
+								</div>
+							</div>
+						</div>
+					</div>
+				</EditForm>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Huỷ</button>
+				<button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmSaveNhomUser">Lưu</button>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title">Xác nhận xóa</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+			</div>
+			<div class="modal-body">
+				Bạn có chắc muốn xóa nhóm user <strong>@DeleteNhomUser.TenNhomUser</strong> không?
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+				<button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Xác nhận xóa</button>
+			</div>
+		</div>
+	</div>
+</div>
+@code {
+	private IJSObjectReference? _module;
+	private EditContext editContext;
+	private List<NhomUserModel> NhomUser = new();
+	private List<CongViecModel> CongViec = new();
+	private List<CongViecModel> ChiTietCongViecUser = new();
+	private List<NhomUserModel> NhomUserSelected = new();
+	private NhomUserModel? DeleteNhomUser = new();
+	private NhomUserModel? NhomUserSave = new();
+	private CongViecModel? Selected = new();
+	private HashSet<string> expandedIds = new();
+
+	private string selectedMaNhomUser;
+	private string SelectedMaNhomUser
+	{
+		get => selectedMaNhomUser;
+		set
+		{
+			if (selectedMaNhomUser != value)
+			{
+				selectedMaNhomUser = value;
+				FilterNhomUser();
+			}
+		}
+	}
+
+	private bool IsVisible(CongViecModel item)
+	{
+
+		if (item.LevelCay == 0)
+			return true;
+		var cha = item.MaCha;
+		while (!string.IsNullOrEmpty(cha))
+		{
+			if (!expandedIds.Contains(cha)) return false;
+			cha = ChiTietCongViecUser.FirstOrDefault(x => x.MaCongViec == cha)?.MaCha;
+		}
+		return true;
+
+	}
+	private bool HasChildren(CongViecModel item) =>
+		ChiTietCongViecUser.Any(x => x.MaCha == item.MaCongViec);
+	private bool showDropdown = false;
+
+	private void ToggleDropdown() => showDropdown = !showDropdown;
+
+	private void Toggle(string? id)
+	{
+		if (string.IsNullOrEmpty(id)) return;
+		if (expandedIds.Contains(id)) expandedIds.Remove(id);
+		else expandedIds.Add(id);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await JS.InvokeVoidAsync("select2Helper.initSelectChange", "NhomUser", "Tất cả", true);
+			// await JS.InvokeVoidAsync("tooltipHelper.init");
+			await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaNhomUser");
+			//_module = await JS.InvokeAsync<IJSObjectReference>("import", "/js/phanquyen/phanquyen.js");
+		}
+		if (ChiTietCongViecUser.Any())
+		{
+			var config = new List<FixColumnConfig>
+			{
+				new FixColumnConfig { left = 1 }
+			};
+			await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+			await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 50);
+		}
+
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		editContext = new EditContext(NhomUserSave);
+		CongViec = await CongViecService.GetTreeAllAsync();
+		ChiTietCongViecUser = await PhanQuyenService.GetTreePhanQuyenByCongViecAsync(string.Empty);
+		await LoadNhomUser();
+
+	}
+
+	private async Task LoadNhomUser()
+	{
+		NhomUser = await PhanQuyenService.GetNhomUserAsync();
+		FilterNhomUser();
+	}
+
+	private void FilterNhomUser()
+	{
+		if (string.IsNullOrEmpty(selectedMaNhomUser))
+		{
+			NhomUserSelected = NhomUser; // an toàn nhất
+		}
+		else
+		{
+			var found = NhomUser.Find(x => x.MaNhomUser == selectedMaNhomUser);
+			NhomUserSelected = found != null ? new List<NhomUserModel> { found } : new List<NhomUserModel>();
+		}
+	}
+	private async Task OnSelected(CongViecModel item)
+	{
+		Selected = item;
+		ChiTietCongViecUser = await PhanQuyenService.GetTreePhanQuyenByCongViecAsync(item.MaCongViec!);
+		expandedIds = new();
+		expandedIds.Add(item.MaCha);
+		Toggle(item.MaCongViec);
+		if (item.LevelCay == 2)
+		{
+			expandedIds.Add(item.TreeRoot);
+		}
+	}
+
+	private async Task OnCheckboxChanged(ChangeEventArgs e, string maCongViec, string maNhomUser, string maNhom)
+	{
+		bool isChecked = (bool?)e.Value == true;
+		var result = await PhanQuyenService.UpdateCheckboxNhomUserAsync(maCongViec, maNhomUser, maNhom, isChecked);
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+		ChiTietCongViecUser = await PhanQuyenService.GetTreePhanQuyenByCongViecAsync(Selected.MaCongViec!);
+	}
+
+	private async Task OnDelGroup(NhomUserModel nhom)
+	{
+		DeleteNhomUser = nhom;
+		await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+	}
+	private async Task ConfirmDelete()
+	{
+		var result = await PhanQuyenService.DeleteNhomUserAsync(DeleteNhomUser);
+		if (result.Status)
+		{
+			NhomUser.Remove(DeleteNhomUser);
+			StateHasChanged();
+		}
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+		await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+	}
+
+	private async Task ConfirmSaveNhomUser()
+	{
+		var dotNetRef = DotNetObjectReference.Create(this);
+		await JS.InvokeVoidAsync("validateFormBlazor", "modal-body", dotNetRef);
+	}
+
+	[JSInvokable]
+	public async Task SubmitForm()
+	{
+		var result = await PhanQuyenService.SaveNhomUserAsync(NhomUserSave);
+		if (result.Status)
+		{
+			NhomUser.Add(NhomUserSave);
+			NhomUserSave = new();
+			StateHasChanged();
+		}
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+		await JS.InvokeVoidAsync("bootstrapModal.hide", "#createNhomUserModal");
+
+	}
+
+	private async Task InsertGroup()
+	{
+		await JS.InvokeVoidAsync("bootstrapModal.show", "#createNhomUserModal");
+	}
+	private void AddUserForGroup()
+	{
+		Nav.NavigateTo("/user");
+	}
+
+	private async Task OnDTKHChanged(string? value)
+	{
+		SelectedMaNhomUser = string.IsNullOrWhiteSpace(value) ? null : value;
+	}
+}

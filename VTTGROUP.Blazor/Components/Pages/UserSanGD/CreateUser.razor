@@ -1,0 +1,178 @@
+﻿@page "/usersgd/createuser/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Domain.Model.User
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject NhanVienService NhanVienService
+@inject UserService UserService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Người sử dụng</h1>
+<EditForm id="formDuAn" EditContext="@editContext">
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nhân viên</span>
+                                    <div class="input-wraper-choose">
+                                        <input class="input-form" id="TenNhanVien" readonly="readonly" type="text" value="@Record.TenNhanVien">
+                                        <InputText type="hidden" class="form-control" id="MaNhanVien" @bind-Value="Record.MaNhanVien" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên đăng nhập <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenDangNhap" />
+                                    <span class="error-validation">Vui lòng nhập tên đăng nhập</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Email</span>
+                                    <InputText class="form-control" id="Email" @bind-Value="Record.Email" readonly="readonly" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số điện thoại</span>
+                                    <InputText class="form-control" id="SoDienThoai" @bind-Value="Record.SoDienThoai" readonly="readonly" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nhóm người dùng <i class="point-validate">*</i></span>
+                                    <select id="NhomUser" class="form-control input-validation" multiple @ref="selectNhomRef">
+                                        @foreach(var nhom in NhomUser)
+                                        {
+                                            <option value="@(nhom.MaNhomUser)">@nhom.TenNhomUser</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn nhóm người dùng</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private UserModel? Record = new();
+    private List<NhomUserModel> NhomUser = new();
+    private NhanVienModel? NhanVien = new();
+    private DotNetObjectReference<CreateUser>? _selfRef;
+    private ElementReference selectNhomRef;
+    public List<string> SelectedNhomUserList { get; set; } = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+
+            await BaseService.CheckPermissionAsync("NguoiSuDungSGD", VuViec.Them.GetDescription());
+            NhomUser = await UserService.GetNhomUserBySanGDAsync();
+            await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "NhomUser", "Chọn nhóm người dùng", true, _selfRef);
+
+            var result = await NhanVienService.FindGetByNhanVienAsync(id, _env.WebRootPath);
+            if (result.Status)
+            {
+                NhanVien = (NhanVienModel)result.Data;
+                Record.TenDangNhap = NhanVien.Email;
+                Record.SoDienThoai = NhanVien.SoDienThoai;
+                Record.Email = NhanVien.Email;
+                Record.MaNhanVien = NhanVien.MaNhanVien;
+                Record.TenNhanVien = NhanVien.HoVaTen;
+                Record.LoaiUser = "SGG";
+            }
+        }
+        StateHasChanged();
+    }
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "formDuAn", dotNetRef);
+    }
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var fullDomain = $"{Nav.BaseUri}login";
+        var result = await UserService.SaveUserAsync(Record, fullDomain);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/usersgd/edit/{result.Id}");
+        }
+    }
+    private async Task ShowPopupNhanVien()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChonNhanVien");
+    }
+    private async Task SelectedNhanVien(NhanVienPagingDto? item)
+    {
+        Record.TenDangNhap = item.Email;
+        Record.SoDienThoai = item.SoDienThoai;
+        Record.Email = item.Email;
+        Record.MaNhanVien = item.MaNhanVien;
+        Record.TenNhanVien = item.HoVaTen;
+        Record.LoaiUser = item.LoaiUser;
+        Record.TenLoaiUser = item.LoaiUser == "NV" ? "Nhân viên" : "Sàn giao dịch";
+        // //set vô mã khách hàng
+    }
+    [JSInvokable]
+    public async Task OnSelectMultiChanged(string id, string[] selectedBlocks)
+    {
+        SelectedNhomUserList = selectedBlocks.ToList();
+        Record.NhomUsers = string.Join(',', SelectedNhomUserList.ToArray());
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/usersgd");
+    }
+}

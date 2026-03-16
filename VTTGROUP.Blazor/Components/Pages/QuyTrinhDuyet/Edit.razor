@@ -1,0 +1,371 @@
+﻿@page "/quytrinhduyet/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Domain.Model.QuyTrinhDuyet
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject QuyTrinhDuyetService QuyTrinhDuyetService
+@inject CongViecService CongViecService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Quy trinh duyệt</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Bước duyệt</li>
+                        <li class="tab-item" data-id="3" id="linkTab3">Dự án</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên Quy Trình <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="TenQuyTrinh" type="text" @bind-value="Record.TenQuyTrinh">
+                                    <span class="error-validation">Vui lòng nhập tên quy trình</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Công việc</span>
+                                    <DisableTextBox Value="@Record.TenCongViec" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trạng thái</span>
+                                    <select id="TrangThai" class="form-control" @onchange="OnTrangThaiChanged">
+                                        <option value="1">Đang mở</option>
+                                        <option value="0">Đã đóng</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" name="GhiChu" id="GhiChu" rows="3" tabindex="2" @bind="@Record.GhiChu"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="action-buttons" style="display: flex;">
+                                <div class="button-action-title" style="margin-left: 0;">
+                                    <div class="icon-button" @onclick="AddBuocDuyet">
+                                        <i class="mdi mdi-playlist-plus"></i>
+                                    </div>
+                                    <span>Bước duyệt</span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; align-items: center;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wraper-listdot">
+                            <table class="tbl table table-hover table-form table-detail">
+                                <thead>
+                                    <tr>
+                                        <th style="width:50px" class="text-center">STT</th>
+                                        <th style="width:250px" class="text-center">Bước duyệt</th>
+                                        <th style="width:200px" class="text-center">Người duyệt</th>
+                                        <th style="width:100px" class="text-center">Thứ tự</th>
+                                        <th style="width:50px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (Record.ListBuocDuyet != null && Record.ListBuocDuyet.Any())
+                                    {
+                                        var i = 1;
+                                        foreach (var item in Record.ListBuocDuyet)
+                                        {
+                                            <tr>
+                                                <td class="text-center">
+                                                    @i
+                                                </td>
+                                                <td>
+                                                    <div class="input-wraper-choose">
+                                                        <input id="BuocDuyet@(i)" class="form-control input-form input-validation" readonly type="text" value="@item.BuocDuyet?.TenBuocDuyet">
+                                                        <div class="icon-choose" @onclick="() => ShowPopupBuocDuyet(item)"><i class="bi bi-plus"></i></div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="input-wraper-choose">
+                                                        <input id="NguoiDuyet@(i)" class="form-control input-form input-validation" readonly type="text" value="@item.NguoiDuyet?.HoVaTen">
+                                                        <div class="icon-choose" @onclick="() => ShowPopupNhanVien(item)"><i class="bi bi-person-add"></i></div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <input id="ThuTu@(i)" class="form-control input-form input-validation currency-input" type="text" @bind-value="item.ThuTu">
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="icon-button" data-title="Xóa" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => DeleteRowBuocDuyet(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="action-buttons" style="display: flex;">
+                                <div class="button-action-title" style="margin-left: 0;">
+                                    <div class="icon-button" @onclick="AddDuAn">
+                                        <i class="mdi mdi-playlist-plus"></i>
+                                    </div>
+                                    <span>Dự án</span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; align-items: center;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wraper-listdot">
+                            <table class="tbl table table-hover table-form table-detail">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">STT</th>
+                                        <th class="text-center">Dự án</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (Record.ListDuAn != null && Record.ListDuAn.Any())
+                                    {
+                                        var i = 1;
+                                        foreach (var item in Record.ListDuAn)
+                                        {
+                                            <tr>
+                                                <td class="text-center">
+                                                    @i
+                                                </td>
+                                                <td>@item.TenDuAn</td>
+                                                <td class="text-center">
+                                                    <div class="icon-button" data-title="Xóa" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => DeleteRowDuAn(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupAddDuAn @ref="duAnModalRef" OnSelected="SelectedDuAn" />
+<PopupBuocDuyet @ref="buocDuyetModalRef" OnSelected="SelectedBuocDuyet" />
+<PopupNhanVien @ref="nhanVienModalRef" OnSelected="SelectedNguoiDuyet" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private PopupAddDuAn? duAnModalRef;
+    private PopupBuocDuyet? buocDuyetModalRef;
+    private PopupNhanVien? nhanVienModalRef;
+    private QuyTrinhDuyetBuocDuyetModel? selectedRow;
+    private QuyTrinhDuyetModel? Record = new();
+    private List<Select2Config> _select2Configs = new();
+    private List<InfoItem> InfoItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+
+            var result = await QuyTrinhDuyetService.GetByIdAsync(id);
+            if (result.Status)
+            {
+                Record = (QuyTrinhDuyetModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+                _select2Configs = new()
+                {   new("TrangThai", "Chọn trạng thái", Record.TrangThai?.ToString(), false),
+                };
+                await JS.InvokeVoidAsync("select2Helper.initMany", _select2Configs);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await QuyTrinhDuyetService.UpdatePhieuAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    private async Task AddBuocDuyet()
+    {
+        var newBuocDuyet = new QuyTrinhDuyetBuocDuyetModel
+        {
+            BuocDuyet = new BuocDuyetModel()
+        };
+        Record?.ListBuocDuyet?.Add(newBuocDuyet);
+
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 0);
+    }
+
+    private async Task AddDuAn()
+    {
+        await duAnModalRef.ShowPopupAsync();
+    }
+
+    private async Task DeleteRowDuAn(DuAnModel? item)
+    {
+        Record.ListDuAn.Remove(item);
+        StateHasChanged();
+    }
+    private async Task DeleteRowBuocDuyet(QuyTrinhDuyetBuocDuyetModel? item)
+    {
+        Record.ListBuocDuyet.Remove(item);
+        StateHasChanged();
+    }
+
+    private async Task SelectedDuAn(List<DanhMucDuAnPagingDto>? listDuAn)
+    {
+        foreach (var nv in listDuAn)
+        {
+            bool isExist = Record.ListDuAn.Any(x => x.MaDuAn == nv.MaDuAn);
+            if (!isExist)
+            {
+                Record.ListDuAn.Add(new DuAnModel
+                {
+                    MaDuAn = nv.MaDuAn,
+                    TenDuAn = nv.TenDuAn
+                });
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task SelectedBuocDuyet(BuocDuyetPagingDto? buocDuyet)
+    {
+        if (selectedRow is not null)
+        {
+            selectedRow.BuocDuyet = new BuocDuyetModel
+            {
+                MaBuocDuyet = buocDuyet.MaBuocDuyet,
+                TenBuocDuyet = buocDuyet.TenBuocDuyet
+            };
+        }
+
+        selectedRow = null;
+        StateHasChanged();
+    }
+    private async Task SelectedNguoiDuyet(NhanVienPagingDto? nhanVien)
+    {
+        if (selectedRow is not null)
+        {
+            selectedRow.NguoiDuyet = new NguoiLapModel
+            {
+                MaNhanVien = nhanVien.MaNhanVien,
+                HoVaTen = nhanVien.HoVaTen
+            };
+        }
+
+        selectedRow = null;
+        StateHasChanged();
+    }
+
+    private async Task OnTrangThaiChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int result))
+        {
+            Record.TrangThai = result;
+        }
+    }
+
+    private async Task ShowPopupBuocDuyet(QuyTrinhDuyetBuocDuyetModel? item)
+    {
+        selectedRow = item;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChonBuocDuyet");
+    }
+    private async Task ShowPopupNhanVien(QuyTrinhDuyetBuocDuyetModel? item)
+    {
+        selectedRow = item;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChonNhanVien");
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo($"/quytrinhduyet");
+    }
+    public class Select2Config
+    {
+        public string id { get; set; }
+        public string placeholder { get; set; }
+        public string? value { get; set; }
+        public bool allowClear { get; set; } = true;
+
+        public Select2Config(string id, string placeholder, string? value, bool allowClear)
+        {
+            this.id = id;
+            this.placeholder = placeholder;
+            this.value = value;
+            this.allowClear = allowClear;
+        }
+    }
+
+}

@@ -1,0 +1,320 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.PhieuGiuCho
+@using VTTGROUP.Infrastructure.Services
+
+@inject PhieuGiuChoService PhieuGiuChoService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+
+<div class="modal fade" tabindex="-1" id="ChuyenBookingDotMoiModal">
+    <div class="modal-dialog modal-dialog-centered modal-lg chuyen-booking-modal">
+        <div class="modal-content">
+            <div class="modal-header booking-modal-header">
+                <h5 class="modal-title">Chuyển booking qua đợt bán hàng mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="Close"></button>
+            </div>
+
+            <div class="modal-body booking-modal-body">
+                @if (_isLoading)
+                {
+                    <div class="text-center py-4 text-muted">Đang tải dữ liệu...</div>
+                }
+                else if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-danger mb-0">@_errorMessage</div>
+                }
+                else if (_model is null)
+                {
+                    <div class="text-center py-4 text-muted">Không có dữ liệu hiển thị.</div>
+                }
+                else
+                {
+                    <!-- Mã phiếu -->
+                    <div class="booking-info-row">
+                        <div class="label">Mã phiếu</div>
+                        <div class="value">@_model.MaPhieu</div>
+                    </div>
+
+                    <!-- Chọn đợt mới -->
+                    <div class="booking-form-row">
+                        <div class="label">Chọn đợt</div>
+                        <div class="field">
+                            @* <select name="MaDotMoBan" id="MaDotMoBan" class="form-select" @bind="_selectedDot">
+                                <option value="">-- Chọn đợt bán hàng --</option>
+                                @foreach (var opt in _model.AvailableDots)
+                                {
+                                    <option value="@opt.MaDotMoBan">@opt.TenDotMoBan</option>
+                                }
+                            </select>
+                            @if (_model.AvailableDots.Count == 0)
+                            {
+                                <small class="text-muted">
+                                    Tất cả các đợt trong dự án này đã được sử dụng cho phiếu.
+                                </small>
+                            } *@
+                            <UiSelect Icon="mdi mdi-tag-multiple-outline"
+                                      Placeholder="Chọn đợt bán hàng"
+                                      Items="_model.AvailableDots.Select(x => new UiSelect.SelectItem(x.MaDotMoBan!, x.TenDotMoBan!))"
+                                      @bind-Value="_selectedDot" />
+                        </div>
+                    </div>
+
+                    <!-- Số thứ tự theo đợt -->
+                    <div class="booking-form-row">
+                        <div class="label">Số thứ tự theo đợt</div>
+                        <div class="field field-small">
+                            <input type="number" style="width:280px;height:40px"
+                                   class="form-control text-center"
+                                   min="1"
+                                   @bind="_soThuTuTheoDot" />
+                        </div>
+                    </div>
+
+                    <!-- Bảng các đợt đã có + STT booking -->
+                    <div class="container-table-detail">
+                        <div class="container-table-fixed has-paging">
+                            <table class="tbl table-form table-detail treeTable" id="table-data">
+                                <thead>
+                                    <tr class="cls_custome_back">
+                                        <th class="text-center">Đợt bán hàng</th>
+                                        <th class="text-center">STT booking</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (_model.ExistingDots.Any())
+                                    {
+                                        @foreach (var d in _model.ExistingDots)
+                                        {
+                                            <tr>
+                                                <td>@d.TenDotBanHang</td>
+                                                <td class="text-end">@d.SoTTBooking</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted py-3">
+                                                Phiếu chưa có đợt bán hàng nào.
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">
+                    Lưu
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnChuyenDoiBooking { get; set; }
+
+    private string SelectedMaDuAn = string.Empty;
+    private string SelectedMaPhieu = string.Empty;
+
+    private ChuyenBookingDotBanHangDto? _model;
+    private bool _isLoading;
+    private string? _errorMessage;
+
+    private string? _selectedDot;
+    private int _soThuTuTheoDot = 1;
+    private bool _needInitSelect2;
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (_needInitSelect2 && _model != null)
+    //     {
+    //         _needInitSelect2 = false;
+
+    //         // init select2 sau khi DOM đã render xong
+    //         await JS.InvokeVoidAsync("select2Helper.initSelectChange",
+    //             "MaDotMoBan", "Chọn đợt bán hàng", true);
+    //     }
+    // }
+
+    private async Task Close()
+    {
+        SelectedMaDuAn = string.Empty;
+        SelectedMaPhieu = string.Empty;
+        _model = null;
+        _selectedDot = null;
+        _soThuTuTheoDot = 1;
+        _errorMessage = null;
+
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#ChuyenBookingDotMoiModal");
+        StateHasChanged();
+    }
+
+
+    private async Task TriggerChoose()
+    {
+        if (_model is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_selectedDot))
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo",
+                "Vui lòng chọn đợt bán hàng mới.", false);
+            return;
+        }
+
+        if (_soThuTuTheoDot <= 0)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo",
+                "Số thứ tự theo đợt phải lớn hơn 0.", false);
+            return;
+        }
+
+        // TODO: gọi service lưu thật sự ở đây
+        try
+        {
+            var result = await PhieuGiuChoService.ChuyenBookingQuaDBHMoiAsync(
+                SelectedMaPhieu,
+               _soThuTuTheoDot,
+                _selectedDot);
+
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                await OnChuyenDoiBooking.InvokeAsync();
+                await JS.InvokeVoidAsync("bootstrapModal.hide", "#ChuyenBookingDotMoiModal");
+            }
+        }
+        finally
+        {
+
+        }
+
+    }
+
+    public async Task ShowThongTinModal(string maPhieu, string maDuAn)
+    {
+        SelectedMaDuAn = maDuAn;
+        SelectedMaPhieu = maPhieu;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _model = null;
+        _selectedDot = null;
+        _soThuTuTheoDot = 1;
+
+        var rs = await PhieuGiuChoService.GetChuyenBookingInfoAsync(maPhieu);
+
+        if (!rs.Status)
+        {
+            _errorMessage = rs.Message;
+        }
+        else
+        {
+            _model = rs.Data as ChuyenBookingDotBanHangDto;
+            if (_model == null)
+            {
+                _errorMessage = "Không đọc được dữ liệu phiếu.";
+            }
+        }
+
+        _isLoading = false;
+
+        // bật modal
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#ChuyenBookingDotMoiModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+
+        // đánh dấu cần init select2 sau khi render xong
+        _needInitSelect2 = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    /* Body */
+    #ChuyenBookingDotMoiModal .booking-modal-body {
+        padding: 1.25rem 1.5rem 1rem;
+        background: #ffffff;
+    }
+
+    /* ===== HÀNG MÃ PHIẾU + CÁC DÒNG FORM ===== */
+
+    /* Cả booking-info-row (Mã phiếu) + booking-form-row (Chọn đợt / Số thứ tự) dùng chung layout */
+    #ChuyenBookingDotMoiModal .booking-info-row,
+    #ChuyenBookingDotMoiModal .booking-form-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+        /* Label của Mã phiếu + các dòng form: cố định 1 độ rộng */
+        #ChuyenBookingDotMoiModal .booking-info-row .label,
+        #ChuyenBookingDotMoiModal .booking-form-row .label {
+            width: 140px; /* chỉnh số này nếu muốn label rộng / hẹp hơn */
+            flex: 0 0 140px; /* khoá cứng chiều ngang label */
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        /* Giá trị Mã phiếu chiếm hết phần còn lại, căn thẳng với control bên dưới */
+        #ChuyenBookingDotMoiModal .booking-info-row .value {
+            flex: 1;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #111827;
+        }
+
+        /* Ô control bên phải: combobox, textbox... */
+        #ChuyenBookingDotMoiModal .booking-form-row .field {
+            flex: 1; /* chiếm hết phần còn lại */
+        }
+
+        /* Riêng field-small (Số thứ tự theo đợt) vẫn full như field bình thường */
+        #ChuyenBookingDotMoiModal .booking-form-row .field-small {
+            max-width: none;
+            flex: 1;
+        }
+
+            #ChuyenBookingDotMoiModal .booking-form-row .field-small .form-control {
+                width: 100%; /* input phủ 100% chiều ngang */
+            }
+
+        /* Input & select trong modal */
+        #ChuyenBookingDotMoiModal .booking-form-row .form-select,
+        #ChuyenBookingDotMoiModal .booking-form-row .form-control {
+            font-size: 0.9rem;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            box-shadow: none;
+        }
+
+            #ChuyenBookingDotMoiModal .booking-form-row .form-select:focus,
+            #ChuyenBookingDotMoiModal .booking-form-row .form-control:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 1px rgba(99,102,241,0.25);
+            }
+
+    /* ===== Responsive cho modal ===== */
+    @@media (max-width: 768px) {
+        #ChuyenBookingDotMoiModal .booking-info-row, #ChuyenBookingDotMoiModal .booking-form-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+            #ChuyenBookingDotMoiModal .booking-info-row .label,
+            #ChuyenBookingDotMoiModal .booking-form-row .label {
+                flex: 0 0 auto;
+                width: auto;
+                margin-bottom: 0.25rem;
+            }
+    }
+</style>

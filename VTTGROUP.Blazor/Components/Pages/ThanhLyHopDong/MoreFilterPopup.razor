@@ -1,0 +1,91 @@
+﻿@using VTTGROUP.Domain.Model
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+<div class="icon-button button-search-more" @ref="popupRef" data-title="Tìm kiếm thêm" data-position="left">
+	<i class="mdi mdi-dots-horizontal btn-toggle-popup-more" @onclick="TogglePopup"></i>
+
+	<div class="content-search-more @(showPopup ? "show" : "")" id="popupFilter">
+		<div class="header-search-more">
+			<div class="title-search-more">
+				Bộ lọc khác
+				<div class="reset-button" @onclick="OnResetClicked">Reset</div>
+			</div>
+		</div>
+		<div class="wappert-item-more container-form">
+			<div class="title-item-more">Trạng thái</div>
+			<div class="content-item-more">
+				<select name="TrangThaiDuyet" id="TrangThaiDuyet" class="form-control" @onchange="OnChangeTrangThai">
+					<option value="">Chọn trạng thái</option>
+					@if (LisTTD != null)
+					{
+						@foreach (var item in LisTTD)
+						{
+							<option value="@item.MaTrangThai">@item.TenTrangThai</option>
+						}
+					}
+				</select>
+			</div>
+		</div>
+	</div>
+</div>
+@code {
+	private bool showPopup = false;
+	private ElementReference popupRef;
+
+	[Inject] IJSRuntime JS { get; set; }
+
+	[Parameter] public EventCallback<string> OnTrangThaiChanged { get; set; }
+	[Parameter] public EventCallback OnReset { get; set; }
+	private List<HtTrangThaiDuyet> LisTTD = new();
+	private bool isTrangThaiDuyetSelect2 = false;
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			LisTTD = await BaseService.GetListTrangThaiDuyetAsync();
+			await JS.InvokeVoidAsync("popupMoreFilter.initClickOutside", popupRef, DotNetObjectReference.Create(this));
+		}
+	}
+
+	private async Task TogglePopup()
+	{
+		showPopup = !showPopup;
+
+		if (showPopup)
+		{
+			if (!isTrangThaiDuyetSelect2)
+			{
+				await JS.InvokeVoidAsync("select2Helper.initSelectChange", "TrangThaiDuyet", "Chọn trạng thái", true);
+				isTrangThaiDuyetSelect2 = true;
+			}
+		}
+	}
+
+	[JSInvokable]
+	public async Task HidePopupMore()
+	{
+		await JS.InvokeVoidAsync("popupMoreFilter.removeShowClass", "popupFilter");
+		await Task.Delay(200);
+		showPopup = false;
+		StateHasChanged();
+	}
+
+	private async Task OnChangeTrangThai(ChangeEventArgs e)
+	{
+		await OnTrangThaiChanged.InvokeAsync(e.Value?.ToString());
+	}
+
+	private async Task OnResetClicked()
+	{
+		await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "TrangThaiDuyet" });
+		await OnTrangThaiChanged.InvokeAsync(string.Empty);
+		await OnReset.InvokeAsync();
+	}
+	public async Task RestAllMore()
+	{
+		await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "TrangThaiDuyet" });
+	}
+}
+

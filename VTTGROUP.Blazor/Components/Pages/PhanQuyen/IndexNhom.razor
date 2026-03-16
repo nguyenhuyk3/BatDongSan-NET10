@@ -1,0 +1,325 @@
+﻿@page "/phanquyen/nhom"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject PhanQuyenService PhanQuyenService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Danh sách Nhóm quyền sử dụng</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Nhóm quyền" OnClick="InsertGroup" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center">
+                            STT
+                        </th>
+                        <th style="width: 135px" class="text-center">
+                            Mã Nhóm
+                        </th>
+                        <th style="width: 200px" class="text-center">
+                            Tên nhóm
+                        </th>
+                        <th style="width: 90px" class="text-center">
+                            Trạng thái
+                        </th>
+                        <th style="width: 130px" class="text-center">
+                            Danh sách NV
+                        </th>
+                        <th style="width: 130px" class="text-center">
+                            Quyền truy cập
+                        </th>
+                        <th style="width: 170px" class="text-center">
+                            Ghi chú
+                        </th>
+                        <th style="width: 90px">
+                            &nbsp;
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (nhomUsers != null && nhomUsers.Count > 0)
+                    {
+                        @foreach (var item in nhomUsers)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    @item.STT
+                                </td>
+                                <td>
+                                    @item.MaNhomUser
+                                </td>
+                                <td>
+                                    @item.TenNhomUser
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@(item.TrangThai ?? false)"
+                                           @onchange="(e) => OnCheckboxChanged(e, item.MaNhomUser)" />
+                                </td>
+                                <td class="text-center">
+                                    <div class="item-phieu" @onclick="() => OnViewDanhSachNhanVien(item)">Chi tiết</div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="item-phieu" @onclick="() => OnViewDanhSachQuyen(item.MaNhomUser)">Xem quyền</div>
+                                </td>
+                                <td>
+                                    @item.GhiChu
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void()" @onclick="() => OnEditRecord(item.MaNhomUser)">
+                                                <span>
+                                                    <i class="mdi mdi-pencil">
+                                                    </i>
+                                                </span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createNhomUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm mới nhóm user</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <EditForm id="formDuAn" EditContext="@editContext">
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã nhóm <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="NhomUserSave.MaNhomUser" id="MaNhomUser" />
+                                    <span class="error-validation">Vui lòng nhập mã nhóm</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên nhóm <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="NhomUserSave.TenNhomUser" id="TenNhomUser" />
+                                    <span class="error-validation">Vui lòng nhập tên nhóm</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="NhomUserSave.GhiChu" rows="5" tabindex="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmSaveNhomUser">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Xác nhận xóa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc muốn xóa nhóm user <strong>@DeleteNhomUser.TenNhomUser</strong> không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Xác nhận xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+<PopupNhanVienUser Nhom="@nhomSelectedView" @ref="popupRef" />
+@code {
+    private PopupNhanVienUser? popupRef;
+    private EditContext editContext;
+    private NhomUserModel? DeleteNhomUser = new();
+    private NhomUserModel? NhomUserSave = new();
+    List<NhomUserPagingDto> nhomUsers = new();
+    NhomUserPagingDto? nhomSelectedView = new();
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    private string? search;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(NhomUserSave);
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (nhomUsers.Any())
+            {
+                var config = new List<FixColumnConfig>
+            {
+                new FixColumnConfig { left = 0 },
+                new FixColumnConfig { right = 0 }
+            };
+                await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+            }
+        }
+
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            var (data, total) = await PhanQuyenService.GetNhomUserPagingAsync(_page, _pageSize, search);
+            nhomUsers = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ShowConfirmDelete(NhomUserPagingDto nhom)
+    {
+        DeleteNhomUser.MaNhomUser = nhom.MaNhomUser;
+        DeleteNhomUser.TenNhomUser = nhom.TenNhomUser;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        var result = await PhanQuyenService.DeleteNhomUserAsync(DeleteNhomUser);
+        if (result.Status)
+        {
+            await LoadData();
+            StateHasChanged();
+        }
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+    }
+    private async Task ConfirmSaveNhomUser()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "modal-body", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await PhanQuyenService.SaveNhomUserAsync(NhomUserSave);
+        if (result.Status)
+        {
+            NhomUserSave = new();
+            await LoadData();
+            StateHasChanged();
+        }
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#createNhomUserModal");
+
+    }
+
+    private async Task InsertGroup()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#createNhomUserModal");
+    }
+
+    private async Task OnViewDanhSachQuyen(string? id)
+    {
+    }
+
+    private async Task OnViewDanhSachNhanVien(NhomUserPagingDto id)
+    {
+        nhomSelectedView = new NhomUserPagingDto
+        {
+            MaNhomUser = id.MaNhomUser,
+            TenNhomUser = id.TenNhomUser,
+        };
+        if (popupRef != null)
+        {
+            await popupRef.ShowPopupAsync(id);
+        }
+    }
+
+    private async Task OnCheckboxChanged(ChangeEventArgs e, string maNhomUser)
+    {
+        bool isChecked = (bool?)e.Value == true;
+        var result = await PhanQuyenService.UpdateTrangThaiNhomUserAsync(maNhomUser, isChecked);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    private async Task OnEditRecord(string? id)
+    {
+        Nav.NavigateTo($"/phanquyen/nhom/{id}");
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData();
+    }
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+}

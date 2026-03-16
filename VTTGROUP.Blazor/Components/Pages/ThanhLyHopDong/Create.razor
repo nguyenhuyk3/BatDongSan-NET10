@@ -1,0 +1,439 @@
+﻿@page "/thanhlyhopdong/create"
+@using System.Globalization
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.HopDongMuaBan
+@using VTTGROUP.Domain.Model.ThanhLyHopDong
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject HopDongMuaBanService HopDongService
+@inject ThanhLyHopDongService ThanhLyHopDongService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Thanh lý hợp đồng</h1>
+    <div class="container-form">
+        <div class="col-lg-11 mx-auto">
+            <div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="container-mess-error">
+                            <div class="content-mess-error">
+                                <span class="icon-mess-error"><i class="mdi mdi-alert"></i></span>
+                                <div class="wapper-mess-error" id="mess-error">
+                                </div>
+                            </div>
+                            <span class="close-mess-error"><i class="mdi mdi-close"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <div class="wapper-content-tab" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-6 mx-auto row">
+                        <div class="wapper-input col-lg-4">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã phiếu</span>
+                                    <span class="input-value">@Record.MaPhieu</span>
+                                    <input class="input-form" id="MaPhieu" name="MaPhieu" type="hidden" value="@Record.MaPhieu">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-4">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày lập</span>
+                                    <span class="input-value">@(string.Format("{0:dd/MM/yyyy}", Record.NgayLap))</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-4">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Người lập</span>
+                                    <span class="input-value">@Record.NguoiLap?.HoVaTen</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số phiếu <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="SoPhieuThanhLy" type="text" @bind-value="Record.SoPhieuThanhLy">
+                                    <span class="error-validation">Vui lòng nhập số phiếu</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày ký <i class="point-validate">*</i></span>
+                                    <FlatpickrInput Id="NgayThanhLy" @bind-Value="Record.NgayThanhLy"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker input-validation"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hình thức thanh lý <i class="point-validate">*</i></span>
+                                    <select id="MaHTTL" class="form-control input-validation" @onchange="OnHTTLChanged">
+                                        <option value=""> Chọn hình thức thanh lý </option>
+                                        @foreach (var item in ListHTTL)
+                                        {
+                                            <option value="@(item.MaHttl)">@item.TenHttl</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn hình thức thanh lý</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" class="form-control input-validation" name="MaDuAn" @onchange="OnDuAnChanged">
+                                        <option value=""> Chọn dự án </option>
+                                        @if (ListDA?.Any() == true)
+                                        {
+                                            @foreach (var item in ListDA)
+                                            {
+                                                <option value="@item.MaDuAn" selected="@(Record.MaDuAn == item.MaDuAn)">
+                                                    @item.TenDuAn
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hợp đồng <i class="point-validate">*</i></span>
+                                    <select id="HopDong" class="form-control input-validation" @onchange="OnHopDongChanged">
+                                        <option value=""></option>
+                                        @foreach (var item in ListHD)
+                                        {
+                                            <option value="@($"{item.MaHopDong}|{item.SoHopDong}|{item.MaCanHo}|{item.TenSanPham}|{item.GiaBanSauThue}|{item.SoTienDaThu}|{item.MaKhachHang}|{item.TenKhachHang}")">
+                                                @item.SoHopDong
+                                            </option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn hợp đồng</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Khách hàng </span>
+                                    <span class="input-value">@Record.TenKhachHang</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Căn hộ</span>
+                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnViewCH(Record.MaCanHo)">@Record.TenCanHo</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Giá trị hợp đồng [1] </span>
+                                    <input class="input-form text-right" readonly="readonly" id="GiaBan" type="text" value="@string.Format("{0:N0}", Record.GiaBan)">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tiền đã thu [2] </span>
+                                    <input class="input-form text-right" readonly="readonly" id="SoTienDaThu" type="text" value="@string.Format("{0:N0}", Record.SoTienDaThu)">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Phí bảo trì đã thu [3] <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal"
+                                                   Id=@($"SoTienPhiBaoTriDaThu")
+                                                   Format="#,##0"
+                                                   CssClass="input-form form-control input-validation select-on-click w-100 p-1"
+                                                   @bind-Value="Record.SoTienPhiBaoTriDaThu"
+                                                   ValueChanged="(val) => OnSoTienPhiBaoTriDaThuChanged(val)"
+                                                   @bind-Value:event="oninput" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tỷ lệ vi phạm hợp đồng % [4] </span>
+                                    <InputCurrency T="decimal"
+                                                   Id=@($"TyLeViPham")
+                                                   Format="#,##0.##"
+                                                   CssClass="input-form form-control input-validation select-on-click w-100 p-1"
+                                                   @bind-Value="Record.TyLeViPham"
+                                                   ValueChanged="(val) => OnTyLeViPhamChanged(val)"
+                                                   @bind-Value:event="oninput" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tiền vi phạm hợp đồng [5]=[1]*[4] <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal"
+                                                   Id=@($"SoTienViPhamHopDong")
+                                                   Format="#,##0"
+                                                   CssClass="input-form form-control input-validation select-on-click w-100 p-1"
+                                                   @bind-Value="Record.SoTienViPhamHopDong"
+                                                   ValueChanged="(val) => OnSoTienViPhamHopDongChanged(val)"
+                                                   @bind-Value:event="oninput" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tiền hoàn lại [6]= [2]-[5]+[3]</span>
+                                    <input class="input-form input-validation text-right" readonly="readonly" id="SoTienHoanTra" type="text" value="@string.Format("{0:#,#0}", Record.SoTienHoanTra)">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input " cols="20" id="GhiChu" rows="3" tabindex="2" @bind="Record.GhiChu"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="row">
+            <div class="col-md-12">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="SubmitFormJs">
+                    Lưu
+                </button>
+                <button type="button" class="button button-action button-tro-ve" @onclick="BackUrl">
+                    Trở về
+                </button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private EditContext editContext;
+    private ThanhLyHopDongModel? Record = new();
+    private HopDongMuaBanModel? HopDong = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<BhHinhThucThanhLy> ListHTTL = new();
+    private List<HopDongChuaLenThanhLyModel> ListHD = new();
+    private string selectedPDKRaw;
+    private CanHoDetails? canHoModalRef;
+    private string[] allowedExtensions = FileTypeSets.Document;
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("ThanhLyHopDong", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("eval", @"
+            setTimeout(function() {
+                select2Helper.initSelectChange('MaDuAn', 'Chọn dự án', true);
+                select2Helper.initSelectChange('MaHTTL', 'Chọn hình thức thanh lý', true);
+                select2Helper.initSelectChange('HopDong', 'Chọn hợp đồng', true);
+            }, 300);");
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "TyLeViPham", 5, 2);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "SoTienPhiBaoTriDaThu", 18, 0);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "SoTienViPhamHopDong", 18, 0);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "SoTienViPhamHopDong", 18, 0);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "SoTienHoanTra", 18, 0);
+            ListDA = await ThanhLyHopDongService.GetByDuAnAsync();
+            ListHTTL = await ThanhLyHopDongService.GetHinhThucThanhLyAsync();
+            var result = await ThanhLyHopDongService.GetByIdAsync(string.Empty);
+            if (result.Status)
+            {
+                Record = (ThanhLyHopDongModel)result.Data;
+                //TinhTienHoanTra();
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        ListHD = await ThanhLyHopDongService.GetHopDongAsync(e.Value?.ToString());
+        ResetGiaTri();
+    }
+
+    private async Task OnHTTLChanged(ChangeEventArgs e)
+    {
+        Record.HinhThucThanhLy = e.Value?.ToString();
+    }
+
+    private async Task OnHopDongChanged(ChangeEventArgs e)
+    {
+        selectedPDKRaw = e.Value.ToString();
+        if (!string.IsNullOrEmpty(selectedPDKRaw))
+        {
+            var parts = selectedPDKRaw.Split('|');
+            if (parts.Length == 8)
+            {
+                Record.MaHopDong = parts[0];
+                Record.MaCanHo = parts[2];
+                Record.TenCanHo = parts[3];
+                Record.GiaBan = Convert.ToDecimal(parts[4]);
+                Record.SoTienDaThu = Convert.ToDecimal(parts[5]);
+                Record.MaKhachHang = parts[6];
+                Record.TenKhachHang = parts[7];
+                Record.TyLeViPham = 0;
+                Record.SoTienPhiBaoTriDaThu = 0;
+            }
+            RecalcSoTienViPham();
+        }
+        else
+        {
+            ResetGiaTri();
+        }
+    }
+
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await ThanhLyHopDongService.SavePhieuAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/thanhlyhopdong/edit/{result.Id}");
+            StateHasChanged();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/thanhlyhopdong");
+    }
+
+    private async Task OnViewCH(string maCanHo)
+    {
+        if (canHoModalRef != null)
+        {
+            var canHo = await BaseService.ThongTinChiTietSanPham(Record.MaDuAn, maCanHo);
+            await canHoModalRef.Show(canHo);
+        }
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private void OnTyLeViPhamChanged(decimal value)
+    {
+        Record.TyLeViPham = value;
+        // Ràng buộc 0 - 100 %
+        if (Record.TyLeViPham < 0) Record.TyLeViPham = 0;
+        if (Record.TyLeViPham > 100) Record.TyLeViPham = 100;
+        RecalcSoTienViPham();
+    }
+
+    private void OnSoTienPhiBaoTriDaThuChanged(decimal value)
+    {
+        Record.SoTienPhiBaoTriDaThu = value;
+        Record.SoTienHoanTra = Record.SoTienDaThu - Record.SoTienViPhamHopDong + Record.SoTienPhiBaoTriDaThu;
+        if (Record.SoTienHoanTra < 0) Record.SoTienHoanTra = 0;
+    }
+
+    private void OnSoTienViPhamHopDongChanged(decimal value)
+    {
+        Record.SoTienViPhamHopDong = value;
+        Record.SoTienHoanTra = Record.SoTienDaThu - Record.SoTienViPhamHopDong + Record.SoTienPhiBaoTriDaThu;
+        if (Record.SoTienHoanTra < 0) Record.SoTienHoanTra = 0;
+    }
+
+    private void RecalcSoTienViPham()
+    {
+        var giaTri = Record.GiaBan ?? 0; // [1]
+        var tyLe = Record.TyLeViPham;      // [4] (%)
+
+        // [5] = [1] * [4%]
+        Record.SoTienViPhamHopDong = Math.Round(giaTri * (tyLe / 100), 0, MidpointRounding.AwayFromZero);
+
+        // Nếu có [6] = [2] - [5]
+        Record.SoTienHoanTra = Record.SoTienDaThu - Record.SoTienViPhamHopDong + Record.SoTienPhiBaoTriDaThu;
+        if (Record.SoTienHoanTra < 0) Record.SoTienHoanTra = 0;
+    }
+
+    private void ResetGiaTri()
+    {
+        Record.GiaBan = 0;
+        Record.SoTienDaThu = 0;
+        Record.SoTienPhiBaoTriDaThu = 0;
+        Record.TyLeViPham = 0;
+        Record.SoTienViPhamHopDong = 0;
+        Record.SoTienHoanTra = 0;
+    }
+}

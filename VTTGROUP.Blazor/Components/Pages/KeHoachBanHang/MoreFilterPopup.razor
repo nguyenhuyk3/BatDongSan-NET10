@@ -1,0 +1,137 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+<div class="button-search-more" @ref="popupRef">
+    @* <i class="mdi mdi-dots-horizontal btn-toggle-popup-more" @onclick="TogglePopup"></i> *@
+    <div class="wraper-button-filter @(countFilter > 0 ? "had-filter" : "had-filter")">
+        <AppButton Label="@(FilterLabel)"
+                   Class="button button-action btn-toggle-popup-more"
+                   IconClass="mdi mdi-filter-outline"
+                   OnClick="() => TogglePopup()" />
+        <div class="reset-button" @onclick="OnResetClicked"><i class="mdi mdi-close"></i></div>
+    </div>
+
+    <div class="wraper-popup-filter content-search-more @(showPopup ? "show" : "")" id="popupFilter">
+        <div class="header-search-more">
+            <div class="title-search-more">
+                Bộ lọc
+                <div class="close-button-popup" @onclick="OnOffPopupClicked"><i class="mdi mdi-close"></i></div>
+            </div>
+        </div>
+        <div class="wappert-item-more container-form">
+            <div class="title-item-more">Trạng thái</div>
+            <div class="content-item-more">
+                <select name="TrangThaiDuyet" id="TrangThaiDuyet" class="form-control" @onchange="OnChangeTrangThai">
+                    <option value="">Chọn trạng thái</option>
+                    @if (LisTTD != null)
+                    {
+                        @foreach (var item in LisTTD)
+                        {
+                            <option value="@item.MaTrangThai">@item.TenTrangThai</option>
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="wraper-button-bottom">
+            <UiButton Text="Áp dụng" Variant="primary" OnClick="OnAgreeFilter" />
+        </div>
+    </div>
+</div>
+@code {
+    private bool showPopup = false;
+    private ElementReference popupRef;
+
+    [Inject] IJSRuntime JS { get; set; }
+
+    [Parameter] public EventCallback<string> OnTrangThaiChanged { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+    private List<HtTrangThaiDuyet> LisTTD = new();
+    private bool isTrangThaiDuyetSelect2 = false;
+    private string? selectedTrangThai;
+    private int countFilter = 0;
+    private string FilterLabel => $"Bộ lọc{(countFilter > 0 ? $" ({countFilter})" : "")}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LisTTD = await BaseService.GetListTrangThaiDuyetAsync();
+            await JS.InvokeVoidAsync("popupMoreFilter.initClickOutside", popupRef, DotNetObjectReference.Create(this));
+        }
+    }
+
+    private async Task TogglePopup()
+    {
+        showPopup = !showPopup;
+
+        if (showPopup)
+        {
+            if (!isTrangThaiDuyetSelect2)
+            {
+                await JS.InvokeVoidAsync("select2Helper.initSelectChange", "TrangThaiDuyet", "Chọn trạng thái", true);
+                isTrangThaiDuyetSelect2 = true;
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task HidePopupMore()
+    {
+        await JS.InvokeVoidAsync("popupMoreFilter.removeShowClass", "popupFilter");
+        await Task.Delay(0);
+        showPopup = false;
+        StateHasChanged();
+    }
+
+    private async Task OnChangeTrangThai(ChangeEventArgs e)
+    {
+        selectedTrangThai = e.Value?.ToString();
+    }
+
+    private async Task ResetCountFilter()
+    {
+        countFilter = 0;
+        if (!string.IsNullOrEmpty(selectedTrangThai))
+            countFilter += 1;
+
+        /*Có thể thêm cho các loại filter khác */
+        /*Ví dụ*/
+        /*Sàn giao dịch*/
+        // if (!string.IsNullOrEmpty(selectedSanGiaoDich))
+        // 	countFilter += 1;
+    }
+
+    private async Task OnAgreeFilter()
+    {
+        showPopup = false;
+        await ResetCountFilter();
+        await OnTrangThaiChanged.InvokeAsync(selectedTrangThai);
+        StateHasChanged();
+    }
+    private async Task OnOffPopupClicked()
+    {
+        showPopup = false;
+        selectedTrangThai = string.Empty;
+        await ResetCountFilter();
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "TrangThaiDuyet" });
+        await OnTrangThaiChanged.InvokeAsync(string.Empty);
+        StateHasChanged();
+    }
+
+    private async Task OnResetClicked()
+    {
+        selectedTrangThai = string.Empty;
+        await ResetCountFilter();
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "TrangThaiDuyet" });
+        await OnTrangThaiChanged.InvokeAsync(string.Empty);
+        await OnReset.InvokeAsync();
+    }
+    public async Task RestAllMore()
+    {
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "TrangThaiDuyet" });
+    }
+}
+

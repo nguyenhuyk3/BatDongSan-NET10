@@ -1,0 +1,1026 @@
+﻿@page "/duan/config/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.DMSanGiaoDich
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject DuAnService DuAnService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+@inject NavigationManager Nav
+<PageTitle>Cấu hình dự án</PageTitle>
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Cấu hình Dự án</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin cấu hình</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Đợt mở bán</li>
+                        <li class="tab-item" data-id="3" id="linkTab3">Sàn giao dịch</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án</span>
+                                    <span class="input-value">@Record.TenDuAn</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        @if (Fields.Any())
+                        {
+                            @* foreach (var item in Fields)
+							{
+								string extentText = item.FieldName == "ThoiGianChoBookGioHangRieng" || item.FieldName == "ThoiGianChoBookGioHangChung" ? "phút" :
+								item.FieldName == "TyLeThueVAT" || item.FieldName == "TyLeQuyBaoTri" ? "%" : string.Empty;
+
+								if (item.FieldName == "SoLuongBookingToiDa" && Fields.FirstOrDefault(f => f.FieldName == "ChoPhepNhieuBookingCho1Can")?.Value == "True")
+								{
+									<div class="wapper-input col-lg-6">
+										<div class="row">
+											<div class="form-group-input">
+												<div class="title-field">@item.DisplayName</div>
+												<div class="input-wraper-choose @(item.HasError ? "has-error-danger" : "")">
+													<input class="form-control input-form select-on-click currency-input @(item.HasError ? "border-danger" : "")"
+														   type="text" id="@(item.FieldName)" @bind="item.Value" />
+													@if (item.HasError)
+													{
+														<span class="error-validation xtop-2" style="display:block!important">Vui lòng nhập @item.DisplayName</span>
+													}
+													<div class="icon-choose icon-mr" @onclick="() => Save(item)">
+														<i class="mdi mdi-content-save"></i>
+													</div>
+													<div class="icon-choose" @onclick="() => ViewHistory(item)">
+														<i class="bi bi-clock-history"></i>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								}
+								else if (item.FieldName != "SoLuongBookingToiDa")
+								{
+									<div class="wapper-input @(item.FieldName == "IsKichHoatGh" || item.FieldName == "IsMoBanCoGia" || item.FieldName == "ChoPhepNhieuBookingCho1Can" ? "col-lg-2" : "col-lg-6")">
+										<div class="row">
+											<div class="form-group-input">
+												<div class="title-field">@item.DisplayName</div>
+												@if (item.FieldName == "IsKichHoatGh" || item.FieldName == "IsMoBanCoGia" || item.FieldName == "ChoPhepNhieuBookingCho1Can" || item.FieldName == "IsHienThiGiaTran")
+												{
+													<div class="input-wraper-choose">
+														<div class="d-flex align-items-center">
+															<label class="switch-toggle mb-0">
+																<input type="checkbox" checked="@Convert.ToBoolean(item.Value)" @onclick="(e) => OnToggleCheckbox(item, !Convert.ToBoolean(item.Value))" />
+																<span class="slider"></span>
+															</label>
+															<span class="label-text ms-2 mb-0">@(Convert.ToBoolean(item.Value) ? "On" : "Off")</span>
+														</div>
+														<div class="icon-choose">
+															<i class="bi bi-clock-history" @onclick="() => ViewHistory(item)"></i>
+														</div>
+													</div>
+												}
+												else
+												{
+													<div class="input-wraper-choose @(item.HasError ? "has-error-danger" : "")">
+														@if (!string.IsNullOrEmpty(extentText))
+														{
+															<div class="input-group">
+																<div class="input-group-text">@extentText</div>
+																<input class="form-control select-on-click currency-input @(item.HasError ? "border-danger" : "")" type="text" id="@(item.FieldName)" @bind="item.Value" />
+															</div>
+														}
+														else
+														{
+															<input class="form-control input-form select-on-click currency-input @(item.HasError ? "border-danger" : "")" type="text" id="@(item.FieldName)" @bind="item.Value" />
+														}
+														@if (item.HasError)
+														{
+															<span class="error-validation xtop-2" style="display:block!important">Vui lòng nhập @item.DisplayName</span>
+														}
+														<div class="icon-choose icon-mr" @onclick="() => Save(item)">
+															<i class="mdi mdi-content-save"></i>
+														</div>
+														<div class="icon-choose" @onclick="() => ViewHistory(item)">
+															<i class="bi bi-clock-history"></i>
+														</div>
+													</div>
+												}
+											</div>
+										</div>
+									</div>
+								}
+							} *@
+                            @* Group 1 *@
+                            <div class="field-group">
+                                <div class="row">
+                                    @foreach (var fieldName in fieldGroups["Group1"])
+                                    {
+                                        var item = Fields.FirstOrDefault(f => f.FieldName == fieldName);
+                                        if (item == null) { continue; }
+
+                                        string extentText = fieldName == "ThoiGianChoBookGioHangRieng" || fieldName == "ThoiGianChoBookGioHangChung" ? "phút" :
+                                        fieldName == "TyLeThueVAT" || fieldName == "TyLeQuyBaoTri" || fieldName == "TyLeLaiQuaHan" ? "%" : string.Empty;
+
+                                        <div class="wapper-input @(item.IsCheckBox == true ? "col-lg-2" : "col-lg-6")">
+                                            <div class="row">
+                                                <div class="form-group-input">
+                                                    <div class="title-field">@item.DisplayName</div>
+                                                    @if (item.IsCheckBox == true)
+                                                    {
+                                                        <div class="input-wraper-choose">
+                                                            <div class="d-flex align-items-center">
+                                                                <label class="switch-toggle mb-0">
+                                                                    <input type="checkbox" checked="@Convert.ToBoolean(item.Value)" @onclick="(e) => OnToggleCheckbox(item, !Convert.ToBoolean(item.Value))" />
+                                                                    <span class="slider"></span>
+                                                                </label>
+                                                                <span class="label-text ms-2 mb-0">@(Convert.ToBoolean(item.Value) ? "On" : "Off")</span>
+                                                            </div>
+                                                            <div class="icon-choose">
+                                                                <i class="bi bi-clock-history" @onclick="() => ViewHistory(item)"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    else if (item.FieldName == "PhuongThucTinhChietKhauKM")
+                                                    {
+                                                        <div class="input-wraper-choose @(item.HasError ? "has-error-danger" : "")">
+                                                            <select class="form-select form-control input-form @(item.HasError ? "border-danger" : "")"
+                                                                    id="@(item.FieldName)"
+                                                                    @bind="item.Value">
+                                                                <option value="">-- Chọn phương thức --</option>
+                                                                <option value="1">Chiết khấu trực tiếp</option>
+                                                                <option value="2">Chiết khấu theo STT</option>
+                                                            </select>
+
+                                                            @if (item.HasError)
+                                                            {
+                                                                <span class="error-validation xtop-2" style="display:block!important">
+                                                                    Vui lòng chọn @item.DisplayName
+                                                                </span>
+                                                            }
+
+                                                            <div class="icon-choose icon-mr" @onclick="() => Save(item)">
+                                                                <i class="mdi mdi-content-save"></i>
+                                                            </div>
+                                                            <div class="icon-choose" @onclick="() => ViewHistory(item)">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="input-wraper-choose @(item.HasError ? "has-error-danger" : "")">
+                                                            @if (!string.IsNullOrEmpty(extentText))
+                                                            {
+                                                                <div class="input-group">
+                                                                    <div class="input-group-text">@extentText</div>
+                                                                    <input class="form-control select-on-click currency-input @(item.HasError ? "border-danger" : "")" type="text" id="@(item.FieldName)" @bind="item.Value" />
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <input class="form-control input-form select-on-click currency-input @(item.HasError ? "border-danger" : "")" type="text" id="@(item.FieldName)" @bind="item.Value" />
+                                                            }
+                                                            @if (item.HasError)
+                                                            {
+                                                                <span class="error-validation xtop-2" style="display:block!important">Vui lòng nhập @item.DisplayName</span>
+                                                            }
+                                                            <div class="icon-choose icon-mr" @onclick="() => Save(item)">
+                                                                <i class="mdi mdi-content-save"></i>
+                                                            </div>
+                                                            <div class="icon-choose" @onclick="() => ViewHistory(item)">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            @* Group 2 *@
+                            <div class="field-group">
+                                <div class="row">
+                                    @foreach (var fieldName in fieldGroups["Group2"])
+                                    {
+                                        var item = Fields.FirstOrDefault(f => f.FieldName == fieldName);
+                                        if (item == null) { continue; }
+
+                                        <div class="wapper-input col-lg-6">
+                                            <div class="row">
+                                                <div class="form-group-input">
+                                                    @if (fieldName == "SoLuongBookingToiDa")
+                                                    {
+                                                        if (Fields.FirstOrDefault(f => f.FieldName == "ChoPhepNhieuBookingCho1Can")?.Value == "True")
+                                                        {
+                                                            <div class="title-field">@item.DisplayName</div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="title-field">@item.DisplayName</div>
+                                                    }
+
+                                                    @if (item.IsCheckBox == true)
+                                                    {
+                                                        <div class="input-wraper-choose">
+                                                            <div class="d-flex align-items-center">
+                                                                <label class="switch-toggle mb-0">
+                                                                    <input type="checkbox" checked="@Convert.ToBoolean(item.Value)" @onclick="(e) => OnToggleCheckbox(item, !Convert.ToBoolean(item.Value))" />
+                                                                    <span class="slider"></span>
+                                                                </label>
+                                                                <span class="label-text ms-2 mb-0">@(Convert.ToBoolean(item.Value) ? "On" : "Off")</span>
+                                                            </div>
+                                                            <div class="icon-choose">
+                                                                <i class="bi bi-clock-history" @onclick="() => ViewHistory(item)"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    else if (Fields.FirstOrDefault(f => f.FieldName == "ChoPhepNhieuBookingCho1Can")?.Value == "True")
+                                                    {
+                                                        <div class="input-wraper-choose @(item.HasError ? "has-error-danger" : "")">
+                                                            <input class="form-control input-form select-on-click currency-input @(item.HasError ? "border-danger" : "")" type="text" id="@(item.FieldName)" @bind="item.Value" />
+                                                            @if (item.HasError)
+                                                            {
+                                                                <span class="error-validation xtop-2" style="display:block!important">Vui lòng nhập @item.DisplayName</span>
+                                                            }
+                                                            <div class="icon-choose icon-mr" @onclick="() => Save(item)">
+                                                                <i class="mdi mdi-content-save"></i>
+                                                            </div>
+                                                            <div class="icon-choose" @onclick="() => ViewHistory(item)">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            @* Group 3 *@
+                            <div class="field-group">
+                                <div class="row">
+                                    @foreach (var fieldName in fieldGroups["Group3"])
+                                    {
+                                        var item = Fields.FirstOrDefault(f => f.FieldName == fieldName);
+                                        if (item == null)
+                                        {
+                                            if (fieldName == "EmptyColumn")
+                                            {
+                                                <div class="wapper-input col-lg-6"></div>
+                                            }
+                                            continue;
+                                        }
+
+                                        <div class="wapper-input col-lg-6">
+                                            <div class="row">
+                                                <div class="form-group-input">
+                                                    @if ((fieldName == "ChenhLechGiaTran" || fieldName == "PhanSoLamTron"))
+                                                    {
+                                                        if (Fields.FirstOrDefault(f => f.FieldName == "IsHienThiGiaTran")?.Value == "True")
+                                                        {
+                                                            <div class="title-field">@item.DisplayName</div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="title-field">@item.DisplayName</div>
+                                                    }
+
+                                                    @if (item.IsCheckBox == true)
+                                                    {
+                                                        <div class="input-wraper-choose">
+                                                            <div class="d-flex align-items-center">
+                                                                <label class="switch-toggle mb-0">
+                                                                    <input type="checkbox" checked="@Convert.ToBoolean(item.Value)" @onclick="(e) => OnToggleCheckbox(item, !Convert.ToBoolean(item.Value))" />
+                                                                    <span class="slider"></span>
+                                                                </label>
+                                                                <span class="label-text ms-2 mb-0">@(Convert.ToBoolean(item.Value) ? "On" : "Off")</span>
+                                                            </div>
+                                                            <div class="icon-choose">
+                                                                <i class="bi bi-clock-history" @onclick="() => ViewHistory(item)"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    else if (Fields.FirstOrDefault(f => f.FieldName == "IsHienThiGiaTran")?.Value == "True")
+                                                    {
+                                                        <div class="input-wraper-choose @(item.HasError ? "has-error-danger" : "")">
+                                                            <input class="form-control input-form select-on-click currency-input @(item.HasError ? "border-danger" : "")" type="text" id="@(item.FieldName)" @bind="item.Value" />
+                                                            @if (item.HasError)
+                                                            {
+                                                                <span class="error-validation xtop-2" style="display:block!important">Vui lòng nhập @item.DisplayName</span>
+                                                            }
+                                                            <div class="icon-choose icon-mr" @onclick="() => Save(item)">
+                                                                <i class="mdi mdi-content-save"></i>
+                                                            </div>
+                                                            <div class="icon-choose" @onclick="() => ViewHistory(item)">
+                                                                <i class="bi bi-clock-history"></i>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-6 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+
+                            <div class="button-action-title" style="margin-left: 0;">
+                                <div class="icon-button" @onclick="AddDot">
+                                    <i class="mdi mdi-playlist-plus"></i>
+                                </div>
+                                <span>Đợt mở bán</span>
+                            </div>
+                        </div>
+                        @*Bảng hiển thị Đợt mở bán*@
+                        <div class="overflow-auto" id="container-table-fixed">
+                            <div class="overflow-auto" id="container-table-fixed">
+                                <table id="table-data" class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">STT</th>
+                                            <th class="text-center">Tên đợt</th>
+                                            <th class="text-center">Mã màu</th>
+                                            <th class="text-center">Ngày bắt đầu</th>
+                                            <th class="text-center">Ngày kết thúc</th>
+                                            <th class="text-center">Trạng thái kích hoạt</th>
+                                            <th class="text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (ListDots != null && ListDots.Any())
+                                        {
+                                            foreach (var item in ListDots)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">@item.ThuTuHienThi</td>
+                                                    <td>@item.TenDotMoBan</td>
+                                                    <td class="text-center">
+                                                        <span class="bg-mau-dot" style="background-color:@(item.MaMau)"></span>
+                                                    </td>
+                                                    <td class="text-center">@string.Format("{0:dd/MM/yyyy}", item.NgayBatDau)</td>
+                                                    <td class="text-center">@string.Format("{0:dd/MM/yyyy}", item.NgayKetThuc)</td>
+                                                    <td class="text-center">
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <label class="switch-toggle mb-0">
+                                                                <input type="checkbox" checked="@(item.IsKichHoat ?? false)"
+                                                                       @onclick="(e) => OnToggleDotCheckbox(item, !Convert.ToBoolean(item.IsKichHoat))" />
+                                                                <span class="slider"></span>
+                                                            </label>
+                                                            <span class="label-text ms-2 mb-0">@(item.IsKichHoat == true ? "On" : "Off")</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="icon-choose icon-edit" @onclick="() => OpenEditDotPopup(item)">
+                                                            <i class="mdi mdi-pencil"></i>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+
+                        </div>
+                    </div>
+                </div>
+                @* Tab 3 *@
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-6 mx-auto row">
+                        @*Nút để hiển thị popup thêm sàn giao dịch*@
+                        <div class="button-action-title"
+                             style="
+                                    margin-left: 0;
+                                    margin-bottom: 8px;
+                                    ">
+                            <div class="icon-button" @onclick="OpenAddPopupSgd">
+                                <i class="mdi mdi-playlist-plus"></i>
+                            </div>
+                            <span>Sàn giao dịch</span>
+                        </div>
+                        @*Table để hiển thị dữ liệu sàn*@
+                        <div class="overflow-auto" id="container-table-fixed">
+                            <table id="table-data" class="tbl table table-hover table-form table-detail">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">STT</th>
+                                        <th class="text-center">Mã sàn</th>
+                                        <th class="text-center">Tên sàn</th>
+                                        <th class="text-center">Số lượng booking</th>
+                                        <th class="text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (ListSGDs != null && ListSGDs.Any())
+                                    {
+                                        int i = 1;
+
+                                        foreach (var item in ListSGDs)
+                                        {
+
+                                            <tr>
+                                                <td class="text-center">@i</td>
+                                                <td>@item.MaSanGiaoDich</td>
+                                                <td>@item.TenSanGiaoDich</td>
+                                                <td>
+                                                    <InputCurrency T="int"
+                                                                   Id=@($"SoLuongBooking{item.MaSanGiaoDich}")
+                                                                   Format="#,##0"
+                                                                   CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                                   @bind-Value="item.SoLuongBooking" />
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="d-flex align-items-center justify-content-center gap-2">
+                                                        @*Nút lưu*@
+                                                        <div class="icon-choose icon-mr icon-save" @onclick="() => SaveSGD(item)">
+                                                            <i class="mdi mdi-content-save"></i>
+                                                        </div>
+                                                        @*Nút yêu cầu xóa*@
+                                                        <div class="icon-choose icon-delete"
+                                                             @onclick="() => AskDeleteSGD(item)">
+                                                            <i class="mdi mdi-delete"></i>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            i++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+    </div>
+</EditForm>
+<PopupLichSu @ref="lichSuModalRef" />
+<PopupCreateDot @ref="createDotModalRef" OnLoadDot="LoadDot" />
+<PopupChinhSuaDotMoBan @ref="chinhSuaDotModalRef" OnUpdated="LoadDot" />
+<PopupAddSanGiaoDich @ref="sanGiaoDichModalRef" OnSelected="OnSelectedSGDs" />
+@if (showConfirm && editingItem != null)
+{
+    <div class="modal-xacnhan modal-backdrop fade show"></div>
+    <div class="modal-xacnhan modal d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xác nhận</h5>
+                </div>
+                <div class="modal-body">
+                    <p>@confirmMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmSave">
+                        Đồng ý
+                    </button>
+                    <button type="button" class="button button-action button-huy" @onclick="CancelConfirm">Hủy</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+@if (showConfirmSGD && editingItemSGD != null)
+{
+    <div class="modal-xacnhan modal-backdrop fade show"></div>
+    <div class="modal-xacnhan modal d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xác nhận cập nhật số lượng booking</h5>
+                </div>
+                <div class="modal-body">
+                    <p>@confirmMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmSaveSGD">
+                        Đồng ý
+                    </button>
+                    <button type="button" class="button button-action button-huy" @onclick="CancelConfirm">Hủy</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+@if (showConfirmDot && editingItemDot != null)
+{
+    <div class="modal-xacnhan modal-backdrop fade show"></div>
+    <div class="modal-xacnhan modal d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xác nhận</h5>
+                </div>
+                <div class="modal-body">
+                    <p>@confirmMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmSaveDot">
+                        Đồng ý
+                    </button>
+                    <button type="button" class="button button-action button-huy" @onclick="CancelConfirmSGD">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@if (showConfirmDeleteSGD && deletingItemSGD != null)
+{
+    <div class="modal-xacnhan modal-backdrop fade show"></div>
+    <div class="modal-xacnhan modal d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xác nhận xoá</h5>
+                </div>
+                <div class="modal-body">
+                    <p>@confirmMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmDeleteSGD">
+                        Đồng ý
+                    </button>
+                    <button type="button" class="button button-action button-huy" @onclick="CancelDeleteSGD">Hủy</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private CauHinhDuAnModel? Record = new();
+    List<ConfigFieldDto> Fields = new();
+    List<DaDanhMucDotMoBan> ListDots = new();
+    List<SanGiaoDichBookingDto> ListSGDs = new();
+    private PopupLichSu? lichSuModalRef;
+    private PopupCreateDot? createDotModalRef;
+    private PopupChinhSuaDotMoBan? chinhSuaDotModalRef;
+    private PopupAddSanGiaoDich? sanGiaoDichModalRef;
+    bool needInitJs = false;
+    ConfigFieldDto? editingItem;
+    bool showConfirm = false;
+    string confirmMessage = "";
+    bool? pendingCheckboxValue = null;
+    bool showConfirmDot = false;
+    DaDanhMucDotMoBan? editingItemDot;
+    bool showConfirmSGD = false;
+    SanGiaoDichBookingDto? editingItemSGD;
+    bool showConfirmDeleteSGD = false;
+    SanGiaoDichBookingDto? deletingItemSGD;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        var result = await DuAnService.GetCauHinhByIdAsync(id ?? string.Empty);
+        if (result.Status)
+        {
+            Record = (CauHinhDuAnModel?)result.Data;
+            if (Record != null)
+            {
+                Fields = new List<ConfigFieldDto>
+                {
+                    new() { FieldName="DonGiaTb", DisplayName="Đơn giá bán", Value=string.Format("{0:#,#0}", Record?.DonGiaTb), OriginalValue=string.Format("{0:#,#0}", Record?.DonGiaTb) },
+                    new() { FieldName="DonGiaDat", DisplayName="Đơn giá đất", Value=string.Format("{0:#,#0}", Record?.DonGiaDat), OriginalValue=string.Format("{0:#,#0}", Record?.DonGiaDat) },
+                    new() { FieldName="TyLeThueVAT", DisplayName="Tỷ lệ thuế", Value=string.Format("{0:#,#0.##}", Record?.TyLeThueVat), OriginalValue=string.Format("{0:#,#0.##}", Record?.TyLeThueVat) },
+                    new() { FieldName="TyLeQuyBaoTri", DisplayName="Tỷ lệ quỹ bảo trì", Value=string.Format("{0:#,#0.##}", Record?.TyLeQuyBaoTri), OriginalValue=string.Format("{0:#,#0.##}", Record?.TyLeQuyBaoTri) },
+                    new() { FieldName="SoTienGiuCho", DisplayName="Số tiền giữ chỗ", Value=string.Format("{0:#,#0}", Record?.SoTienGiuCho) , OriginalValue=string.Format("{0:#,#0}", Record?.SoTienGiuCho)},
+                    new() { FieldName="ThoiGianChoBookGioHangRieng", DisplayName="Thời gian giữ căn GHR", Value=string.Format("{0:#,#0}", Record?.ThoiGianChoBookGioHangRieng), OriginalValue=string.Format("{0:#,#0}", Record?.ThoiGianChoBookGioHangRieng) },
+                    new() { FieldName="ThoiGianChoBookGioHangChung", DisplayName="Thời gian giữ căn GHC", Value=string.Format("{0:#,#0}", Record?.ThoiGianChoBookGioHangChung), OriginalValue=string.Format("{0:#,#0}", Record?.ThoiGianChoBookGioHangChung) },
+                    new() { FieldName="IsKichHoatGh", DisplayName="Kích hoạt giỏ hàng", Value=Record?.IsKichHoatGh?.ToString(), OriginalValue = Record?.IsKichHoatGh?.ToString() ,IsCheckBox = true},
+                    new() { FieldName="IsMoBanCoGia", DisplayName="Hiển thị giá bán", Value=Record?.IsMoBanCoGia?.ToString(), OriginalValue = Record?.IsMoBanCoGia?.ToString() ,IsCheckBox = true},
+                    new() { FieldName="TyLeLaiQuaHan", DisplayName="Tỷ lệ lãi quá hạn", Value=string.Format("{0:#,#0.##}", Record?.TyLeLaiQuaHan), OriginalValue=string.Format("{0:#,#0.##}", Record?.TyLeLaiQuaHan) },
+                    new() { FieldName="NgayQuaHanTungDotChoPhep", DisplayName="Ngày quá hạn từng đợt cho phép", Value=string.Format("{0:#,#0}", Record?.NgayQuaHanTungDotChoPhep), OriginalValue=string.Format("{0:#,#0}", Record?.NgayQuaHanTungDotChoPhep) },
+                    new()
+{
+    FieldName = "PhuongThucTinhChietKhauKM",
+    DisplayName = "Phương thức tính chiết khấu KM",
+    Value = (Record?.PhuongThucTinhChietKhauKM ?? "1").ToString(),
+    OriginalValue = (Record?.PhuongThucTinhChietKhauKM ?? "1").ToString()
+},
+                    new() { FieldName="ChoPhepNhieuBookingCho1Can", DisplayName="Cho phép nhiều Booking", Value=Record?.ChoPhepNhieuBookingCho1Can?.ToString(), OriginalValue = Record?.ChoPhepNhieuBookingCho1Can?.ToString(),IsCheckBox = true },
+                    new() { FieldName="SoLuongBookingToiDa", DisplayName="Số lượng Booking tối đa", Value=string.Format("{0:#,#0}", Record?.SoLuongBookingToiDa), OriginalValue=string.Format("{0:#,#0}", Record?.SoLuongBookingToiDa) },
+                    new() { FieldName="IsHienThiGiaTran", DisplayName="Hiển thị giá trần khi mở bán", Value=Record?.IsHienThiGiaTran?.ToString(), OriginalValue=Record?.IsHienThiGiaTran?.ToString() ,IsCheckBox = true},
+                    new() { FieldName="ChenhLechGiaTran", DisplayName="Chênh lệch giá trần", Value=string.Format("{0:#,#0}", Record?.ChenhLechGiaTran), OriginalValue=string.Format("{0:#,#0}", Record?.ChenhLechGiaTran) },
+                    new() { FieldName="PhanSoLamTron", DisplayName="Phân số làm tròn", Value=string.Format("{0:#,#0}", Record?.PhanSoLamTron), OriginalValue=string.Format("{0:#,#0}", Record?.PhanSoLamTron) },
+                };
+            }
+
+        }
+        ListDots = await DuAnService.GetListDotMoBanByDuAnAsyn(id ?? string.Empty);
+        ListSGDs = await DuAnService.GetSanGiaoDichBookingByDuAnAsync(id ?? string.Empty);
+        await ReapplyCurrencyFormat();
+    }
+
+    //Format định dạng số thập phân
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "input-currency", 9, 0);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("DMDuAn", VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            if (Fields.Any())
+            {
+                foreach (var item in Fields)
+                {
+                    if (jsConfig.TryGetValue(item.FieldName, out var cfg))
+                    {
+                        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatById", item.FieldName, cfg.len, cfg.dec);
+                        await JS.InvokeVoidAsync("InputUtils.selectAllOnClickByClass", "select-on-click");
+                    }
+                }
+            }
+        }
+
+        if (needInitJs)
+        {
+            if (Fields.Any())
+            {
+                foreach (var item in Fields)
+                {
+                    if (jsConfig.TryGetValue(item.FieldName, out var cfg))
+                    {
+                        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatById", item.FieldName, cfg.len, cfg.dec);
+                        await JS.InvokeVoidAsync("InputUtils.selectAllOnClickByClass", "select-on-click");
+                    }
+                }
+            }
+        }
+    }
+
+    Dictionary<string, (int len, int dec)> jsConfig = new()
+{
+    { "DonGiaTb", (18,0) },
+    { "DonGiaDat", (18,0) },
+    { "SoTienGiuCho", (18,0) },
+    { "ThoiGianChoBookGioHangRieng", (2,0) },
+    { "ThoiGianChoBookGioHangChung", (2,0) },
+    { "TyLeThueVAT", (3,2) },
+    { "TyLeQuyBaoTri", (3,2) },
+    { "TyLeLaiQuaHan", (3,2) },
+    { "NgayQuaHanTungDotChoPhep", (12,0) },
+    { "SoLuongBookingToiDa", (12,0) },
+    { "ChenhLechGiaTran", (18,0) },
+    { "PhanSoLamTron", (2,0) },
+};
+
+    Dictionary<string, List<string>> fieldGroups = new()
+{
+    { "Group1", new List<string> {
+        "DonGiaTb", "DonGiaDat", "TyLeThueVAT", "TyLeQuyBaoTri", "SoTienGiuCho",
+        "ThoiGianChoBookGioHangRieng", "ThoiGianChoBookGioHangChung", "IsKichHoatGh", "IsMoBanCoGia", "TyLeLaiQuaHan", "NgayQuaHanTungDotChoPhep", "PhuongThucTinhChietKhauKM"
+    }},
+    { "Group2", new List<string> {
+        "ChoPhepNhieuBookingCho1Can", "SoLuongBookingToiDa"
+    }},
+    { "Group3", new List<string> {
+        "IsHienThiGiaTran","EmptyColumn", "ChenhLechGiaTran", "PhanSoLamTron"
+    }},
+};
+
+    void OnToggleCheckbox(ConfigFieldDto item, bool newValue)
+    {
+        // Lưu lại item đang xử lý + giá trị user vừa chọn
+        item.Value = newValue.ToString();
+        editingItem = item;
+        pendingCheckboxValue = newValue;
+
+        confirmMessage = $"Bạn chắc chắn muốn thay đổi {item.DisplayName}?";
+        showConfirm = true;
+    }
+    async Task ViewHistory(ConfigFieldDto item)
+    {
+        await lichSuModalRef?.Show(Record?.MaDuAn, item);
+    }
+
+    void CancelConfirm()
+    {
+        if (editingItem != null)
+        {
+            editingItem.Value = editingItem.OriginalValue; //rollback
+            editingItem.IsEditing = false;
+        }
+
+        editingItem = null;
+        pendingCheckboxValue = null;
+        showConfirm = false;
+        StateHasChanged();
+    }
+
+    void Save(ConfigFieldDto item)
+    {
+        if (item.FieldName == "PhuongThucTinhChietKhauKM")
+        {
+            var v = (item.Value ?? "").Trim();
+            if (v != "1" && v != "2")
+            {
+                item.HasError = true;
+                return;
+            }
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(item.Value?.ToString()))
+            {
+                item.HasError = true;
+                return;
+            }
+        }
+        // Nếu hợp lệ -> show popup confirm
+        confirmMessage = $"Bạn có chắc muốn lưu {item.DisplayName}?";
+        editingItem = item;
+        showConfirm = true;
+    }
+
+    async Task ConfirmSave()
+    {
+        if (editingItem != null)
+        {
+            // var rawValue = editingItem.Value?.Replace(",", "");
+            var rawValue = editingItem.Value?.ToString()?.Trim();
+
+            if (editingItem.FieldName != "PhuongThucTinhChietKhauKM")
+                rawValue = rawValue?.Replace(",", "");
+            if (editingItem.FieldName == "IsKichHoatGh" || editingItem.FieldName == "IsMoBanCoGia" || editingItem.FieldName == "ChoPhepNhieuBookingCho1Can" || editingItem.FieldName == "IsHienThiGiaTran")
+            {
+                rawValue = pendingCheckboxValue?.ToString();
+                editingItem.Value = pendingCheckboxValue.ToString();
+            }
+
+            var result = await DuAnService.UpdateCauHinhByIdAsync(id ?? string.Empty,
+                                                        editingItem.FieldName,
+                                                        rawValue);
+
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+
+            editingItem.OriginalValue = editingItem.Value;
+            editingItem.IsEditing = false;
+        }
+
+        editingItem = null;
+        pendingCheckboxValue = null;
+        showConfirm = false;
+        needInitJs = true;
+        StateHasChanged();
+    }
+
+    async Task AddDot()
+    {
+        await createDotModalRef?.Show(Record?.MaDuAn);
+    }
+
+    void OnToggleDotCheckbox(DaDanhMucDotMoBan item, bool newValue)
+    {
+        editingItemDot = item;
+        editingItemDot.IsKichHoat = newValue;
+        confirmMessage = $"Bạn chắc chắn muốn {(newValue ? "kích hoạt" : "tắt")} đợt này?";
+        showConfirmDot = true;
+    }
+
+    async Task ConfirmSaveDot()
+    {
+        if (editingItemDot != null)
+        {
+            var result = await DuAnService.UpdateCauHinhDotByIdAsync(id ?? string.Empty,
+                                                        editingItemDot.MaDotMoBan,
+                                                        editingItemDot.IsKichHoat);
+
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+
+        editingItemDot = null;
+        showConfirmDot = false;
+        StateHasChanged();
+    }
+    void CancelConfirmDot()
+    {
+        if (editingItemDot != null)
+        {
+            editingItemDot.IsKichHoat = !editingItemDot.IsKichHoat;
+        }
+
+        editingItemDot = null;
+        showConfirmDot = false;
+        StateHasChanged();
+    }
+
+    async Task LoadDot()
+    {
+        ListDots = await DuAnService.GetListDotMoBanByDuAnAsyn(id ?? string.Empty);
+        StateHasChanged();
+    }
+
+    private async Task OpenEditDotPopup(DaDanhMucDotMoBan item)
+    {
+        if (chinhSuaDotModalRef != null)
+            await chinhSuaDotModalRef.ShowAsync(item.MaDotMoBan);
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/duan");
+    }
+
+    private async Task ConfirmSaveSGD()
+    {
+        if (editingItemSGD != null)
+        {
+            var result = await DuAnService.UpdateSoLuongBookingSGGAsync(id ?? string.Empty,
+                                                        editingItemSGD.MaSanGiaoDich,
+                                                        editingItemSGD.SoLuongBooking);
+
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+
+        editingItemSGD = null;
+        showConfirmSGD = false;
+        StateHasChanged();
+    }
+
+
+    private async Task SaveSGD(SanGiaoDichBookingDto item)
+    {
+        // Nếu hợp lệ -> show popup confirm
+        confirmMessage = $"Bạn có chắc muốn cập nhật số lượng booking của sàn giao dịch {item.TenSanGiaoDich}?";
+        editingItemSGD = item;
+        showConfirmSGD = true;
+    }
+
+    void CancelConfirmSGD()
+    {
+        editingItemSGD = null;
+        showConfirmSGD = false;
+
+        StateHasChanged();
+    }
+
+    #region Thao tác xóa sàn giao dịch khỏi dự án
+
+    @*Khi yêu cầu xóa 1 sgd sẽ hiển thị popup xác nhận*@
+    private void AskDeleteSGD(SanGiaoDichBookingDto item)
+    {
+        confirmMessage = $"Bạn có chắc muốn xoá sàn giao dịch {item.TenSanGiaoDich} khỏi dự án?";
+        deletingItemSGD = item; // Biến toàn cục để lưu lại item đang yêu cầu xóa, tránh trường hợp user click nhanh nhiều item khác
+        showConfirmDeleteSGD = true;
+    }
+
+    private async Task ConfirmDeleteSGD()
+    {
+        if (deletingItemSGD != null)
+        {
+            var result = await DuAnService.RemoveSGDFromDuAnAsync(id ?? string.Empty, deletingItemSGD.MaSanGiaoDich);
+
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+
+            if (result.Status)
+            {
+                // Cập nhập lại danh sách sgd sau khi xóa 1 sgd
+                ListSGDs = await DuAnService.GetSanGiaoDichBookingByDuAnAsync(id ?? string.Empty);
+
+                await ReapplyCurrencyFormat();
+            }
+        }
+
+        deletingItemSGD = null;
+        showConfirmDeleteSGD = false;
+
+        StateHasChanged();
+    }
+
+    private void CancelDeleteSGD()
+    {
+        deletingItemSGD = null;
+        showConfirmDeleteSGD = false;
+
+        StateHasChanged();
+    }
+
+    # endregion
+
+    # region Xử lí thêm sàn giao dịch ở tab "Sàn giao dịch"
+    private async Task OpenAddPopupSgd()
+    {
+        await sanGiaoDichModalRef?.ShowPopupAsync(id);
+    }
+
+    private async Task OnSelectedSGDs(List<SanGiaoDichPagingDto>? selectedSGDs)
+    {
+        if (selectedSGDs == null || !selectedSGDs.Any())
+        {
+            return;
+        }
+
+        var listMaSGDs = selectedSGDs.Select(s => s.MaSanGiaoDich).ToList();
+        var result = await DuAnService.AddSGDToDuAnAsync(id ?? string.Empty, listMaSGDs);
+
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+
+        if (result.Status)
+        {
+            ListSGDs = await DuAnService.GetSanGiaoDichBookingByDuAnAsync(id ?? string.Empty);
+
+            await ReapplyCurrencyFormat();
+
+            StateHasChanged();
+        }
+    }
+    #endregion
+}
+
+<style>
+    .icon-choose.icon-save {
+        cursor: pointer;
+        color: #f3c46c;
+        font-size: 20px;
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: color .2s ease, background-color .2s ease;
+    }
+
+        .icon-choose.icon-save:hover {
+            color: #c97e0a;
+        }
+
+    .icon-choose.icon-delete {
+        cursor: pointer;
+        color: #f29ba7;
+        font-size: 20px;
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: color .2s ease, background-color .2s ease, transform .2s ease;
+    }
+
+        .icon-choose.icon-delete:hover {
+            color: #c82333;
+            transform: scale(1.05);
+        }
+
+        .icon-choose.icon-delete i {
+            transition: color .2s ease, transform .2s ease;
+        }
+
+    .icon-choose.icon-edit {
+        cursor: pointer;
+        color: #5b9bd5;
+        font-size: 20px;
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: color .2s ease, transform .2s ease, filter .2s ease;
+    }
+
+        .icon-choose.icon-edit:hover {
+            color: #1a6aad;
+            transform: scale(1.25);
+            filter: drop-shadow(0 2px 6px rgba(91, 155, 213, 0.6));
+        }
+
+        .icon-choose.icon-edit i {
+            transition: color .2s ease, transform .2s ease;
+        }
+</style>

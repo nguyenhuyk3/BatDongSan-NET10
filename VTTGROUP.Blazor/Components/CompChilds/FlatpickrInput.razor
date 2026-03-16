@@ -1,0 +1,73 @@
+﻿@using System.Text.Json
+@implements IDisposable
+
+<input @ref="inputRef"
+	   id="@Id"
+	   name="@Name"
+	   class="@CssClass"
+	   placeholder="@Placeholder"
+	   value="@Value"
+	   @onchange="OnChange" />
+
+@code {
+	[Parameter] public string? Value { get; set; }
+	[Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+	[Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+	[Parameter] public string? Name { get; set; }   // ✅ Cho phép truyền name
+	[Parameter] public string CssClass { get; set; } = "form-control datetime-picker";
+	[Parameter] public string Placeholder { get; set; } = "Chọn ngày";
+
+	[Parameter] public object? Options { get; set; }
+
+	[Inject] private IJSRuntime JS { get; set; } = default!;
+	private ElementReference inputRef;
+	private DotNetObjectReference<FlatpickrInput>? dotNetRef;
+	private bool hasMask = false;
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			dotNetRef = DotNetObjectReference.Create(this);
+			string optionsJson = Options != null ? JsonSerializer.Serialize(Options) : "{}";
+			using (var doc = JsonDocument.Parse(optionsJson))
+			{
+				if (doc.RootElement.TryGetProperty("allowTypingDateMask", out var allowMaskProp)
+					&& allowMaskProp.GetBoolean())
+				{
+					hasMask = true;
+				}
+			}
+			if (hasMask)
+				await JS.InvokeVoidAsync("InputUtils.initFlatpickrMaskById", Id, dotNetRef, optionsJson);
+			else
+				await JS.InvokeVoidAsync("InputUtils.initFlatpickrById", Id, dotNetRef, optionsJson);
+		}
+	}
+
+	[JSInvokable]
+	public async Task OnDateChanged(string newValue)
+	{
+		Value = newValue;
+		await ValueChanged.InvokeAsync(Value);
+		// gỡ cảnh báo ngay khi chọn ngày
+		await JS.InvokeVoidAsync("clearValidateById", Id);
+		StateHasChanged();
+	}
+
+	private async Task OnChange(ChangeEventArgs e)
+	{
+		Value = e.Value?.ToString();
+		await ValueChanged.InvokeAsync(Value);
+	}
+
+	public void Dispose()
+	{
+		dotNetRef?.Dispose();
+	}
+}
+@* private object dateOptions = new {
+    dateFormat = "d/m/Y H:i",
+    enableTime = true,
+    time_24hr = true
+}; *@

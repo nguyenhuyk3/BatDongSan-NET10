@@ -1,0 +1,203 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject PhanQuyenService PhanQuyenService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupAddNhanVien" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered draggable-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách nhân viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng" @onclick="OnClosePupop"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="flex items-center gap-3 my-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Tên đăng nhập
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Họ và tên
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Email
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Số điện thoại
+                                    </th>
+                                    <th style="width: 50px" class="text-center">
+                                        <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                               @onchange="OnCheckboxAllChanged" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listNhanViens != null && listNhanViens.Count > 0)
+                                {
+                                    var i = 1;
+                                    @foreach (var item in listNhanViens)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@i</span>
+                                            </td>
+                                            <td>@item.TenDangNhap</td>
+                                            <td>@item.TenNhanVien</td>
+                                            <td>
+                                                <span>@item.Email</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.SoDienThoai</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@item.IsSelected"
+                                                       @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (listNhanViens == null || !listNhanViens.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="OnClosePupop">Đóng</button>
+                <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">
+                    Chọn
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<List<NhanVienUserPagingDto>?> OnSelected { get; set; }
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<NhanVienUserPagingDto> listNhanViens = new();
+    private bool IsSelectAll = false;
+    List<NhanVienUserPagingDto> listSelecteds = new();
+
+    public async Task ShowPopupAsync(NhomUserPagingDto nhom)
+    {
+        _page = 1;
+        await LoadData();
+        StateHasChanged();
+    }
+
+    public async Task OnClosePupop()
+    {
+        IsSelectAll = false;
+        foreach (var item in listNhanViens)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await PhanQuyenService.GetNhanVienByUserPopupAsync(_page, _pageSize, search);
+            listNhanViens = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task TriggerChoose()
+    {
+
+        var selectedNhanViens = listNhanViens
+            .Where(x => x.IsSelected)
+            .ToList();
+        if (selectedNhanViens.Any())
+        {
+            listSelecteds = selectedNhanViens;
+            await OnSelected.InvokeAsync(listSelecteds);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Chọn nhân viên thành công", true);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Không có nhân viên nào được chọn", false);
+        }
+    }
+    private void OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in listNhanViens)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(NhanVienUserPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listNhanViens.All(x => x.IsSelected);
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+}
+

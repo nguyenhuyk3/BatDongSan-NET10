@@ -1,0 +1,277 @@
+﻿@page "/truc/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.ViewTruc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject LoadingService Loading
+@inject ViewTrucService ViewTrucService
+@inject DuAnService DuAnService
+@inject IBaseService BaseService
+@inject BlockService BlockService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Trục</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" name="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                        <option value="">-- Chọn dự án --</option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Block <i class="point-validate">*</i></span>
+                                    <select id="MaBlock" name="MaBlock" class="form-control input-validation" @onchange="OnBlockChanged">
+                                        <option value="">-- Chọn block --</option>
+                                        @foreach (var item in ListBlock)
+                                        {
+                                            <option value="@(item.MaBlock)">@item.TenBlock</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn block</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã trục <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MaTruc" id="MaTruc" />
+                                    <span class="error-validation">Vui lòng nhập mã trục</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên trục <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenTruc" id="TenTruc" />
+                                    <span class="error-validation">Vui lòng nhập tên trục</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mặt khối <i class="point-validate">*</i></span>
+                                    <select id="MaMatKhoi" class="form-control input-validation" name="MaMatKhoi" @bind="Record.MaMatKhoi">
+                                        <option value="">-- Chọn mặt khối --</option>
+                                        @foreach (var item in ListMMK)
+                                        {
+                                            <option value="@(item.MaMatKhoi)">@item.TenMatKhoi</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn View mặt khối</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hướng</span>
+                                    <select id="MaHuong" class="form-control" name="MaHuong" @bind="Record.MaHuong">
+                                        <option value="">-- Chọn hướng --</option>
+                                        @foreach (var item in ListHuong)
+                                        {
+                                            <option value="@(item.MaHuong)">@item.TenHuong</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">View </span>
+                                    <select id="MaView" class="form-control" name="MaView" @bind="Record.MaView">
+                                        <option value="">-- Chọn view --</option>
+                                        @foreach (var item in ListView)
+                                        {
+                                            <option value="@(item.MaView)">@item.TenView</option>
+                                        }
+                                    </select>                                 
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại góc</span>
+                                    <select id="MaLoaiGoc" class="form-control" name="MaLoaiGoc" @bind="Record.MaLoaiGoc">
+                                        <option value="">-- Chọn loại góc --</option>
+                                        @foreach (var item in ListGoc)
+                                        {
+                                            <option value="@(item.MaLoaiGoc)">@item.TenLoaiGoc</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Vị trí</span>
+                                    <select id="MaViTri" class="form-control" name="MaViTri" @bind="Record.MaViTri">
+                                        <option value="">-- Chọn vị trí --</option>
+                                        @foreach (var item in ListVT)
+                                        {
+                                            <option value="@(item.MaViTri)">@item.TenViTri</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="HeSoTruc" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.HeSoTruc" />
+                                    <span class="error-validation">Vui lòng nhập hệ số</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Thứ tự hiển thị <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="ThuTuHienThi" name="ThuTuHienThi" style="width:40px;text-align:right" type="text" @bind="Record.ThuTuHienThi">
+                                    <span class="error-validation">Vui lòng nhập thứ tự hiên thị</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+
+
+</EditForm>
+@code {
+    private EditContext editContext;
+    private ViewTrucModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<DaDanhMucBlock> ListBlock = new();
+    private List<DaDanhMucLoaiGoc> ListGoc = new();//Góc theo dự án
+    private List<DaDanhMucView> ListView = new();//View theo dự án
+    private List<DaDanhMucViewMatKhoi> ListMMK = new();//Mặt khối  theo dự án
+    private List<DaDanhMucViTri> ListVT = new();//Vị trí theo dự án
+    private List<DaDanhMucHuong> ListHuong = new();//Hướng  theo dự án
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        ListDA = await BlockService.GetByDuAnAsync();
+        ListBlock = await ViewTrucService.GetByBlockTheoDuAnAsync(Record.MaDuAn);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("TraCanHoVeKho", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaBlock", "Chọn block", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaLoaiGoc", "Chọn loại góc", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaView", "Chọn view", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaMatKhoi", "Chọn mặt khối ", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaViTri", "Chọn vị trí", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaHuong", "Chọn hướng", true);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaTruc");
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "ThuTuHienThi", 18, 0);
+            await ReapplyCurrencyFormat();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await ViewTrucService.SaveViewTrucAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/truc/edit/{Record.MaTruc}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/truc");
+
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        Record.MaBlock = null;
+        ListBlock = await ViewTrucService.GetByBlockTheoDuAnAsync(Record.MaDuAn);
+        ListGoc = await ViewTrucService.GetByLoaiGocTheoDuAnAsync(Record.MaDuAn);
+        ListView = await ViewTrucService.GetByViewTheoDuAnAsync(Record.MaDuAn);
+        ListMMK = await ViewTrucService.GetByMatKhoiTheoDuAnAsync(Record.MaDuAn, Record.MaBlock);
+        ListVT = await ViewTrucService.GetByViTriTheoDuAnAsync(Record.MaDuAn);
+        ListHuong = await DuAnService.GetByHuogTheoDuAnAsync(Record.MaDuAn);
+    }
+
+    //Format định dạng số thập phân
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 4);
+    }
+
+    private async Task OnBlockChanged(ChangeEventArgs e)
+    {
+        Record.MaBlock = e.Value?.ToString();
+        ListMMK = await ViewTrucService.GetByMatKhoiTheoDuAnAsync(Record.MaDuAn, Record.MaBlock);
+    }
+}

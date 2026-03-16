@@ -1,0 +1,26 @@
+﻿@using VTTGROUP.Infrastructure.Services
+@inject LoadingService Loading
+
+@if (Loading.IsLoading)
+{
+    <div class="app-loading-overlay">
+        <div class="app-loading-box">
+            <div class="app-spinner"></div>
+        </div>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Loading.OnChanged += OnLoadingChanged;
+    }
+
+    private void OnLoadingChanged()
+        => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Loading.OnChanged -= OnLoadingChanged;
+    }
+}

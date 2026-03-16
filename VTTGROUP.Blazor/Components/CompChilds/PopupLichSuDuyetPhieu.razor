@@ -1,0 +1,104 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject KhachHangTamService KhachHangTamService
+@inject DMKhachHangService DMKhachHangService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupLSDPModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Lịch sử duyệt phiếu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 200px" class="text-center">
+                                        Tình trạng
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Nhân viên
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Ngày duyệt
+                                    </th>
+                                    <th style="width: 200px" class="text-center">
+                                        Ghi chú
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listLSDP != null && listLSDP.Count > 0)
+                                {
+                                    int i = 1;
+                                    @foreach (var item in listLSDP)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@i</span>
+                                            </td>
+                                            <td>@item.TenTrangThai</td>
+                                            <td>
+                                                <span>@item.TenNhanVien</span>
+                                            </td>
+                                            <td style="text-align:center">                                              
+                                                @((item.NgayDuyet == null || item.NgayDuyet == DateTime.MinValue) ? "" : item.NgayDuyet.ToString("dd/MM/yyyy HH:mm"))
+                                            </td>
+                                            <td>
+                                                <span>@item.NoiDung</span>
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    private bool isLoading = false;
+    List<LichSuDuyetPhieuDto> listLSDP = new();
+    [Parameter]
+    public string MaCongViec { get; set; }
+    public string MaPhieu { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // await LoadData();
+    }
+
+    public async Task ShowLSDP(string maCongViec, string maPhieu)
+    {
+        MaCongViec = maCongViec;
+        MaPhieu = maPhieu;
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupLSDPModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+
+    private async Task LoadData()
+    {
+        listLSDP = await BaseService.GetLichSuDuyetPhieuAsyn(MaCongViec, MaPhieu);
+        StateHasChanged();
+    }
+}

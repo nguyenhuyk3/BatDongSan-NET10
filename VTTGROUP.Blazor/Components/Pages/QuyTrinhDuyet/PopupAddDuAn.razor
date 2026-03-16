@@ -1,0 +1,190 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupAddDuAn" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách dự án</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng" @onclick="OnClosePupop"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="flex items-center gap-3 my-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Công trình
+                                    </th>
+                                    <th style="width: 50px" class="text-center">
+                                        <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                               @onchange="OnCheckboxAllChanged" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listDuAns != null && listDuAns.Count > 0)
+                                {
+                                    var i = 1;
+                                    @foreach (var item in listDuAns)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@i</span>
+                                            </td>
+                                            <td>@item.TenDuAn</td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@item.IsSelected"
+                                                       @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (listDuAns == null || !listDuAns.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">
+                    Chọn
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="OnClosePupop">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<List<DanhMucDuAnPagingDto>?> OnSelected { get; set; }
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<DanhMucDuAnPagingDto> listDuAns = new();
+    private bool IsSelectAll = false;
+    List<DanhMucDuAnPagingDto> listSelecteds = new();
+
+    public async Task ShowPopupAsync()
+    {
+        _page = 1;
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupAddDuAn");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+        StateHasChanged();
+    }
+
+    public async Task OnClosePupop()
+    {
+        IsSelectAll = false;
+        foreach (var item in listDuAns)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupAddDuAn");
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await BaseService.DuAnPagingAsync(_page, _pageSize, search);
+            listDuAns = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task TriggerChoose()
+    {
+
+        var selecteds = listDuAns
+            .Where(x => x.IsSelected)
+            .ToList();
+        if (selecteds.Any())
+        {
+            listSelecteds = selecteds;
+            await OnSelected.InvokeAsync(listSelecteds);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Chọn dự án thành công", true);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Không có dự án nào được chọn", false);
+        }
+    }
+    private void OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in listDuAns)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(DanhMucDuAnPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listDuAns.All(x => x.IsSelected);
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+}
+

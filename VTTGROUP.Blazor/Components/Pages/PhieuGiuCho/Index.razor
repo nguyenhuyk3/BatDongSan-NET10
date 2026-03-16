@@ -1,0 +1,957 @@
+﻿@page "/phieugiucho"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.PhieuGiuCho
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject PhieuGiuChoService PhieuGiuChoService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Phiếu booking giữ chỗ</h1>
+<div class="container-form">
+    <div class="container-tabs">
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="tab-element">
+                    <li class="tab-item actived-tab" data-id="1" id="linkTab1" @onclick="() => ChangeTab(1)">Danh sách booking giữ chỗ</li>
+                    <li class="tab-item" data-id="2" id="linkTab2" @onclick="() => ChangeTab(2)">Danh sách booking còn hiệu lực</li>
+                    <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                    </div>
+                </ul>
+            </div>
+        </div>
+        <div class="wapper-content-tab" id="formCongViec">
+            <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                <div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+                    <div class="relative z-50">
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="flex items-center">
+                                <div class="result-label-icon">
+                                    <i class="mdi mdi-calendar-today"></i>
+                                    <DateRangePicker OnDateRangeChanged="OnDateRangeChanged" @ref="dateRangeRef" />
+                                </div>
+                            </div>
+
+                            <UiSelect Icon="mdi mdi-file-document"
+                                      Placeholder="Chọn dự án"
+                                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                                      @bind-Value="selectedDuAn"
+                                      OnChange="OnDTKHChanged" />
+
+                            <div class="ml-auto flex items-center gap-2">
+                                <MoreFilterPopup OnTrangThaiChanged="OnTTDChanged" OnSanGiaoDichChanged="OnSanGGChanged"
+                                                 OnReset="ResetAllParam" @ref="morePopupRef" />
+                                <AddButton Text="Giữ chỗ" OnClick="Insert" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 my-3">
+                        <div class="w-[360px] md:w-[480px]">
+                            <InputSearch @bind-Value="search" OnSearch="Search" />
+                        </div>
+                        <div class="ml-auto h-11 flex items-center">
+                            <Pagination Page="@_page"
+                                        TotalPages="@totalPage"
+                                        TotalItems="@totalCount"
+                                        OnPageChanged="HandlePageChanged"
+                                        OnPageSizeChanged="HandlePageSizeChanged" />
+                        </div>
+                    </div>
+                    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+                    <div class="container-table-detail">
+                        <div class="container-table-fixed has-paging">
+                            <table class="tbl table-form table-detail treeTable" id="table-data">
+                                <thead>
+                                    <tr class="cls_custome_back">
+                                        <th style="width: 40px" class="text-center">
+                                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                                        </th>
+                                        <th style="width: 40px" class="text-center">
+                                            STT
+                                        </th>
+                                        <th style="width: 130px" class="text-center">
+                                            Hệ thống
+                                        </th>
+                                        <th style="width: 220px" class="text-center">
+                                            Dự án
+                                        </th>
+                                        <th style="width: 130px" class="text-center">
+                                            Khách hàng
+                                        </th>
+                                        <th style="width: 130px" class="text-center">
+                                            Sàn giao dịch
+                                        </th>
+                                        <th style="width: 150px" class="text-center">
+                                            Đợt mở bán
+                                        </th>
+                                        <th style="width: 150px" class="text-center">
+                                            Nhân viên môi giới
+                                        </th>
+                                        <th style="width: 150px" class="text-center">
+                                            Số tiền giữ chỗ
+                                        </th>
+                                        <th style="width: 100px" class="text-center">
+                                            STT booking
+                                        </th>
+                                        <th style="width: 100px" class="text-center">
+                                            Tổng hợp booking
+                                        </th>
+                                        <th style="width: 250px" class="text-center">
+                                            Nội dung
+                                        </th>
+                                        <th style="width: 90px" class="text-center">
+                                            Trạng thái
+                                        </th>
+                                        <th style="width: 50px">
+                                            &nbsp;
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (listPGC != null && listPGC.Count > 0)
+                                    {
+                                        @foreach (var item in listPGC)
+                                        {
+                                            <tr class="initialized">
+                                                <td class="text-center">
+                                                    @if (item.TrangThaiDuyet < 1 && item.NguoiLap == maNhanVienHT && string.IsNullOrWhiteSpace(item.MaPhieuTH))
+                                                    {
+                                                        <input type="checkbox" class="form-check-input"
+                                                               checked="@item.IsSelected"
+                                                               @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                                    }
+                                                </td>
+                                                <td style="text-align:center">
+                                                    <span>@item.STT</span>
+                                                </td>
+                                                <td>
+                                                    <div class="item-phieu" @onclick="() => OnEditRecord(item.MaPhieu.ToString())">@item.MaPhieu</div>
+                                                    <span class="created-label">@item.HoVaTen</span>
+                                                    <div class="created-date-label">@string.Format("{0:dd/MM/yyyy}", item.NgayLap)</div>
+                                                </td>
+                                                <td>
+                                                    <span>@item.TenDuAn</span>
+                                                </td>
+                                                <td>
+                                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnMaKHTamRecord(item.MaKhachHangTam)">@item.TenKhachHang</span></div>
+                                                </td>
+                                                <td>
+                                                    <span>@item.TenSanGiaoDich</span>
+                                                </td>
+                                                <td>
+                                                    <span>@item.TenDotMoBan</span>
+                                                </td>
+                                                <td>
+                                                    <span>@item.TenNhanVienMG</span>
+                                                </td>
+                                                <td style="text-align:right">
+                                                    @string.Format("{0:N0}", item.SoTienGiuCho)
+                                                </td>
+                                                <td style="text-align:center">
+                                                    @string.Format("{0:N0}", item.SoTTBooking)
+                                                </td>
+                                                <td>
+                                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnEditTongHopRecord(item.MaPhieuTH)">@item.MaPhieuTH</span></div>
+                                                </td>
+                                                <td>
+                                                    <span>@item.NoiDung</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="status-label" style="color: @(item.Mau)" @onclick="() => LichSuDuyetPhieu(maCongViec, item.MaPhieu, item.MaPhieuTH)">
+                                                        @item.TenTrangThai
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    @if (item.TrangThaiDuyet < 1 && item.NguoiLap == maNhanVienHT)
+                                                    {
+                                                        <div class="d-flex justify-content-center align-items-center flex-column">
+                                                            <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                                                <a href="javascript:void()" @onclick="() => OnEditRecord(item.MaPhieu!)">
+                                                                    <span>
+                                                                        <i class="mdi mdi-pencil">
+                                                                        </i>
+                                                                    </span>
+                                                                </a>
+                                                            </div>
+                                                            @if (string.IsNullOrWhiteSpace(item.MaPhieuTH))
+                                                            {
+                                                                <div class="icon-button" data-title="Xóa" data-position="left">
+                                                                    <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaPhieu!)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                            @if (listPGC == null || !listPGC.Any())
+                            {
+                                <div class="p-2">Không có dữ liệu</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div data-id="2" class="tab-content-item" id="tab2">
+                <div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+                    <div class="relative z-50">
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="flex items-center">
+                                <div class="result-label-icon">
+                                    <i class="mdi mdi-calendar-today"></i>
+                                    <!-- Date range TAB 2 -->
+                                    <DateRangePicker OnDateRangeChanged="OnDateRangeChangedTab2" @ref="dateRangeRef2" />
+                                </div>
+                            </div>
+
+                            <!-- Dự án TAB 2 -->
+                            <UiSelect Icon="mdi mdi-file-document"
+                                      Placeholder="Chọn dự án"
+                                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                                      @bind-Value="selectedDuAn2"
+                                      OnChange="OnDTKHChangedTab2" />
+
+                            <UiSelect Icon="mdi mdi-file-document"
+                                      Placeholder="Chọn sàn giao dịch"
+                                      Items="ListSGG.Select(x => new UiSelect.SelectItem(x.MaSanGiaoDich!, x.TenSanGiaoDich!))"
+                                      @bind-Value="selectedMaSan2"
+                                      OnChange="OnSanGGChangedTab2" />
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 my-3">
+                        <div class="w-[360px] md:w-[480px]">
+                            <!-- Search TAB 2 -->
+                            <InputSearch @bind-Value="search2" OnSearch="SearchTab2" />
+                        </div>
+                        <div class="ml-auto h-11 flex items-center">
+                            <!-- Paging TAB 2 -->
+                            <Pagination Page="@_page2"
+                                        TotalPages="@totalPage2"
+                                        TotalItems="@totalCount2"
+                                        OnPageChanged="HandlePageChangedTab2"
+                                        OnPageSizeChanged="HandlePageSizeChangedTab2" />
+                        </div>
+                    </div>
+                    <div class="container-table-detail">
+                        <div class="container-table-fixed has-paging">
+                            <table class="tbl table-form table-detail treeTable" id="table-data">
+                                <thead>
+                                    <tr class="cls_custome_back">
+                                        <th style="width: 40px" class="text-center">
+                                            STT
+                                        </th>
+                                        <th style="width: 130px" class="text-center">
+                                            Hệ thống
+                                        </th>
+                                        <th style="width: 220px" class="text-center">
+                                            Dự án
+                                        </th>
+                                        <th style="width: 130px" class="text-center">
+                                            Sàn giao dịch
+                                        </th>
+                                        <th style="width: 130px" class="text-center">
+                                            Khách hàng
+                                        </th>
+                                        <th style="width: 250px" class="text-center">
+                                            Nội dung
+                                        </th>
+                                        <th style="width: 150px" class="text-center">
+                                            Số tiền giữ chỗ
+                                        </th>
+                                        <th style="width: 150px" class="text-center">
+                                            Đợt bán hàng
+                                        </th>
+                                        <th style="width: 100px" class="text-center">
+                                            STT booking
+                                        </th>
+                                        <th style="width: 50px">
+                                            &nbsp;
+                                        </th>
+                                        <th style="width: 90px" class="text-center">
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                @if (listPGCCHL != null && listPGCCHL.Count > 0)
+                                {
+                                    // Gom theo mã phiếu
+                                    var groups = listPGCCHL.GroupBy(x => x.MaPhieu);
+
+                                    foreach (var group in groups)
+                                    {
+                                        var first = group.First();     // dòng chính
+                                        var rowSpan = group.Count();     // số dòng (số đợt)
+                                        var index = 0;
+                                        <tbody class="content-table booking-group">
+                                            @foreach (var row in group)
+                                            {
+                                                <tr class="initialized">
+                                                    @* ======= CÁC CỘT GỘP (rowspan) – chỉ render ở dòng đầu ======= *@
+                                                    @if (index == 0)
+                                                    {
+                                                        <!-- STT -->
+                                                        <td style="text-align:center" rowspan="@rowSpan">
+                                                            <span>@first.STT</span>
+                                                        </td>
+
+                                                        <!-- Hệ thống (Mã phiếu + người lập + ngày lập) -->
+                                                        <td rowspan="@rowSpan">
+                                                            <div class="item-phieu" @onclick="() => OnEditRecord(first.MaPhieu.ToString())">
+                                                                @first.MaPhieu
+                                                            </div>
+                                                            <span class="created-label">@first.HoVaTen</span>
+                                                            <div class="created-date-label">
+                                                                @string.Format("{0:dd/MM/yyyy}", first.NgayLap)
+                                                            </div>
+                                                        </td>
+
+                                                        <!-- Dự án -->
+                                                        <td rowspan="@rowSpan">
+                                                            <span>@first.TenDuAn</span>
+                                                        </td>
+
+                                                        <!-- Sàn giao dịch -->
+                                                        <td rowspan="@rowSpan">
+                                                            <span>@first.TenSanGiaoDich</span>
+                                                        </td>
+
+                                                        <!-- Khách hàng -->
+                                                        <td rowspan="@rowSpan">
+                                                            <span>@first.TenKhachHang</span>
+                                                        </td>
+
+                                                        <!-- Nội dung -->
+                                                        <td rowspan="@rowSpan">
+                                                            <span>@first.NoiDung</span>
+                                                        </td>
+
+                                                        <!-- Số tiền giữ chỗ -->
+                                                        <td style="text-align:right" rowspan="@rowSpan">
+                                                            @string.Format("{0:N0}", first.SoTienGiuCho)
+                                                        </td>
+                                                    }
+
+                                                    @* ======= CÁC CỘT THEO TỪNG DÒNG (Đợt + STT booking) ======= *@
+
+                                                    <!-- Đợt mở bán -->
+                                                    <td>
+                                                        <span>@row.TenDotMoBan</span>
+                                                    </td>
+
+                                                    <!-- STT booking -->
+                                                    <td style="text-align:center">
+                                                        @string.Format("{0:N0}", row.SoTTBooking)
+                                                    </td>
+
+                                                    @* Action: mỗi dòng một ô để xử lý STT theo từng đợt *@
+                                                    <td class="text-center">
+                                                        <!-- xử lý STT booking cho từng đợt -->
+                                                        <div class="d-flex justify-content-center align-items-center flex-column">
+                                                            @if (row.MaTrangThai == "3" && row.SoTTBooking == 0)
+                                                            {
+                                                                <div class="icon-button" data-title="Xác nhận STT" data-position="left">
+                                                                    <a href="javascript:void(0);"
+                                                                       @onclick="() => XacNhanSTT(row.MaPhieu, row.MaDuAn, row.DotMoBan)">
+                                                                        <i class="bi bi-sort-numeric-down text-success fs-5"></i>
+                                                                    </a>
+                                                                </div>
+                                                            }
+
+                                                            @if (row.STTMax == row.SoTTBooking && row.STTMax > 0 && ISResetSTT)
+                                                            {
+                                                                <div class="icon-button" data-title="Reset STT về 0" data-position="left">
+                                                                    <a href="javascript:void(0);" @onclick="() => ResetSttMax(row)">
+                                                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                                                    </a>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    @* Trạng thái: gộp 1 ô cho cả phiếu *@
+                                                    @if (index == 0)
+                                                    {
+                                                        <td class="text-center" rowspan="@rowSpan">
+                                                            <div class="icon-button" data-title="Chuyển Book qua đợt bán hàng mới" data-position="left">
+                                                                <a href="javascript:void(0);"
+                                                                   @onclick="() => ChuyenBookingQuaDotMoi(row.MaPhieu, row.MaDuAn, row.DotMoBan)">
+                                                                    <i class="bi bi-chevron-double-right fs-5"></i>
+                                                                </a>
+                                                            </div>
+                                                        </td>
+                                                    }
+                                                </tr>
+
+                                                index++;
+                                            }
+                                        </tbody>
+                                    }
+                                }
+
+
+                            </table>
+                            @if (listPGCCHL == null || !listPGCCHL.Any())
+                            {
+                                <div class="p-2">Không có dữ liệu</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa phiếu booking giữ chỗ này này <strong>@selectedMaPhieu</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+
+    <ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa danh sách phiếu booking giữ chỗ này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+
+    <ConfirmDeleteModal ModalId="confirmXacNhanSTTModal"
+                        Title="Xác nhận STT">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xác nhận <strong>@selectedMaPhieu</strong> có số thự tự là <strong>@soThuTuTD</strong> hay không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmXacNhanSTT">
+                Xác nhận
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+
+    <ConfirmDeleteModal ModalId="confirmResetSTTModal"
+                        Title="Cập nhật STT">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn cập nhật <strong>@selectedMaPhieu</strong> có số thự tự là <strong>@soThuTuTD</strong> về 0 hay không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmResetNhanSTT">
+                Xác nhận
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</div>
+
+<PopupLichSuDuyetPhieu @ref="guiDuyetModalRef" />
+<ChuyenBookingDotMoi @ref="chuyenDoiModalRef" OnChuyenDoiBooking="HandleLoadLaiTrang" />
+
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+
+    // TAB ACTIVE
+    private int _activeTab = 1;   // 1 = tab1, 2 = tab2
+
+    // --- TAB 1 ---
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    private string? tuNgay { get; set; } = DateTime.Now.AddMonths(-1).ToString("dd/MM/yyyy");
+    private string? denNgay { get; set; } = DateTime.Now.ToString("dd/MM/yyyy");
+    private string? selectedDuAn;
+    private string? selectedMaSan;
+    private string? selectedTrangThaiDuyet;
+    private bool isLoading = false;
+
+    // --- TAB 2 ---
+    int _page2 = 1;
+    int _pageSize2 = 10;
+    int totalPage2 = 1;
+    int totalCount2;
+    string? search2;
+    private string? tuNgay2 { get; set; } = DateTime.Now.AddMonths(-1).ToString("dd/MM/yyyy");
+    private string? denNgay2 { get; set; } = DateTime.Now.ToString("dd/MM/yyyy");
+    private string? selectedDuAn2;
+    private string? selectedMaSan2;
+    private bool isLoadingTab2 = false;
+    private ChuyenBookingDotMoi? chuyenDoiModalRef;
+
+    // khác
+    List<PhieuGiuChoPagingDto> listPGC = new();
+    int SelectedCount => listPGC?.Count(x => x.IsSelected) ?? 0;
+    List<PhieuGiuChoPagingDto> listPGCCHL = new();
+
+    private bool _isTab2Loaded = false;  // ✅ tab2 đã load lần đầu chưa
+
+    // DateRangePicker
+    DateRangePicker dateRangeRef;
+    DateRangePicker dateRangeRef2;
+
+    // Popup filter tab1
+    MoreFilterPopup morePopupRef;
+
+
+    private string? selectedDuAnChoose;
+    private string? selectedMDMBChoose;
+    private string? selectedMaPhieu;
+    private int soThuTuTD;
+
+
+
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<DmSanGiaoDich> ListSGG = new();
+    private string maNhanVienHT;
+    private bool IsSelectAll = false;
+    private bool ISResetSTT = false;
+    private PopupLichSuDuyetPhieu? guiDuyetModalRef;
+    private string maCongViec = "PhieuGiuCho";
+    // Chặn re-init JS
+    private bool _jsInited;
+
+    /* --------- 1) LOAD DỮ LIỆU Ở ĐÂY --------- */
+    protected override async Task OnInitializedAsync()
+    {
+        await BaseService.CheckPermissionAsync("PhieuGiuCho", VuViec.Xem.GetDescription());
+
+        ListDA = await CanHoService.GetByDuAnAsync();
+        ListSGG = await PhieuGiuChoService.GetBySanGiaoDichAsync();
+        maNhanVienHT = await BaseService.MaNhanVienHienTai();
+        ISResetSTT = await BaseService.CheckPermissionTraVeAsync("PhieuGiuCho", VuViec.ResetSTT.GetDescription());
+        _activeTab = 1;
+        await LoadPhieuGiuCho();// Blazor tự render lại sau khi hàm này xong → không cần StateHasChanged() Chỉ tab1 load lúc đầu
+        // await LoadPhieuGiuChoCHL();// Không gọi LoadPhieuGiuChoCHL ở đây
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_jsInited)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            // Chỉ init select2 khi có dropdown chọn dự án (khi KHÔNG bị khoá theo công trình)
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            _jsInited = true;
+        }
+        // if (firstRender)
+        // {
+
+        //     _dotNetRef = DotNetObjectReference.Create(this);
+        //     await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+        //     ListDA = await CanHoService.GetByDuAnAsync();
+        //     // ListSGG = await PhieuGiuChoService.GetBySanGiaoDichAsync();
+        //     maNhanVienHT = await BaseService.MaNhanVienHienTai();
+        //     await LoadPhieuGiuCho();
+        //     StateHasChanged();
+        // }
+        // if (listPGC.Any())
+        // {
+        //     var config = new List<FixColumnConfig>
+        //     {
+        //         new FixColumnConfig { left = 2 },
+        //         new FixColumnConfig { right = 1 }
+        //     };
+        //     await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+        // }
+    }
+
+    private async Task ChangeTab(int tabId)
+    {
+        if (_activeTab == tabId)
+            return;
+
+        _activeTab = tabId;
+
+        if (_activeTab == 2 && !_isTab2Loaded)
+        {
+            await LoadPhieuGiuChoCHL();   // lần đầu vào tab2 mới load
+            _isTab2Loaded = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ShowConfirmDelete(string maPhieu)
+    {
+        await BaseService.CheckPermissionAsync("PhieuGiuCho", VuViec.Xoa.GetDescription());
+        selectedMaPhieu = maPhieu;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task XacNhanSTT(string maPhieu, string maCongTrinh, string maDotMB)
+    {
+        await BaseService.CheckPermissionAsync("PhieuGiuCho", VuViec.Xoa.GetDescription());
+        soThuTuTD = await PhieuGiuChoService.SoThuTuTangDanTheoDuAn(maPhieu, maCongTrinh, maDotMB);
+        selectedMaPhieu = maPhieu;
+        selectedDuAnChoose = maCongTrinh;
+        selectedMDMBChoose = maDotMB;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmXacNhanSTTModal");
+    }
+
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaPhieu == null || string.IsNullOrEmpty(selectedMaPhieu))
+        {
+            return;
+        }
+        var result = await PhieuGiuChoService.DeletePGCAsync(selectedMaPhieu);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadPhieuGiuCho();
+        selectedMaPhieu = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        var selected = listPGC.Where(d => d.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        var result = await PhieuGiuChoService.DeleteListAsync(selected);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+        await LoadPhieuGiuCho();
+        StateHasChanged();
+    }
+
+    private async Task ConfirmXacNhanSTT()
+    {
+        var result = await PhieuGiuChoService.CapNhatSTTAsync(selectedMaPhieu ?? string.Empty, selectedDuAnChoose ?? string.Empty, selectedMDMBChoose ?? string.Empty);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmXacNhanSTTModal");
+        await LoadPhieuGiuChoCHL();
+        selectedMaPhieu = string.Empty;
+        soThuTuTD = 0;
+        selectedDuAnChoose = string.Empty;
+        selectedMDMBChoose = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ResetSttMax(PhieuGiuChoPagingDto item)
+    {
+        await BaseService.CheckPermissionAsync("PhieuGiuCho", VuViec.Xoa.GetDescription());
+        soThuTuTD = item.STTMax;
+        selectedMaPhieu = item.MaPhieu;
+        selectedDuAnChoose = item.MaDuAn;
+        selectedMDMBChoose = item.DotMoBan;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmResetSTTModal");
+    }
+
+    private async Task ConfirmResetNhanSTT()
+    {
+        var result = await PhieuGiuChoService.ResetSTTAsync(selectedMaPhieu ?? string.Empty, selectedDuAnChoose ?? string.Empty, selectedMDMBChoose ?? string.Empty);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmResetSTTModal");
+        await LoadPhieuGiuChoCHL();
+        selectedMaPhieu = string.Empty;
+        soThuTuTD = 0;
+        selectedDuAnChoose = string.Empty;
+        selectedMDMBChoose = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task LichSuDuyetPhieu(string MaCongViec, string MaPhieu, string MaPhieuTongHop)
+    {
+        if (!string.IsNullOrEmpty(MaPhieuTongHop))
+        {
+            MaCongViec = "TongHopBooking";
+            MaPhieu = MaPhieuTongHop;
+        }
+        await guiDuyetModalRef?.ShowLSDP(MaCongViec, MaPhieu);
+    }
+
+    private async Task OnDTKHChanged(string? duAn)
+    {
+        if (isLoading) return;
+        selectedDuAn = string.IsNullOrWhiteSpace(duAn) ? null : duAn;
+        _page = 1;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task OnSanGGChanged(string maSanGG)
+    {
+        var newSGG = maSanGG;
+        if (newSGG == selectedMaSan || isLoading)
+        {
+            return;
+        }
+        selectedMaSan = newSGG;
+        _page = 1;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task LoadPhieuGiuCho()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await PhieuGiuChoService.GetPagingAsync(selectedDuAn, selectedMaSan, selectedTrangThaiDuyet ?? string.Empty, _page, _pageSize, search, tuNgay, denNgay);
+            listPGC = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // private async Task LoadPhieuGiuChoCHL()
+    // {
+    //     // isLoading = true;
+    //     try
+    //     {
+    //         var (data, total) = await PhieuGiuChoService.GetPagingCHLAsync(selectedDuAn, selectedMaSan, selectedTrangThaiDuyet ?? string.Empty, _page, _pageSize, search, null, null);
+    //         listPGCCHL = data;
+    //         // totalCount = total;
+    //         // totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+    //     }
+    //     finally
+    //     {
+    //         //   isLoading = false;
+    //     }
+    // }
+
+    private async Task LoadPhieuGiuChoCHL()
+    {
+        isLoadingTab2 = true;
+        try
+        {
+            var (data, total) = await PhieuGiuChoService.GetPagingCHLAsync(
+                selectedDuAn2,         // dự án tab2
+                selectedMaSan2,        // sàn tab2
+                "3",                   // trạng thái cố định: còn hiệu lực
+                _page2,
+                _pageSize2,
+                search2,
+                tuNgay2,
+                denNgay2);
+
+            listPGCCHL = data;
+            totalCount2 = total;
+            totalPage2 = (int)Math.Ceiling((double)totalCount2 / _pageSize2);
+            _isTab2Loaded = true;
+        }
+        finally
+        {
+            isLoadingTab2 = false;
+        }
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadPhieuGiuCho(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task OnEditRecord(string maPhieu)
+    {
+        Nav.NavigateTo($"/phieugiucho/edit/{maPhieu}");
+    }
+
+    private async Task OnEditTongHopRecord(string maPhieu)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/tonghopbooking/edit/" + maPhieu);
+    }
+
+    private async Task OnMaKHTamRecord(string maKH)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/khachhangtam/edit/" + maKH);
+    }
+
+    private void Insert()
+    {
+        Nav.NavigateTo("/phieugiucho/create");
+        return;
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadPhieuGiuCho();
+    }
+
+    async Task NextPage()
+    {
+        _page++;
+        await LoadPhieuGiuCho();
+    }
+
+    async Task PreviousPage()
+    {
+        _page--;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task OnTTDChanged(string trangThai)
+    {
+        var newTTD = trangThai;
+        if (newTTD == selectedTrangThaiDuyet || isLoading)
+        {
+            return;
+        }
+        selectedTrangThaiDuyet = newTTD;
+        _page = 1;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task ResetAllParam()
+    {
+        _page = 1;
+        _pageSize = 10;
+        search = null;
+        selectedTrangThaiDuyet = null;
+        selectedDuAn = null;
+        selectedMaSan = null;
+        tuNgay = null;
+        denNgay = null;
+        await LoadPhieuGiuCho();
+        await dateRangeRef.ResetAsync();
+        await morePopupRef.RestAllMore();
+        await JS.InvokeVoidAsync("select2Helper.resetMultipleSelects", new[] { "MaDuAn", "MaDuAn" });
+        StateHasChanged();
+    }
+
+    private async Task OnDateRangeChanged((string? Start, string? End) range)
+    {
+        tuNgay = range.Start;
+        denNgay = range.End;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task ResetMore()
+    {
+        _page = 1;
+        _pageSize = 10;
+        await LoadPhieuGiuCho();
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in listPGC)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in listPGC)
+        {
+            if (item.TrangThaiDuyet < 1 && item.NguoiLap == maNhanVienHT && string.IsNullOrWhiteSpace(item.MaPhieuTH))
+            {
+                item.IsSelected = IsSelectAll;
+            }
+        }
+    }
+
+    private async Task OnCheckboxChanged(PhieuGiuChoPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listPGC.All(x => x.IsSelected || !(x.TrangThaiDuyet < 1 && x.NguoiLap == maNhanVienHT) || !(string.IsNullOrWhiteSpace(x.MaPhieuTH)));
+    }
+
+    private async Task OnDTKHChangedTab2(string? duAn)
+    {
+        if (isLoadingTab2) return;
+
+        selectedDuAn2 = string.IsNullOrWhiteSpace(duAn) ? null : duAn;
+        _page2 = 1;
+        await LoadPhieuGiuChoCHL();
+    }
+
+    private async Task OnSanGGChangedTab2(string maSanGG)
+    {
+        if (isLoadingTab2) return;
+
+        selectedMaSan2 = string.IsNullOrWhiteSpace(maSanGG) ? null : maSanGG;
+        _page2 = 1;
+        await LoadPhieuGiuChoCHL();
+    }
+
+    private async Task OnDateRangeChangedTab2((string? Start, string? End) range)
+    {
+        tuNgay2 = range.Start;
+        denNgay2 = range.End;
+        _page2 = 1;
+        await LoadPhieuGiuChoCHL();
+    }
+
+    private async Task SearchTab2(string? keyword)
+    {
+        search2 = keyword;
+        _page2 = 1;
+        await LoadPhieuGiuChoCHL();
+    }
+
+    private async Task HandlePageChangedTab2(int newPage)
+    {
+        _page2 = newPage;
+        await LoadPhieuGiuChoCHL();
+    }
+
+    private async Task HandlePageSizeChangedTab2(int newPageSize)
+    {
+        _pageSize2 = newPageSize;
+        _page2 = 1;
+        await LoadPhieuGiuChoCHL();
+    }
+
+    private async Task ChuyenBookingQuaDotMoi(string maPhieu, string maCongTrinh, string maDotMB)
+    {
+        chuyenDoiModalRef.ShowThongTinModal(maPhieu, maCongTrinh);
+    }
+
+    private async Task HandleLoadLaiTrang()
+    {
+        await LoadPhieuGiuChoCHL();
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+}

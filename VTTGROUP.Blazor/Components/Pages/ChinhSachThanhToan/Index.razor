@@ -1,0 +1,265 @@
+﻿@page "/chinhsachthanhtoan"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.ChinhSachThanhToan
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject ChinhSachThanhToanService ChinhSachThanhToanService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">DANH SÁCH CHÍNH SÁCH THANH TOÁN</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-office-building-outline"
+                      Placeholder="Chọn dự án"
+                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                      @bind-Value="selectedMaDuAn"
+                      OnChange="OnDTKHChanged" />
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Chính sách" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 60px" class="text-center">STT</th>
+                        <th style="width: 220px" class="text-center">Hệ thống</th>
+                        <th style="width: 260px" class="text-center">Dự án</th>
+                        <th style="width: 140px" class="text-center">Tỷ lệ CK</th>
+                        <th style="width: 420px" class="text-center">Nội dung</th>
+                        <th style="width: 50px" class="text-center">Trạng thái</th>
+                    </tr>
+                </thead>
+
+                <tbody class="content-table">
+                    @if (chinhSachThanhToans != null && chinhSachThanhToans.Any())
+                    {
+                        foreach (var item in chinhSachThanhToans)
+                        {
+                            <tr class="initialized">
+                                <td style="text-align:center">
+                                    <span>@item.STT</span>
+                                </td>
+                                <td>
+                                    <div class="item-phieu cursor-pointer underline decoration-dotted"
+                                         style="padding-bottom:5px"
+                                         @onclick="() => OnEditRecord(item.MaCSTT.ToString())">
+                                        <i class="bi bi-file-earmark-bar-graph-fill"></i> @item.TenCSTT
+                                    </div>
+                                    <div style="padding-bottom:5px">
+                                        <i class="bi bi-person-fill me-1"></i>@item.HoVaTen
+                                    </div>
+                                    <div style="padding-bottom:5px">
+                                        <i class="bi bi-calendar2-minus me-1"></i>
+                                        @string.Format("{0:dd/MM/yyyy}", item.NgayLap)
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="d-flex wraper-2">@item.TenDuAn</div>
+                                </td>
+
+                                <td style="text-align:right">
+                                    @item.TyLeChietKhau
+                                </td>
+
+                                <td>
+                                    <span class="line-clamp-3">@item.NoiDung</span>
+                                </td>
+
+                                <td class="text-center">
+                                    @if (item.IsXacNhan == false)
+                                    {
+                                        <div class="d-flex justify-content-center align-items-center">
+                                            <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                                <a href="javascript:void(0)" @onclick="() => OnEditRecord(item.MaCSTT!)">
+                                                    <span><i class="mdi mdi-pencil"></i></span>
+                                                </a>
+                                            </div>
+                                            <div class="icon-button" data-title="Xóa" data-position="left">
+                                                <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaCSTT!)">
+                                                    <span><i class="mdi mdi-delete"></i></span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            @if (chinhSachThanhToans == null || !chinhSachThanhToans.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa chính sách thanh toán <strong>@selectedMaCSTT</strong> này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</div>
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string? selectedMaDuAn;
+    private string? selectedMaCSTT;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<ChinhSachThanhToanPagingDto> chinhSachThanhToans = new();
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListDA = await CanHoService.GetByDuAnAsync();
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("ChinhSachThanhToan", VuViec.Xem.GetDescription());
+            _dotNetRef = DotNetObjectReference.Create(this);
+            // await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+        }
+    }
+
+    private async Task ShowConfirmDelete(string maCSTT)
+    {
+        var coQuyen = await BaseService.KiemTraQuyenVuViec("ChinhSachThanhToan", VuViec.Xoa.GetDescription());
+        if (coQuyen == false)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn không có quyền xóa. Xin vui lòng liên hệ quản trị", false);
+            return;
+        }
+        else
+        {
+            selectedMaCSTT = maCSTT;
+            await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaCSTT == null || string.IsNullOrEmpty(selectedMaCSTT))
+        {
+            return;
+        }
+        var result = await ChinhSachThanhToanService.DeleteRecordAsync(selectedMaCSTT);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadData();
+        selectedMaCSTT = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await ChinhSachThanhToanService.GetPagingAsync(selectedMaDuAn, _page, _pageSize, search);
+            chinhSachThanhToans = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnDTKHChanged(string? maDuAn)
+    {
+        if (isLoading) return;
+        selectedMaDuAn = string.IsNullOrWhiteSpace(maDuAn) ? null : maDuAn;
+        _page = 1;
+        await LoadData();
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task OnEditRecord(string maPhieu)
+    {
+        Nav.NavigateTo($"/chinhsachthanhtoan/edit/{maPhieu}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo("/chinhsachthanhtoan/create");
+        return;
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+
+    async Task NextPage()
+    {
+        _page++;
+        await LoadData();
+    }
+
+    async Task PreviousPage()
+    {
+        _page--;
+        await LoadData();
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+}

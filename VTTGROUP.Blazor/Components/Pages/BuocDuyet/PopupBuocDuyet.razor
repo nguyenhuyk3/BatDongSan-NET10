@@ -1,0 +1,104 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model.QuyTrinhDuyet
+@using VTTGROUP.Infrastructure.Services
+@inject BuocDuyetService BuocDuyetService
+@inject IJSRuntime JS
+<div class="modal fade" id="createBuocDuyetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thông tin bước duyệt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <EditForm id="formUser" EditContext="@editContext">
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã bước duyệt <i class="point-validate">*</i></span>
+                                    @if (BuocDuyetSave.IsCreate == true)
+                                    {
+                                        <InputText class="form-control input-validation" id="MaBuocDuyet" @bind-Value="BuocDuyetSave.MaBuocDuyet" />
+                                        <span class="error-validation">Vui lòng nhập mã bước duyệt</span>
+                                    }
+                                    else
+                                    {
+                                        <DisableTextBox Value="@BuocDuyetSave.MaBuocDuyet" />
+                                    }
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên bước duyệt <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="BuocDuyetSave.TenBuocDuyet" />
+                                    <span class="error-validation">Vui lòng nhập tên bước duyệt</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên hiển thị</span>
+                                    <InputText class="form-control" @bind-Value="BuocDuyetSave.TenHienThi" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="BuocDuyetSave.GhiChu" rows="5" tabindex="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="ConfirmSave">Lưu</button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Huỷ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<Task> OnSaved { get; set; }
+    private EditContext editContext;
+    private BuocDuyetModel? BuocDuyetSave = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(BuocDuyetSave);
+    }
+    public async Task ShowPopup(BuocDuyetModel item)
+    {
+        BuocDuyetSave = item;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#createBuocDuyetModal");
+        await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaBuocDuyet");
+        StateHasChanged();
+    }
+    private async Task ConfirmSave()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "modal-body", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await BuocDuyetService.SaveBuocDuyetAsync(BuocDuyetSave);
+        if (result.Status)
+        {
+            StateHasChanged();
+        }
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#createBuocDuyetModal");
+        await OnSaved.InvokeAsync();
+
+    }
+
+}

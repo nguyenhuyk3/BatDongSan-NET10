@@ -1,0 +1,676 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.Tang
+@using VTTGROUP.Domain.Model.ViewTruc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject LoadingService Loading
+@inject DuAnService DuAnService
+@inject ViewTrucService ViewTrucService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupTrucModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh mục trục</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="popup-tang-header">
+                    <div class="popup-tang-info">
+                        <div class="general-info">
+                            <div class="wapper-input ">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Dự án</span>
+                                        <span class="input-value">@TenDuAn</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input ">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Block</span>
+                                        <span class="input-value">@TenBlock</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="popup-tang-actions">
+                        <button type="button"
+                                class="btn-action"
+                                title="Add"
+                                @onclick="AddTruc">
+                            <i class="mdi mdi-playlist-plus"></i>
+                            <span>Add</span>
+                        </button>
+
+                        <button type="button"
+                                class="btn-action"
+                                title="Import"
+                                @onclick="Import">
+                            <i class="mdi mdi-cloud-upload"></i>
+                            <span>Import</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="container-table-detail truc-table">
+                    <div class="container-table-fixed has-paging rows-10">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th class="text-center col-ma-truc">Mã trục</th>
+                                    <th class="text-center col-ten-truc">Tên trục</th>
+                                    <th class="text-center col-stt">STT</th>
+                                    <th class="text-center col-he-so">Hệ số</th>
+                                    <th class="text-center col-mat-khoi">Mặt khối</th>
+                                    <th class="text-center col-huong">Hướng</th>
+                                    <th class="text-center col-view">View</th>
+                                    <th class="text-center col-loai-goc">Loại góc</th>
+                                    <th class="text-center col-vi-tri">Vị trí</th>
+                                    <th class="text-center col-actions">
+                                        <button type="button"
+                                                class="icon-button icon-inline icon-save"
+                                                title="Lưu thay đổi trục"
+                                                data-title="Lưu thay đổi trục"
+                                                data-position="right"
+                                                @onclick="SaveTrucsList">
+                                            <i class="mdi mdi-content-save save-icon"></i>
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (TrucPopups != null && TrucPopups.Count > 0)
+                                {
+                                    int sttTang = 0;
+                                    @foreach (var item in TrucPopups)
+                                    {
+                                        <tr class="initialized">
+                                            <td class="col-ma-truc">
+                                                @if (item.IsNew == false)
+                                                {
+                                                    <DisableTextBox Value="@item.MaTruc" />
+                                                }
+                                                else
+                                                {
+                                                    <InputText @bind-Value="item.MaTruc" class="form-control input-validation" />
+                                                }
+                                            </td>
+                                            <td class="col-ten-truc"><InputText @bind-Value="item.TenTruc" class="form-control input-validation" /></td>
+                                            <td class="col-stt">
+                                                <InputCurrency T="int"
+                                                               Id=@($"STTTrucAdd{sttTang+1}")
+                                                               Format="#,##0"
+                                                               CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1"
+                                                               @bind-Value="item.ThuTuHienThi" />
+                                            </td>
+                                            <td class="col-he-so" style="text-align:right">
+                                                <InputCurrency T="decimal"
+                                                               Id=@($"HeSoTruc{sttTang+1}")
+                                                               Format="#,##0.####"
+                                                               CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1"
+                                                               @bind-Value="item.HeSoTruc" />
+                                            </td>
+                                            <td class="col-mat-khoi">
+                                                <select class="form-control input-validation s2-mk select-popup-row"
+                                                        name="MaMatKhoi"
+                                                        data-value="@item.MaView"
+                                                        @bind="item.MaView">
+                                                    <option value="">Chọn mặt khối</option>
+                                                    @foreach (var mk in ListMMK)
+                                                    {
+                                                        <option value="@mk.MaView">@mk.TenView</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="col-huong">
+                                                <select class="form-control s2-huong select-popup-row"
+                                                        name="MaHuong"
+                                                        data-value="@item.MaHuong"
+                                                        @bind="item.MaHuong">
+                                                    <option value="">Chọn hướng</option>
+                                                    @foreach (var h in ListHuong)
+                                                    {
+                                                        <option value="@h.MaHuong">@h.TenHuong</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="col-view">
+                                                <select class="form-control s2-view select-popup-row"
+                                                        name="MaView"
+                                                        data-value="@item.MaMatKhoi"
+                                                        @bind="item.MaMatKhoi">
+                                                    <option value="">Chọn view</option>
+                                                    @foreach (var v in ListView)
+                                                    {
+                                                        <option value="@v.MaMatKhoi">@v.TenMatKhoi</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="col-loai-goc">
+                                                <select class="form-control s2-loaigoc select-popup-row"
+                                                        name="MaLoaiGoc"
+                                                        data-value="@item.MaLoaiGoc"
+                                                        @bind="item.MaLoaiGoc">
+                                                    <option value="">Chọn loại góc</option>
+                                                    @foreach (var lg in ListGoc)
+                                                    {
+                                                        <option value="@(lg.MaLoaiGoc)">@lg.TenLoaiGoc</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="col-vi-tri">
+                                                <select class="form-control s2-vitri select-popup-row"
+                                                        name="MaViTri"
+                                                        data-value="@item.MaViTri"
+                                                        @bind="item.MaViTri">
+                                                    <option value="">Chọn vị trí</option>
+                                                    @foreach (var vt in ListVT)
+                                                    {
+                                                        <option value="@vt.MaViTri">@vt.TenViTri</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="col-actions text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-delete"
+                                                        title="Xóa"
+                                                        data-title="Xóa"
+                                                        data-position="left"
+                                                        @onclick="() => DeleteRowTruc(item)">
+                                                    <i class="mdi mdi-delete"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        sttTang++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (TrucPopups == null || !TrucPopups.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="SaveTrucsList">
+                    Lưu
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+<ImportFileModalTruc @ref="importFileModalRef" OnUploaded="HandleFileUpload" />
+@code {
+    [Parameter]
+    public string? MaBlock { get; set; }
+    public string? TenBlock { get; set; }
+    public string? MaDuAn { get; set; }
+    public string? TenDuAn { get; set; }
+    private bool isLoading = false;
+    List<ViewTrucModel> TrucPopups = new();
+
+    [Parameter] public EventCallback<TrucSavedArgs> OnSaved { get; set; }
+    private ImportFileModalTruc? importFileModalRef;
+    private List<DaDanhMucView> ListMMK = new();//Mặt khối  theo dự án
+    private List<DaDanhMucHuong> ListHuong = new();//Hướng  theo dự án
+    private List<DaDanhMucViewMatKhoi> ListView = new();//View theo dự án
+    private List<DaDanhMucLoaiGoc> ListGoc = new();//Góc theo dự án
+    private List<DaDanhMucViTri> ListVT = new();//Vị trí theo dự án
+    private bool _needReInitSelect2;
+
+    public sealed class TrucSavedArgs
+    {
+        public string MaBlock { get; set; } = "";
+        public int SoLuongTruc { get; set; }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needReInitSelect2)
+        {
+            _needReInitSelect2 = false;
+
+            // Dọn các instance cũ (nếu có)
+            // await JS.InvokeVoidAsync("select2Helper.destroy",
+            //     ".s2-mk, .s2-huong, .s2-view, .s2-loaigoc, .s2-vitri");
+
+            await InitSelect2ForTrucAsync();
+            // 👉 Gắn live validation cho container bảng trục
+            await JS.InvokeVoidAsync("liveValidationHelper.init", "#table-data");
+        }
+    }
+
+    private async Task LoadDanhSachTrucData()
+    {
+        isLoading = true;
+        try
+        {
+            var data = await DuAnService.GetTrucAsync(MaDuAn ?? string.Empty, MaBlock ?? string.Empty);
+            TrucPopups = data;
+            await ReapplyCurrencyFormat2();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public async Task Show(string maDuAn, string tenDuAn, string maBock, string tenBlock)
+    {
+        MaDuAn = maDuAn;
+        TenDuAn = tenDuAn;
+        MaBlock = maBock;
+        TenBlock = tenBlock;
+
+        TrucPopups = new List<ViewTrucModel>();
+        ListMMK = await DuAnService.GetByMatKhoiTheoDuAnAsync(maDuAn, maBock);
+        ListHuong = await DuAnService.GetByHuogTheoDuAnAsync(maDuAn);
+        ListView = await DuAnService.GetByViewTheoDuAnAsync(maDuAn);
+        ListGoc = await ViewTrucService.GetByLoaiGocTheoDuAnAsync(maDuAn);
+        ListVT = await ViewTrucService.GetByViTriTheoDuAnAsync(maDuAn);
+
+        await LoadDanhSachTrucData();
+
+        // 👉 báo: sau khi render phải init lại Select2
+        _needReInitSelect2 = true;
+        await InvokeAsync(StateHasChanged);
+        //   await InitSelect2ForTrucAsync(); // re-bind cho cả list
+        // 👉 Show popup
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupTrucModal");
+        // await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+    private async Task InitSelect2ForTrucAsync()
+    {
+        await JS.InvokeVoidAsync("select2Helper.initBySelector", ".s2-mk", "Chọn mặt khối", true);
+        await JS.InvokeVoidAsync("select2Helper.initBySelector", ".s2-huong", "Chọn hướng", true);
+        await JS.InvokeVoidAsync("select2Helper.initBySelector", ".s2-view", "Chọn view", true);
+        await JS.InvokeVoidAsync("select2Helper.initBySelector", ".s2-loaigoc", "Chọn loại góc", true);
+        await JS.InvokeVoidAsync("select2Helper.initBySelector", ".s2-vitri", "Chọn vị trí", true);
+    }
+
+    private async Task DeleteRowTruc(ViewTrucModel? item)
+    {
+        TrucPopups.Remove(item);
+    }
+
+    private async Task AddTruc()
+    {
+        if (TrucPopups == null)
+            return;
+
+        var newTang = new ViewTrucModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSoTruc = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        TrucPopups.Insert(0, newTang);
+        await ReapplyCurrencyFormat2();
+        await InvokeAsync(StateHasChanged);
+        await InitSelect2ForTrucAsync(); // re-bind cho cả list
+    }
+
+    private async Task Import()
+    {
+        await importFileModalRef!.ShowFileModal(MaDuAn ?? string.Empty, MaBlock ?? string.Empty);
+    }
+
+    private async Task SaveTrucsList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".truc-table",                      // id container phần Block
+   "",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveTrucsAsync(MaDuAn ?? string.Empty, MaBlock ?? string.Empty, TrucPopups);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại diện tích coi như không còn "mới" nữa
+                if (TrucPopups != null)
+                {
+                    foreach (var b in TrucPopups)
+                    {
+                        b.IsNew = false;
+                    }
+                    // ✅ Sắp xếp tăng dần theo STT (null xuống cuối), rồi theo MaTang để ổn định
+                    TrucPopups = TrucPopups
+                        .OrderBy(t => t.ThuTuHienThi)
+                        .ThenBy(t => t.MaTruc)
+                        .ThenBy(t => t.TenTruc) // optional: tie-breaker
+                        .ToList();
+                }
+                // 🔔 báo về parent: set SoLuongTruc
+                await OnSaved.InvokeAsync(new TrucSavedArgs
+                {
+                    MaBlock = MaBlock!,
+                    SoLuongTruc = TrucPopups.Count
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+            Loading.Hide();
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task HandleFileUpload()
+    {
+        TrucPopups = new List<ViewTrucModel>();
+        ListMMK = await DuAnService.GetByMatKhoiTheoDuAnAsync(MaDuAn, MaBlock);
+        ListHuong = await DuAnService.GetByHuogTheoDuAnAsync(MaDuAn);
+        ListView = await DuAnService.GetByViewTheoDuAnAsync(MaDuAn);
+        ListGoc = await ViewTrucService.GetByLoaiGocTheoDuAnAsync(MaDuAn);
+        ListVT = await ViewTrucService.GetByViTriTheoDuAnAsync(MaDuAn);
+
+        await LoadDanhSachTrucData();
+        // 🔔 báo về parent: set SoLuongTang
+        await OnSaved.InvokeAsync(new TrucSavedArgs
+        {
+            MaBlock = MaBlock!,
+            SoLuongTruc = TrucPopups.Count
+        });
+
+        _needReInitSelect2 = true;
+        await InvokeAsync(StateHasChanged);
+        // await InitSelect2ForTrucAsync(); // re-bind cho cả list
+    }
+
+    private async Task ReapplyCurrencyFormat2()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "input-currency", 8, 4);
+    }
+
+}
+<style>
+    /* Header popup tầng */
+    .popup-tang-header {
+        display: flex;
+        flex-direction: column; /* xếp info trên, buttons dưới */
+        align-items: flex-start; /* tất cả căn trái */
+        padding: 4px 0 12px 0;
+        gap: 8px;
+    }
+
+    /* Dự án / Block */
+    .popup-tang-info {
+        display: flex;
+        flex-direction: column;
+        margin: 0 auto;
+        gap: 4px;
+    }
+
+        .popup-tang-info .general-info {
+            margin-bottom: 0;
+        }
+
+        .popup-tang-info .info-row {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #444;
+        }
+
+        .popup-tang-info .label {
+            font-weight: 600;
+            color: #666;
+            min-width: 70px; /* để “Dự án:” và “Block:” thẳng hàng, không bị sít */
+            display: inline-block;
+        }
+
+        .popup-tang-info .value {
+            font-weight: 500;
+        }
+
+    /* Hàng nút Booking + Import bên trái */
+    .popup-tang-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px; /* khoảng cách giữa 2 nút */
+    }
+
+    /* Style nút */
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #f0f0f0;
+        background: #fffdf7;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+        .btn-action i {
+            font-size: 18px;
+            color: #f4b000;
+        }
+
+        .btn-action:hover {
+            background: #fff7e0;
+        }
+</style>
+
+<style>
+    /* =========================
+           POPUP TRỤC RESPONSIVE (FULL FIX - FINAL)
+           - Không double scroll
+           - Có scroll dọc trong bảng
+           - Có scroll ngang bên dưới (khi table overflow)
+           ========================= */
+
+    /* --- DESKTOP --- */
+    #PopupTrucModal .modal-dialog {
+        max-width: 1400px;
+        width: calc(100% - 3rem);
+        margin: 1.5rem auto;
+    }
+
+    #PopupTrucModal .modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 3rem);
+    }
+
+    /* BODY: tắt scroll ngoài, giao cho vùng bảng xử lý */
+    #PopupTrucModal .modal-body.modal-wraper {
+        flex: 1 1 auto;
+        min-height: 0; /* QUAN TRỌNG */
+        overflow: hidden !important; /* tắt scrollbar ngoài */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Wrapper bảng: giữ scrollbar ngang ở đáy */
+    #PopupTrucModal .container-table-detail.truc-table {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden !important; /* ✅ không tạo scroll ở đây */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Scroll dọc nằm ở đây, nhưng KHÔNG được clip ngang */
+    #PopupTrucModal .container-table-fixed {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto !important; /* ✅ cả dọc + ngang */
+        scrollbar-gutter: stable both-edges; /* ✅ giữ chỗ cho scrollbar (Chrome mới) */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Table phải rộng theo tổng cột để sinh overflow ngang */
+    #PopupTrucModal #table-data {
+        width: max-content !important;
+        min-width: 100% !important;
+    }
+
+    /* Làm scrollbar ngang rõ hơn (Chrome/Edge) */
+    #PopupTrucModal .container-table-detail.truc-table::-webkit-scrollbar {
+        height: 12px;
+    }
+
+    /* --- MOBILE / TABLET: FULL MÀN HÌNH --- */
+    @@media (max-width: 991.98px) {
+        #PopupTrucModal {
+            padding: 0 !important;
+        }
+
+            #PopupTrucModal .modal-dialog {
+                max-width: 100%;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+            }
+
+                #PopupTrucModal .modal-dialog.modal-dialog-centered {
+                    display: flex;
+                    align-items: stretch;
+                    min-height: 100vh;
+                }
+
+            #PopupTrucModal .modal-content {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+
+            #PopupTrucModal .modal-body.modal-wraper {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow: hidden !important;
+                display: flex;
+                flex-direction: column;
+            }
+    }
+
+    /* =========================
+           WIDTH COLUMNS
+           ========================= */
+    #PopupTrucModal #table-data th.col-ma-truc,
+    #PopupTrucModal #table-data td.col-ma-truc {
+        width: 80px;
+        min-width: 80px;
+    }
+
+    #PopupTrucModal #table-data th.col-ten-truc,
+    #PopupTrucModal #table-data td.col-ten-truc {
+        width: 100px;
+        min-width: 100px;
+    }
+
+    #PopupTrucModal #table-data th.col-stt,
+    #PopupTrucModal #table-data td.col-stt {
+        width: 70px;
+        min-width: 70px;
+    }
+
+    #PopupTrucModal #table-data th.col-he-so,
+    #PopupTrucModal #table-data td.col-he-so {
+        width: 80px;
+        min-width: 80px;
+    }
+
+    #PopupTrucModal #table-data th.col-mat-khoi,
+    #PopupTrucModal #table-data td.col-mat-khoi {
+        width: 150px;
+        min-width: 150px;
+    }
+
+    #PopupTrucModal #table-data th.col-huong,
+    #PopupTrucModal #table-data td.col-huong {
+        width: 150px;
+        min-width: 150px;
+    }
+
+    #PopupTrucModal #table-data th.col-view,
+    #PopupTrucModal #table-data td.col-view {
+        width: 150px;
+        min-width: 150px;
+    }
+
+    #PopupTrucModal #table-data th.col-loai-goc,
+    #PopupTrucModal #table-data td.col-loai-goc {
+        width: 150px;
+        min-width: 150px;
+    }
+
+    #PopupTrucModal #table-data th.col-vi-tri,
+    #PopupTrucModal #table-data td.col-vi-tri {
+        width: 150px;
+        min-width: 150px;
+    }
+
+    #PopupTrucModal #table-data th.col-actions,
+    #PopupTrucModal #table-data td.col-actions {
+        width: 80px;
+        min-width: 80px;
+    }
+
+    /* =========================
+           SELECT2 FULL WIDTH + ELLIPSIS
+           ========================= */
+    #PopupTrucModal td.col-mat-khoi .select2-container,
+    #PopupTrucModal td.col-huong .select2-container,
+    #PopupTrucModal td.col-view .select2-container,
+    #PopupTrucModal td.col-loai-goc .select2-container,
+    #PopupTrucModal td.col-vi-tri .select2-container {
+        width: 150px !important;
+    }
+
+    #PopupTrucModal td.col-mat-khoi .select2-selection__rendered,
+    #PopupTrucModal td.col-huong .select2-selection__rendered,
+    #PopupTrucModal td.col-view .select2-selection__rendered,
+    #PopupTrucModal td.col-loai-goc .select2-selection__rendered,
+    #PopupTrucModal td.col-vi-tri .select2-selection__rendered {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Clear X đỏ */
+    #PopupTrucModal .select2-container--default .select2-selection--single .select2-selection__clear {
+        color: #e74c3c !important;
+        font-weight: bold;
+    }
+
+        #PopupTrucModal .select2-container--default .select2-selection--single .select2-selection__clear:hover {
+            color: #c0392b !important;
+        }
+
+    /* =========================
+           VALIDATION
+           ========================= */
+    input.validate,
+    select.validate {
+        border-color: #ff4d4f !important;
+    }
+
+    .select2-selection.validate {
+        border-color: #ff4d4f !important;
+    }
+
+</style>

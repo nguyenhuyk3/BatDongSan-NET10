@@ -1,0 +1,816 @@
+﻿@page "/phieudatcoc/create"
+@page "/phieudatcoc/create/{id}"
+@using System.Text.Json
+@using System.Globalization
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Domain.Model.KhachHangTam
+@using VTTGROUP.Domain.Model.PhieuDatCoc
+@using VTTGROUP.Domain.Model.PhieuGiuCho
+@using VTTGROUP.Domain.Model.SanPham
+@using VTTGROUP.Domain.Model.ViewMatKhoi
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject PhieuGiuChoService PhieuGiuChoService
+@inject LoadingService Loading
+@inject PhieuDatCocService PhieuDatCocService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Phiếu đặt cọc</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <MessageErrorForm />
+            <div class="wapper-content-tab" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Thông tin sản phẩm</span>
+                            </div>
+                        </div>
+
+                        @if (string.IsNullOrEmpty(Record.FlagDK))
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                        <select id="MaDuAn" class="form-control input-validation" name="MaDuAn" @onchange="OnDuAnChanged">
+                                            <option value=""> Chọn dự án </option>
+                                            @if (ListDA?.Any() == true)
+                                            {
+                                                @foreach (var item in ListDA)
+                                                {
+                                                    <option value="@item.MaDuAn" selected="@(Record.MaDuAn == item.MaDuAn)">
+                                                        @item.TenDuAn
+                                                    </option>
+                                                }
+                                            }
+                                        </select>
+                                        <span class="error-validation">Vui lòng chọn dự án</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Dự án</span>
+                                        <DisableTextBox Value="@Record.TenDuAn" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Ngày ký</span>
+                                    <FlatpickrInput Id="NgayKi" Name="NgayKi" @bind-Value="Record.NgayKi"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Số phiếu <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.SoPhieuDC" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Mẫu in <i class="point-validate">*</i></span>
+                                    <select id="MaMauIn" class="form-control input-validation" name="MaMauIn" @bind="Record.MaMauIn">
+                                        <option value=""> Chọn mẫu in </option>
+                                        @if (ListMI?.Any() == true)
+                                        {
+                                            @foreach (var item in ListMI)
+                                            {
+                                                <option value="@item.MaMauIn">
+                                                    @item.TenMauIn
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                    @*  <span class="error-validation">Vui lòng chọn mẫu in</span> *@
+                                </div>
+                            </div>
+                        </div>
+                        @if (string.IsNullOrEmpty(Record.FlagDK))
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Phiếu giữ chỗ <i class="point-validate">*</i></span>
+                                        <select id="MaPhieuDangKy" name="MaPhieuDangKy" class="form-control input-validation" @onchange="OnPhieuDKChanged">
+                                            <option value=""> Chọn phiếu giữ chỗ </option>
+                                            @foreach (var item in ListPDK)
+                                            {
+                                                <option value="@($"{item.MaPhieuDangKy}|{item.MaCanHo}|{item.TenCanHo}|{item.MaDatCocChoKyLai}|{item.TenKhachHang}|{item.MaCSTT}")">
+                                                    [@item.MaPhieuDangKy]_[@item.TenCanHo]_[@item.TenKhachHang]
+                                                </option>
+                                            }
+                                        </select>
+                                        <span class="error-validation">Vui lòng chọn phiếu giữ chỗ</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Phiếu giữ chỗ </span>
+                                        <div class="item-phieu"><span class="input-value" @onclick="() => OnViewPDK(Record.MaPhieuDK)">[@Record.MaPhieuDK]_[@Record.TenCanHo]_[@Record.TenKhachHang]</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Sản phẩm</span>
+                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnViewCH(Record.MaCanHo)">@Record.TenCanHo</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Diện tích tim tường</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N2}", Record.DienTichTimTuong)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Diện tích thông thủy</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N2}", Record.DienTichLotLong)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Diện tích sân vườn</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N2}", Record.DienTichSanVuon)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Giá đất (1)</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaDat)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Giá căn hộ trước thuế (2)</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaCanHoTruocThue)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Tỷ lệ thuế (3)</span>
+                                    <div class="input-suffix-wrap">
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N2}", Record.TyLeThueVAT)" />
+                                        <span class="suffix">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Giá căn hộ sau thuế (4)</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaCanHoSauThue)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="10" name="GhiChu" id="GhiChu" rows="2" tabindex="2" @bind="Record.GhiChu"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Thông tin khách hàng</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive table-responsive-soft">
+                            <table class="tbl table table-form table-detail table-policy" id="table-data">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:center">Họ tên</th>
+                                        <th style="text-align:center">Ngày sinh</th>
+                                        <th style="text-align:center">CCCD</th>
+                                        <th style="text-align:center">Số điện thoại</th>
+                                        <th style="text-align:center">Địa chỉ thường trú</th>
+                                        <th style="text-align:center">Địa chỉ liên lạc</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table booking-group">
+                                    <tr>
+                                        <td>@Record.TenKhachHang</td>
+                                        <td>@string.Format("{0:dd/MM/yyyy}", Record.NgaySinh)</td>
+                                        <td>@Record.IDCard</td>
+                                        <td>@Record.SoDienThoai</td>
+                                        <td>@Record.DiaChiThuongTru</td>
+                                        <td>@Record.DiaChiHienNay</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Chính sách thanh toán</span>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    @*Danh sách chính sách thanh toán*@
+                                    <span class="title-field">Chính sách <i class="point-validate">*</i></span>
+                                    <select id="MaChinhSachTT" name="MaChinhSachTT" class="form-control input-validation" @onchange="OnCSTTChanged">
+                                        <option value=""> Chọn chính sách thanh toán </option>
+                                        @foreach (var item in ListCSTT)
+                                        {
+                                            <option value="@item.MaCSTT"
+                                                    selected="@(item.MaCSTT == Record.MaChinhSachTT)">
+                                                @item.TenCSTT
+                                            </option>
+                                        }
+                                    </select>
+                                    @*  <span class="error-validation">Vui lòng chọn chính sách thanh toán</span> *@
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Tỷ lệ chiết khấu CSTT (5)</span>
+                                    <div class="input-suffix-wrap">
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N2}", Record.TyLeCK)" />
+                                        <span class="suffix">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @if (HasPDK)
+                        {
+                            @*  <div class="wapper-input col-lg-6" style="display:none">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Đợt mở bán</span>
+                                        <DisableTextBox Value="@Record.TenDotMoBan" />
+                                        <input id="DotMoBan" name="DotMoBan" type="hidden" value="@Record.DotMoBan">
+                                    </div>
+                                </div>
+                            </div> *@
+
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field"> Giá trị chiết khấu<span class="icon-button-tooltip" data-title="[6]=[2]*[5]" data-position="left">(6)</span></span>
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaTriCK)" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Giá bán trước thuế<span class="icon-button-tooltip" data-title="[7]=[2]-[6]" data-position="left">(7)</span></span>
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaBanTruocThue)" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Giá trị thuế (8)</span>
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaBanTienThue)" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Giá bán sau thuế <span class="icon-button-tooltip" data-title="[9]=[7]+([7]-[1])*[3]" data-position="left">(9)</span></span>
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaBanSauThue)" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Tỷ lệ quỹ bảo trì (10)</span>
+                                        <div class="input-suffix-wrap">
+                                            <DisableTextBox Class="is-right" Value="@string.Format("{0:N2}", Record.TyLeQuyBaoTri)" />
+                                            <span class="suffix">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input group-input-grid">
+                                        <span class="title-field">Giá trị quỹ bảo trì <span class="icon-button-tooltip" data-title="[11]=[7]*[10]" data-position="left">(11)</span></span>
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.TienQuyBaoTri)" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Tiến độ thanh toán</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive table-responsive-soft">
+                            <table class="tbl table table-form table-detail table-policy" id="table-data">
+                                <thead>
+                                    <tr>
+                                        <th style="width:70px" class="text-center">STT</th>
+                                        <th style="width:250px" class="text-center">Nội dung</th>
+                                        <th style="width:200px" class="text-center">Ngày thanh toán</th>
+                                        <th style="width:130px" class="text-center">Khoảng cách ngày</th>
+                                        <th style="width:130px" class="text-center">Đợt tham chiếu</th>
+                                        <th style="width:130px" class="text-center">Tỷ lệ TT</th>
+                                        <th style="width:130px" class="text-center">Tỷ lệ VAT cần TT</th>
+                                        <th style="width:130px" class="text-center">Số tiền TT</th>
+                                        <th style="width:130px" class="text-center">Cấn trừ đã thanh toán</th>
+                                        <th style="width:130px" class="text-center">Giá trị chuyển đổi booking</th>
+                                        <th style="width:130px" class="text-center">Phải thanh toán</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (ListTDTT != null && ListTDTT.Any() == true)
+                                    {
+                                        int i = 1;
+                                        @foreach (var item in ListTDTT)
+                                        {
+                                            <tr>
+                                                <td class="text-center">@item.DotTT</td>
+                                                <td>@item.NoiDungTT</td>
+                                                <td>@(item.NgayThanhToan == null ? string.Empty : string.Format("{0:dd/MM/yyyy}", item.NgayThanhToan))</td>
+                                                <td class="text-right">@item.SoKhoangCachNgay</td>
+                                                <td class="text-right">@item.DotThamChieu</td>
+                                                <td class="text-center">@string.Format("{0:N2}", (decimal?)item.TyLeThanhToan ?? 0)</td>
+                                                <td class="text-center">@string.Format("{0:N2}", (decimal?)item.TyLeThanhToanVAT ?? 0)</td>
+                                                <td class="text-right">@string.Format("{0:N0}", (decimal?)item.SoTien ?? 0)</td>
+                                                <td class="text-right">@string.Format("{0:N0}", (decimal?)item.SoTienCanTruDaTT ?? 0)</td>
+                                                <td class="text-right">@string.Format("{0:N0}", (decimal?)item.SoTienChuyenDoiBooking ?? 0)</td>
+                                                <td class="text-right">@string.Format("{0:N0}", (decimal?)item.SoTienPhaiThanhToan ?? 0)</td>
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                    @if (ListTDTT != null && ListTDTT.Any())
+                                    {
+                                        var tongSoTienTT = ListTDTT.Sum(x => (decimal?)x.SoTien ?? 0m);
+                                        var tongCanTru = ListTDTT.Sum(x => (decimal?)x.SoTienCanTruDaTT ?? 0m);
+                                        var tongChuyenDoi = ListTDTT.Sum(x => (decimal?)x.SoTienChuyenDoiBooking ?? 0m);
+                                        var tongPhaiTT = ListTDTT.Sum(x => (decimal?)x.SoTienPhaiThanhToan ?? 0m);
+                                        <tr class="row-total">
+                                            <td></td>
+                                            <td colspan="2" class="text-left">Tổng cộng</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongSoTienTT)</td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongCanTru)</td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongChuyenDoi)</td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongPhaiTT)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<CanHoDetails @ref="canHoModalRef" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+    private PhieuDatCocModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<HtMauIn> ListMI = new();
+    private List<PhieuDangKyDatCocModel> ListPDK = new();
+    private List<PhieuDangKyDatCocCSTTModel> ListCSTT = new();
+    private List<PhieuDatCocTienDoThanhToanModel> ListTDTT = new();
+    private string selectedPDKRaw;
+    private string[] allowedExtensions = FileTypeSets.Document;
+    private List<InfoItem> InfoItems = new();
+    private bool HasPDK => !string.IsNullOrWhiteSpace(Record?.MaPhieuDK);
+    private CanHoDetails? canHoModalRef;
+    private bool _csttSelect2Inited = false;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("PhieuDatCoc", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("eval", @"
+            setTimeout(function() {
+                select2Helper.initSelectChange('MaDuAn', 'Chọn dự án', true);
+                select2Helper.initSelectChange('MaPhieuDangKy', 'Chọn phiếu đăng ký', true);
+                select2Helper.initSelectChange('MaChinhSachTT', 'Chọn chính sách thanh toán', true);
+                select2Helper.initSelectChange('MaMauIn', 'Chọn mẫu in', true);
+            }, 300);");
+
+            var result = await PhieuDatCocService.GetByIdAsync(string.Empty);
+            if (result.Status)
+            {
+                Record = (PhieuDatCocModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieuDC},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+            }
+            if (!string.IsNullOrEmpty(id))
+            {
+                Record.FlagDK = "1";
+                await ThongTinPhieuDK(id);
+            }
+            else
+            {
+                ListDA = await PhieuGiuChoService.GetByDuAnAsync();
+                ListPDK = await PhieuDatCocService.GetByPhieuDangKyAsync(Record.MaDuAn);
+                ListCSTT = await PhieuDatCocService.GetChinhSachThanhToanAsync(Record.MaDuAn, Record.MaPhieuDK);
+            }
+            StateHasChanged();
+        }
+        // >>> Đây là phần quan trọng:
+        if (HasPDK && !_csttSelect2Inited)
+        {
+            await InitCSTTSelect2Async();
+            // set value sau khi init, nếu bạn có Record.MaChinhSachTT:
+            await JS.InvokeVoidAsync("eval", $@"$('#MaChinhSachTT').val('{Record?.MaChinhSachTT}').trigger('change');");
+        }
+        else if (!HasPDK && _csttSelect2Inited)
+        {
+            await DestroyCSTTSelect2Async();
+        }
+    }
+
+    private async Task InitCSTTSelect2Async()
+    {
+        await JS.InvokeVoidAsync("eval", @"
+        (function(){
+            var $el = $('#MaChinhSachTT');
+            if (!$el.length) return;
+            if ($el.data('select2')) $el.select2('destroy');
+            $el.select2({ placeholder:'Chọn chính sách thanh toán', allowClear:true, width:'100%' });
+        })();
+    ");
+        _csttSelect2Inited = true;
+    }
+
+    private async Task DestroyCSTTSelect2Async()
+    {
+        await JS.InvokeVoidAsync("eval", @"
+        (function(){
+            var $el = $('#MaChinhSachTT');
+            if ($el.length && $el.data('select2')) $el.select2('destroy');
+        })();
+    ");
+        _csttSelect2Inited = false;
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await PhieuDatCocService.SavePhieuDatCocAsync(Record, ListTDTT, _env.WebRootPath);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/phieudatcoc/edit/{result.Id}");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/phieudatcoc");
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        ListPDK = await PhieuDatCocService.GetByPhieuDangKyAsync(Record.MaDuAn);
+        ListCSTT = await PhieuDatCocService.GetChinhSachThanhToanAsync(Record.MaDuAn, string.Empty);
+        ListTDTT = await PhieuDatCocService.GetByTienDoThanhToanAsync(string.Empty, String.Empty, 0, 0, string.Empty);
+        ListMI = await PhieuDatCocService.GetByMauInAsync(Record.MaDuAn);
+        ResetThongTin();
+        if (string.IsNullOrEmpty(Record.MaDuAn))
+        {
+            Record.MaPhieuDK = string.Empty;                 // -> HasPDK = false
+        }
+        StateHasChanged();
+    }
+
+    private async Task ThongTinPhieuDK(string maPhieuDK)
+    {
+        var entity2 = await PhieuDatCocService.GetByPhieuDangKyDCAsync(id);
+        Record.MaDuAn = entity2.MaDuAn;
+        Record.TenDuAn = entity2.TenDuAn;
+        Record.MaPhieuDK = maPhieuDK;
+        Record.MaDatCocChoKyLai = entity2.MaDatCocChoKyLai;
+
+        // Lấy CSTT mặc định từ BH_PhieuDangKiChonCan_CSBH (LoaiCS='CSTT', IsChon=1)
+        var maCSTTMacDinh = await PhieuDatCocService.GetCSTTMacDinhTuPhieuDKAsync(maPhieuDK);
+        Record.MaChinhSachTT = !string.IsNullOrEmpty(maCSTTMacDinh) ? maCSTTMacDinh : entity2.MaCSTT;
+
+        var entity = await PhieuDatCocService.ThongTinKhachHang(maPhieuDK, string.Empty, Record.MaDuAn, Record.MaChinhSachTT);
+        Record.MaKhachHang = entity.MaKhachHang;
+        Record.TenKhachHang = entity.TenKhachHang;
+        Record.NgaySinh = !string.IsNullOrEmpty(entity.NgaySinh) ? DateTime.ParseExact(entity.NgaySinh, "dd/MM/yyyy", CultureInfo.InvariantCulture) : (DateTime?)null;
+        Record.SoDienThoai = entity.SoDienThoai;
+        Record.IDCard = entity.IdCard;
+        Record.NgayCap = !string.IsNullOrEmpty(entity.NgayCapIdCard) ? DateTime.ParseExact(entity.NgayCapIdCard, "dd/MM/yyyy", CultureInfo.InvariantCulture) : (DateTime?)null;
+        Record.NoiCap = entity.NoiCapIdCard;
+        Record.DiaChiThuongTru = entity.DiaChiThuongTru;
+        Record.DiaChiHienNay = entity.DiaChiHienNay;
+        Record.DotMoBan = entity.MaDotMoBan;
+        Record.TenDotMoBan = entity.TenDotMoBan;
+        Record.MaCanHo = entity.MaCanHo;
+        Record.TenCanHo = entity.TenCanHo;
+        Record.GiaTriCK = entity.GiaTriCK;
+        Record.IDKhachHangCT = entity.IDKhachHangCT;
+
+        Record.DienTichTimTuong = entity.DienTichTimTuong;
+        Record.DienTichSanVuon = entity.DienTichSanVuon;
+        Record.DienTichLotLong = entity.DienTichLotLong;
+        Record.GiaDat = entity.GiaDat;
+        Record.DonGiaDat = entity.DonGiaDat;
+        Record.GiaCanHoTruocThue = entity.GiaCanHoTruocThue;
+        Record.TyLeThueVAT = entity.TyLeThueVAT;
+        Record.GiaCanHoSauThue = entity.GiaCanHoSauThue;
+        Record.TyLeCK = entity.TyLeCK;
+        Record.GiaTriCK = entity.GiaTriCK;
+        Record.GiaBanTruocThue = entity.GiaBanTruocThue;
+        Record.GiaBanTienThue = entity.GiaBanTienThue;
+        Record.GiaBanSauThue = entity.GiaBanSauThue;
+        Record.TyLeQuyBaoTri = entity.TyLeQuyBaoTri;
+        Record.TienQuyBaoTri = entity.TienQuyBaoTri;
+        ListCSTT = await PhieuDatCocService.GetChinhSachThanhToanAsync(Record.MaDuAn, maPhieuDK);
+        ListTDTT = await PhieuDatCocService.GetByTienDoThanhToanAsync(Record.MaChinhSachTT, String.Empty, Record.GiaBanTruocThue, Record.GiaBanTienThue, Record.MaPhieuDK);
+        ListMI = await PhieuDatCocService.GetByMauInAsync(Record.MaDuAn);
+        await LoadCSTTMacDinhTuPhieuDC();
+    }
+
+    private async Task OnPhieuDKChanged(ChangeEventArgs e)
+    {
+        selectedPDKRaw = e.Value.ToString();
+        if (!string.IsNullOrEmpty(selectedPDKRaw))
+        {
+            var parts = selectedPDKRaw.Split('|');
+            if (parts.Length == 6)
+            {
+                Record.MaPhieuDK = parts[0];
+                Record.MaDatCocChoKyLai = parts[3];
+
+                // Lấy CSTT mặc định từ BH_PhieuDangKiChonCan_CSBH (LoaiCS='CSTT', IsChon=1)
+                var maCSTTMacDinh = await PhieuDatCocService.GetCSTTMacDinhTuPhieuDKAsync(Record.MaPhieuDK);
+                Record.MaChinhSachTT = !string.IsNullOrEmpty(maCSTTMacDinh) ? maCSTTMacDinh : parts[5];
+            }
+        }
+        else
+        {
+            Record.MaPhieuDK = string.Empty;                 // -> HasPDK = false
+            await ResetThongTin();
+            // Reset các thông tin phụ thuộc nếu cần
+            ListTDTT?.Clear();
+            // Nếu muốn reset CSTT về rỗng:
+            Record.MaChinhSachTT = string.Empty;
+            ListCSTT = await PhieuDatCocService.GetChinhSachThanhToanAsync(Record.MaDuAn, string.Empty);
+            await DestroyCSTTSelect2Async();  // dọn Select2 (vì block bị ẩn)
+            StateHasChanged(); // bắt buộc để ẩn 2 block
+            return;
+        }
+        var entity = await PhieuDatCocService.ThongTinKhachHang(Record.MaPhieuDK, string.Empty, Record.MaDuAn, Record.MaChinhSachTT);
+        Record.MaKhachHang = entity.MaKhachHang;
+        Record.TenKhachHang = entity.TenKhachHang;
+        Record.MaDoiTuongKH = entity.MaDoiTuongKH;
+        Record.NguoiDaiDien = entity.NguoiDaiDien;
+        Record.ChucVuNguoiDaiDien = entity.ChucVuNguoiDaiDien;
+        Record.NguoiLienHe = entity.NguoiLienHe;
+        Record.SoDienThoaiNguoiLienHe = entity.SoDienThoaiNguoiLienHe;
+        Record.NgaySinh = !string.IsNullOrEmpty(entity.NgaySinh) ? DateTime.ParseExact(entity.NgaySinh, "dd/MM/yyyy", CultureInfo.InvariantCulture) : (DateTime?)null;
+        Record.SoDienThoai = entity.SoDienThoai;
+        Record.IDCard = entity.IdCard;
+        Record.NgayCap = !string.IsNullOrEmpty(entity.NgayCapIdCard) ? DateTime.ParseExact(entity.NgayCapIdCard, "dd/MM/yyyy", CultureInfo.InvariantCulture) : (DateTime?)null;
+        Record.NoiCap = entity.NoiCapIdCard;
+        Record.DiaChiThuongTru = entity.DiaChiThuongTru;
+        Record.DiaChiHienNay = entity.DiaChiHienNay;
+        Record.DotMoBan = entity.MaDotMoBan;
+        Record.TenDotMoBan = entity.TenDotMoBan;
+        Record.MaCanHo = entity.MaCanHo;
+        Record.TenCanHo = entity.TenCanHo;
+        Record.GiaTriCK = entity.GiaTriCK;
+        Record.IDKhachHangCT = entity.IDKhachHangCT;
+
+        Record.DienTichTimTuong = entity.DienTichTimTuong;
+        Record.DienTichSanVuon = entity.DienTichSanVuon;
+        Record.DienTichLotLong = entity.DienTichLotLong;
+        Record.GiaDat = entity.GiaDat;
+        Record.DonGiaDat = entity.DonGiaDat;
+        Record.GiaCanHoTruocThue = entity.GiaCanHoTruocThue;
+        Record.TyLeThueVAT = entity.TyLeThueVAT;
+        Record.GiaCanHoSauThue = entity.GiaCanHoSauThue;
+        Record.TyLeCK = entity.TyLeCK;
+        Record.GiaTriCK = entity.GiaTriCK;
+        Record.GiaBanTruocThue = entity.GiaBanTruocThue;
+        Record.GiaBanTienThue = entity.GiaBanTienThue;
+        Record.GiaBanSauThue = entity.GiaBanSauThue;
+        Record.TyLeQuyBaoTri = entity.TyLeQuyBaoTri;
+        Record.TienQuyBaoTri = entity.TienQuyBaoTri;
+        ListCSTT = await PhieuDatCocService.GetChinhSachThanhToanAsync(Record.MaDuAn, e.Value?.ToString());
+        ListTDTT = await PhieuDatCocService.GetByTienDoThanhToanAsync(Record.MaChinhSachTT, String.Empty, Record.GiaBanTruocThue, Record.GiaBanTienThue, Record.MaPhieuDK);
+        // await LoadCSTTMacDinhTuPhieuDC();
+        await DestroyCSTTSelect2Async();
+        StateHasChanged();                // render ra options mới
+        await InitCSTTSelect2Async();     // init lại để thấy thành combobox
+        await JS.InvokeVoidAsync("eval", $@"$('#MaChinhSachTT').val('{Record?.MaChinhSachTT}').trigger('change');");
+        // StateHasChanged();
+    }
+    private async Task OnCSTTChanged(ChangeEventArgs e)
+    {
+        var cstt = e.Value?.ToString();
+        Record.MaChinhSachTT = cstt;
+        var result = await PhieuDatCocService.ThongTinKhachHang(Record.MaPhieuDK, string.Empty, string.Empty, Record.MaChinhSachTT);
+        Record.DienTichTimTuong = result.DienTichTimTuong;
+        Record.DienTichSanVuon = result.DienTichSanVuon;
+        Record.DienTichLotLong = result.DienTichLotLong;
+        Record.GiaDat = result.GiaDat;
+        Record.DonGiaDat = result.DonGiaDat;
+        Record.GiaCanHoTruocThue = result.GiaCanHoTruocThue;
+        Record.TyLeThueVAT = result.TyLeThueVAT;
+        Record.GiaCanHoSauThue = result.GiaCanHoSauThue;
+        Record.TyLeCK = result.TyLeCK;
+        Record.GiaTriCK = result.GiaTriCK;
+        Record.GiaBanTruocThue = result.GiaBanTruocThue;
+        Record.GiaBanTienThue = result.GiaBanTienThue;
+        Record.GiaBanSauThue = result.GiaBanSauThue;
+        Record.TyLeQuyBaoTri = result.TyLeQuyBaoTri;
+        Record.TienQuyBaoTri = result.TienQuyBaoTri;
+        ListTDTT = await PhieuDatCocService.GetByTienDoThanhToanAsync(Record.MaChinhSachTT, String.Empty, Record.GiaBanTruocThue, Record.GiaBanTienThue, Record.MaPhieuDK);
+    }
+
+    private async Task ResetThongTin()
+    {
+        Record.MaKhachHang = string.Empty;
+        Record.TenKhachHang = string.Empty;
+        Record.NgaySinh = null;
+        Record.SoDienThoai = string.Empty;
+        Record.IDCard = string.Empty;
+        Record.NgayCap = null;
+        Record.NoiCap = string.Empty;
+        Record.DiaChiThuongTru = string.Empty;
+        Record.DiaChiHienNay = string.Empty;
+        Record.DotMoBan = string.Empty;
+        Record.TenDotMoBan = string.Empty;
+        Record.MaCanHo = string.Empty;
+        Record.TenCanHo = string.Empty;
+        Record.MaChinhSachTT = string.Empty;
+        Record.TenChinhSachTT = string.Empty;
+        Record.IDKhachHangCT = string.Empty;
+        Record.DienTichTimTuong = 0;
+        Record.DienTichSanVuon = 0;
+        Record.DienTichLotLong = 0;
+        Record.GiaDat = 0;
+        Record.DonGiaDat = 0;
+        Record.GiaCanHoTruocThue = 0;
+        Record.TyLeThueVAT = 0;
+        Record.GiaCanHoSauThue = 0;
+        Record.TyLeCK = 0;
+        Record.GiaTriCK = 0;
+        Record.GiaBanTruocThue = 0;
+        Record.GiaBanTienThue = 0;
+        Record.GiaBanSauThue = 0;
+        Record.TyLeQuyBaoTri = 0;
+        Record.TienQuyBaoTri = 0;
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private async Task LoadCSTTMacDinhTuPhieuDC()
+    {
+        await JS.InvokeVoidAsync("eval", $@"
+    setTimeout(function() {{
+        $('#MaChinhSachTT').val('{Record?.MaChinhSachTT}').trigger('change');
+    }}, 300);
+");
+    }
+
+    private async Task OnViewPDK(string maPhieuDK)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieudangky/edit/" + maPhieuDK);
+    }
+
+    private async Task OnViewCH(string maCanHo)
+    {
+        if (canHoModalRef != null)
+        {
+            var canHo = await BaseService.ThongTinChiTietSanPham(Record.MaDuAn, Record.MaCanHo);
+            await canHoModalRef.Show(canHo);
+        }
+    }
+}
+<style>
+    /* FIX: đừng cắt tooltip */
+    .wapper-input,
+    .wapper-input .row,
+    .form-group-input,
+    .group-input-grid,
+    .title-field {
+        overflow: visible !important;
+    }
+
+</style>

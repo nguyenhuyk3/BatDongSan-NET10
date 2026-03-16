@@ -1,0 +1,135 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject KhachHangTamService KhachHangTamService
+@inject DMKhachHangService DMKhachHangService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupSGDModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sàn giao dịch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 200px" class="text-center">
+                                        Mã sàn
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Tên sàn
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Địa chỉ
+                                    </th>
+                                    <th style="width: 100px" class="text-center">
+                                        Điện thoại
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Email
+                                    </th>
+                                    <th style="width: 90px">
+                                        &nbsp;
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listSGG != null && listSGG.Count > 0)
+                                {
+                                    int i = 1;
+                                    @foreach (var item in listSGG)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@i</span>
+                                            </td>
+                                            <td>@item.MaSanGiaoDich</td>
+                                            <td>
+                                                <span>@item.TenSanGiaoDich</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.DiaChi</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.DienThoai</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.Email</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center align-items-center">
+                                                    <div class="icon-button" data-title="Chọn" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => TriggerChoose(item)"><span><i class="bi bi-check-circle"></i></span></a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (listSGG == null || !listSGG.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    private bool isLoading = false;
+    List<DmSanGiaoDich> listSGG = new();
+    [Parameter]
+    public string MaDuAn { get; set; }
+    public string MaPhieu { get; set; }
+
+    [Parameter] public EventCallback<DmSanGiaoDich> OnSelected { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    public async Task ShowSGG(GioHangPagingDto item)
+    {
+        MaDuAn = item.MaDuAn;
+        MaPhieu = item.MaPhieu;
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupSGDModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+    private async Task TriggerChoose(DmSanGiaoDich? item)
+    {
+        if (OnSelected.HasDelegate)
+        {
+            await OnSelected.InvokeAsync(item);
+        }
+
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupSGDModal");
+    }   
+
+    private async Task LoadData()
+    {
+        listSGG = await BaseService.GetListSGGAsyn(string.Empty);
+        StateHasChanged();
+    }
+}

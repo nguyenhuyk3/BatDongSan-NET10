@@ -1,0 +1,220 @@
+﻿﻿@using Microsoft.AspNetCore.Components.Forms
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject SanPhamService SanPhamService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+
+<div class="modal fade import-file-popup-modal" tabindex="-1" id="ImportSanPhamModal">
+    <div class="modal-dialog modal-dialog-centered modal-import-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import sản phẩm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- 🔔 Cảnh báo nằm TRÊN 2 combobox -->
+                <div class="import-file-alert">
+                    @* <div class="icon">
+                        <i class="mdi mdi-alert"></i>
+                    </div> *@
+                    <div class="content">
+                        @*  <div class="title">Lưu ý trong file:</div> *@
+                        <ul>
+                            <li>Vui lòng nhập dữ liệu trong Sheet SanPham.</li>
+                        </ul>
+                        <ul>
+                            <li>Các trường có dấu * là bắt buộc.</li>
+                        </ul>
+                        <ul>
+                            <li>Mã Block, Mã Tầng, Mã Trục, Mã loại căn, Mã loại diện tích, Mã loại layout phải nằm trong sheet DuAn.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 2 combobox: Dự án + Loại sản phẩm -->
+                <div class="import-grid mb-3">
+                    <div>
+                        <UiSelect Icon="mdi mdi-office-building-outline"
+                                  Placeholder="Chọn dự án"
+                                  Items="DuAnOptions.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                                  @bind-Value="SelectedMaDuAn" />
+                    </div>
+
+                    <div>
+                        <UiSelect Icon="mdi mdi-tag-multiple-outline"
+                                  Placeholder="Chọn loại sản phẩm"
+                                  Items="LoaiSanPhamOptions.Select(x => new UiSelect.SelectItem(x.MaLoaiSanPham!, x.TenLoaiSanPham!))"
+                                  @bind-Value="SelectedMaLoaiSanPham" />
+                    </div>
+                </div>
+
+                <!-- Nút tải file mẫu -->
+                <button type="button"
+                        class="btn btn-success"
+                        @onclick="OnTaiFileMau"
+                        disabled="@IsLoadingDownload">
+                    @if (IsLoadingDownload)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Đang tải...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-download me-1"></i>
+                        <span>Tải file mẫu</span>
+                    }
+                </button>
+
+                <!-- Chọn file upload -->
+                <div class="wraper-select-file">
+                    <div class="mb-3 mt-3">
+                        <label for="formFile" class="form-label">Chọn file để import dữ liệu</label>
+                        <InputFile OnChange="OnFileSelected"
+                                   class="form-control"
+                                   accept=".xlsx,.csv"
+                                   id="formFile" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" @onclick="Close">Đóng</button>
+                <button class="btn btn-success"
+                        @onclick="Upload"
+                        disabled="@(IsLoadingUpload || !CanUpload)">
+                    @if (IsLoadingUpload)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Đang xử lý...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-upload me-1"></i>
+                        <span>Tải lên</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<Task> OnUploaded { get; set; }
+
+    private IBrowserFile? SelectedFile;
+    private string? SelectedFileName;
+    private bool IsLoadingUpload = false;
+    private bool IsLoadingDownload = false;
+
+    // ==== PARAMETER: cha truyền List dự án + loại sản phẩm vào đây cho component dùng ====
+    [Parameter] public List<DaDanhMucDuAn> DuAnOptions { get; set; } = new();
+    [Parameter] public List<DaDanhMucLoaiSanPham> LoaiSanPhamOptions { get; set; } = new();
+
+    private string? SelectedMaDuAn;
+    private string? SelectedMaLoaiSanPham;
+
+    private bool CanUploadField =>
+        !string.IsNullOrWhiteSpace(SelectedMaDuAn) &&
+        !string.IsNullOrWhiteSpace(SelectedMaLoaiSanPham);
+
+    private async Task Close()
+    {
+        SelectedFile = null;
+        SelectedFileName = null;
+        SelectedMaDuAn = null;
+        SelectedMaLoaiSanPham = null;
+
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportSanPhamModal");
+        StateHasChanged();
+    }
+
+    private bool CanUpload => SelectedFile != null;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        SelectedFileName = e.File.Name;
+    }
+
+    private async Task OnTaiFileMau()
+    {
+        if (!CanUploadField)
+        {
+            await JS.InvokeVoidAsync(
+                "showToast",
+                "Thông báo",
+                "Bạn vui lòng chọn dự án và loại sản phẩm để tải file mẫu về để import",
+                false);
+            return;
+        }
+
+        IsLoadingDownload = true;
+        try
+        {
+            var fullPath = Path.Combine(_env.WebRootPath, "templates", "FileMauSanPham.xlsx");
+            var fileBytes = await SanPhamService.GenerateTemplateWithDataAsync(
+                fullPath,
+                SelectedMaDuAn ?? string.Empty);
+
+            var base64 = Convert.ToBase64String(fileBytes);
+            await JS.InvokeVoidAsync("downloadFileFromBytes", "FileMauSanPham.xlsx", base64);
+        }
+        finally
+        {
+            IsLoadingDownload = false;
+        }
+    }
+
+    private async Task Upload()
+    {
+        if (!CanUpload)
+        {
+            return;
+        }
+
+        if (!CanUploadField)
+        {
+            await JS.InvokeVoidAsync(
+                "showToast",
+                "Thông báo",
+                "Bạn vui lòng chọn dự án và loại sản phẩm để Import",
+                false);
+            return;
+        }
+
+        if (SelectedFile != null)
+        {
+            IsLoadingUpload = true;
+            try
+            {
+                var result = await SanPhamService.ImportFromExcelAsync(
+                    SelectedFile,
+                    SelectedMaDuAn ?? string.Empty,
+                    SelectedMaLoaiSanPham ?? string.Empty);
+
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+                if (result.Status)
+                {
+                    await OnUploaded.InvokeAsync();
+                    await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportSanPhamModal");
+                }
+            }
+            finally
+            {
+                IsLoadingUpload = false;
+            }
+        }
+    }
+
+    // Hàm để parent gọi hiển thị popup (tuỳ anh dùng hay không)
+    public async Task ShowFileModal(string? maDuAn = null, string? maLoaiSanPham = null)
+    {
+        SelectedMaDuAn = maDuAn;
+        SelectedMaLoaiSanPham = maLoaiSanPham;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#ImportSanPhamModal");
+    }
+}
+

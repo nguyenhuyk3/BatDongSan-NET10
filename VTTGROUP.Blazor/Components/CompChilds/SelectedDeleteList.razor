@@ -1,0 +1,19 @@
+﻿@if (Count > 0)
+{
+    <div class="wraper-selbar">
+        <div class="selbar-left">
+            <input type="checkbox" class="form-check-input" checked @onclick="OnRemoveList" />
+            <span>Đã chọn <b>@Count</b> dòng</span>
+        </div>
+
+        <button type="button" class="btn-delete" @onclick="OnDeleteList">
+            Xoá
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public int Count { get; set; }
+    [Parameter] public EventCallback OnRemoveList { get; set; }
+    [Parameter] public EventCallback OnDeleteList { get; set; }
+}

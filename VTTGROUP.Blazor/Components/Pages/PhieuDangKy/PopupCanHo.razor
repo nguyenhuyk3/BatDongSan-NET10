@@ -1,0 +1,240 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject DMKhachHangService DMKhachHangService
+@inject SanPhamService SanPhamService
+@inject KeHoachBanHangService KeHoachBanHangService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupCanHoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách căn hộ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="container-search-home">
+                    <div class="search-row" style="margin-bottom: 15px;">
+                        <div class="col-search wapper-congtrinh container-form">
+                            <div class="result-label-icon">
+                                <i class="mdi mdi-file-document"></i>
+                                <select name="MaBlock" id="MaBlock" class="form-control" @onchange="OnBlockChanged">
+                                    <option value=""> Chọn block </option>
+                                    @foreach (var item in ListBlock)
+                                    {
+                                        <option value="@(item.MaBlock)">@item.TenBlock</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-search wapper-congtrinh container-form">
+                            <div class="result-label-icon">
+                                <i class="mdi mdi-file-document"></i>
+                                <select name="MaTang" id="MaTang" class="form-control" @onchange="OnTangChanged">
+                                    <option value=""> Chọn tầng </option>
+                                    @foreach (var item in ListTang)
+                                    {
+                                        <option value="@(item.MaTang)">@item.TenTang</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="wapper-congtrinh container-form">
+                            <div class="result-label-icon">
+                                <InputSearch @bind-Value="search" OnSearch="Search" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Sản phẩm
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Tên block
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Tên tầng
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Tên mặt khối
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Diện tích
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Hệ số
+                                    </th>
+                                    <th style="width: 50px" class="text-center">
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (SanPhamPopups != null && SanPhamPopups.Count > 0)
+                                {
+                                    @foreach (var item in SanPhamPopups)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@item.STT</span>
+                                            </td>
+                                            <td><div class="item-phieu">@item.TenSanPham</div></td>
+                                            <td>
+                                                <span>@item.TenBlock</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.TenTang</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.TenMatKhoi</span>
+                                            </td>
+                                            <td style="text-align:right">@string.Format("{0:N0}", item.DienTichTimTuong)</td>
+                                            <td style="text-align:right">@string.Format("{0:N0}", item.HeSoTuTinh)</td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center align-items-center">
+                                                    <div class="icon-button" data-title="Chọn" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => TriggerChoose(item)"><span><i class="bi bi-check-circle"></i></span></a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (SanPhamPopups == null || !SanPhamPopups.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                    <Pagination Page="@_page"
+                                TotalPages="@totalPage"
+                                OnPageChanged="HandlePageChanged"
+                                OnPageSizeChanged="HandlePageSizeChanged" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<SanPhamPopupPaginModel?> OnSelected { get; set; }
+    [Parameter]
+    public string? MaDuAn { get; set; }
+    private string? SelectedBlock;
+    private string? SelectedTang;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<SanPhamPopupPaginModel> SanPhamPopups = new();
+    private List<DaDanhMucBlock> ListBlock = new();
+    private List<DaDanhMucTang> ListTang = new();
+    private bool IsSelectAll = false;
+    private async Task TriggerChoose(SanPhamPopupPaginModel? item)
+    {
+        await OnSelected.InvokeAsync(item);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupCanHoModal");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaBlock", "Chọn block", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaTang", "Chọn tầng", true);
+        }
+    }
+
+    public async Task ShowPopupAsync(string maDuAn)
+    {
+        MaDuAn = maDuAn;
+        _page = 1;
+        await LoadDanhSachCanHoData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupCanHoModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListBlock = await SanPhamService.GetByBlockTheoDuAnAsync(MaDuAn);
+        await LoadDanhSachCanHoData();
+    }
+
+    private async Task OnTangChanged(ChangeEventArgs e)
+    {
+        var newKH = e.Value?.ToString();
+        if (newKH == SelectedTang || isLoading)
+        {
+            return;
+        }
+        SelectedTang = newKH;
+        _page = 1;
+        await LoadDanhSachCanHoData();
+    }
+
+    private async Task OnBlockChanged(ChangeEventArgs e)
+    {
+        var newBlock = e.Value?.ToString();
+        if (newBlock == SelectedBlock || isLoading)
+        {
+            return;
+        }
+        SelectedBlock = e.Value?.ToString();
+        ListTang = await SanPhamService.GetByTangTheoBlockAsync(SelectedBlock, MaDuAn);
+        await LoadDanhSachCanHoData();
+    }
+
+    private async Task LoadDanhSachCanHoData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await KeHoachBanHangService.GetPagingPopupAsync(MaDuAn, SelectedBlock, SelectedTang, string.Empty);
+            SanPhamPopups = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadDanhSachCanHoData();
+    }
+
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadDanhSachCanHoData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadDanhSachCanHoData();
+    }
+}

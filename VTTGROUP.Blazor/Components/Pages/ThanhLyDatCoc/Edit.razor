@@ -1,0 +1,411 @@
+﻿@page "/thanhlydatcoc/edit/{id}"
+@using System.Globalization
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.PhieuDatCoc
+@using VTTGROUP.Domain.Model.ThanhLyDatCoc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using static VTTGROUP.Blazor.Components.Pages.Block.Edit
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject PhieuDatCocService PhieuDatCocService
+@inject ThanhLyDatCocService ThanhLyDatCocService
+@inject LoadingService Loading
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Thanh lý phiếu đặt cọc</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Tiến độ thanh toán</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab @(Record.FlagTong == true ? "" : "wraper-duyet")" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số phiếu <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.SoPhieuThanhLy" />
+                                    <span class="error-validation">Vui lòng nhập số phiếu</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày ký <i class="point-validate">*</i></span>
+                                    <FlatpickrInput Id="NgayThanhLy" @bind-Value="Record.NgayThanhLy"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker input-validation"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hình thức thanh lý</span>
+                                    <DisableTextBox Value="@Record.TenHinhThucThanhLy" />
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Record?.MaPhieuDatCoc) && Record.MaPhieuDatCoc.StartsWith("PDK"))
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Phiếu thanh lý </span>
+                                        <div class="item-phieu"><span class="input-value" @onclick="() => OnViewPDK(Record.MaPhieuDatCoc)">@Record.MaPhieuDatCoc</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(Record?.MaPhieuDatCoc) && Record.MaPhieuDatCoc.StartsWith("PDC"))
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Phiếu thanh lý</span>
+                                        <div class="item-phieu"><span class="input-value" @onclick="() => OnViewPDC(Record.MaPhieuDatCoc)">[@Record.MaPhieuDatCoc]_[@PhieuDC.TenCanHo]_[@PhieuDC.TenKhachHang]</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Căn hộ</span>
+                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnViewCH(PhieuDC.MaCanHo)">@PhieuDC.TenCanHo</span></div>
+                                    <input id="MaCanHo" name="MaCanHo" type="hidden" value="@PhieuDC.MaCanHo">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên khách hàng </span>
+                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnMaKHRecord(PhieuDC.MaKhachHang)">@PhieuDC.TenKhachHang</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Giá bán </span>
+                                    <input class="input-form text-right" readonly="readonly" id="GiaBan" type="text" value="@string.Format("{0:#,#0}", PhieuDC.GiaBanTruocThue)">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tiền đã thanh toán </span>
+                                    <input class="input-form text-right" readonly="readonly" id="SoTienDaThanhToan" type="text" value="@string.Format("{0:#,#0}", Record.SoTienDaThanhToan)">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Phí phạt <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation text-right" id="PhiPhat" type="text" value="@string.Format("{0:#,#0}", Record.PhiPhat)" @onkeydown="HandleKeyPhiPhat">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tiền hoàn trả</span>
+                                    <input class="input-form text-right" readonly="readonly" id="SoTienHoanTra" type="text" value="@string.Format("{0:#,#0}", Record.SoTienHoanTra)">
+                                </div>
+                            </div>
+                        </div>
+                     
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader @ref="uploaderRef" AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input " cols="20" id="GhiChu" rows="3" tabindex="2" @bind="Record.GhiChu"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto">
+                        <div class="wraper-listdot overflow-auto" id="container-table-fixed">
+                            <table class="tbl table table-hover table-form table-detail">
+                                <thead>
+                                    <tr>
+                                        <th style="width:70px" class="text-center">STT</th>
+                                        <th style="width:250px" class="text-center">Nội dung</th>
+                                        <th style="width:200px" class="text-center">Kỳ thanh toán</th>
+                                        <th style="width:100px" class="text-center">Số tiền TT</th>
+                                        <th style="width:100px" class="text-center">Đã thanh toán</th>
+                                        <th style="width:100px" class="text-center">Chưa thanh toán</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (ListTDTT != null && ListTDTT.Any() == true)
+                                    {
+                                        int i = 1;
+                                        @foreach (var item in ListTDTT)
+                                        {
+                                            <tr>
+                                                <td class="text-center">@item.DotTT</td>
+                                                <td>@item.NoiDungTT</td>
+                                                <td>@item.TenKyTT</td>
+                                                <td style="text-align:right">@string.Format("{0:N0}", (decimal?)item.SoTienThanhToan ?? 0)</td>
+                                                <td style="text-align:right">@string.Format("{0:N0}", (decimal?)item.SoTienDaTT ?? 0)</td>
+                                                <td style="text-align:right">@string.Format("{0:N0}", (decimal?)item.SoTienConLai ?? 0)</td>
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                    @if (ListTDTT != null && ListTDTT.Any())
+                                    {
+                                        var tongSoTienTT = ListTDTT.Sum(x => (decimal?)x.SoTienThanhToan ?? 0m);
+                                        var tongSoTienDaTT = ListTDTT.Sum(x => (decimal?)x.SoTienDaTT ?? 0m);
+                                        var tongSoTienConLai = ListTDTT.Sum(x => (decimal?)x.SoTienConLai ?? 0m);
+                                        <tr class="row-total">
+                                            <td colspan="2">Tổng cộng</td>
+                                            <td></td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongSoTienTT)</td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongSoTienDaTT)</td>
+                                            <td class="text-right">@string.Format("{0:N0}", tongSoTienConLai)</td>
+                                        </tr>
+                                        <tr class="row-total">
+                                            <td colspan="2">Phí phạt</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td>
+                                                <InputCurrency T="decimal" Id="PhiPhat" Format="#,##0" CssClass="input-form form-control select-on-click" @bind-Value="Record.PhiPhat" />
+                                            </td>
+                                        </tr>
+                                        <tr class="row-total">
+                                            <td colspan="2">Tiền hoàn lại</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td>
+                                                <InputCurrency T="decimal" Id="SoTienHoanTra" Format="#,##0" CssClass="input-form form-control select-on-click" @bind-Value="Record.SoTienHoanTra" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            @if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+            {
+                <AppButton Label="Gửi duyệt"
+                           Class="button button-action"
+                           IconClass="mdi mdi-telegram"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+            else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+            {
+                <AppButton Label="Duyệt"
+                           Class="button button-action"
+                           IconClass="mdi mdi-check-circle"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,1)" />
+                <AppButton Label="Trả lại"
+                           Class="button button-action"
+                           IconClass="mdi mdi-replay"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,2)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+        </div>
+    </div>
+</EditForm>
+<PopupGuiDuyet @ref="guiDuyetModalRef" OnReloadGuiDuyet="ReloadForm" />
+<CanHoDetails @ref="canHoModalRef" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private ThanhLyDatCocModel? Record = new();
+    private PhieuDatCocModel? PhieuDC = new();
+    private string MaCongViec = "ThanhLyDatCoc";
+    private List<PhieuTLDCTienDoThanhToanModel> ListTDTT = new();
+    private PopupGuiDuyet? guiDuyetModalRef;
+    private CanHoDetails? canHoModalRef;
+    private string? maNhanVienHT;
+    private FileUploader uploaderRef;
+    private string[] allowedExtensions = FileTypeSets.Document;
+    private List<InfoItem> InfoItems = new();
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            // await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "PhiPhat", 18, 0);
+            var result = await ThanhLyDatCocService.GetByIdAsync(id);
+            if (result.Status)
+            {
+                Record = (ThanhLyDatCocModel)result.Data;
+                var pdc = await ThanhLyDatCocService.GetByIdPhieuTLAsync(Record.MaPhieuDatCoc);
+                if (pdc.Status)
+                {
+                    PhieuDC = (PhieuDatCocModel)pdc.Data;
+                    if (Record?.Files?.Any() == true)
+                    {
+                        await uploaderRef.RenderInitialFiles(Record.Files, (Record.FlagTong == true ? false : true));
+                    }
+                    uploaderRef.IsDuyet = (Record.FlagTong == true ? false : true);
+                }
+                ListTDTT = await ThanhLyDatCocService.TienDoThanhToan(string.Empty, Record.MaPhieu);
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=PhieuDC.TenDuAn, LargeWidth = true},
+                };
+                TinhTienHoanTra();
+            }
+            maNhanVienHT = await BaseService.MaNhanVienHienTai();
+            StateHasChanged();
+        }
+    }
+    private async Task OnHTTLChanged(ChangeEventArgs e)
+    {
+        Record.HinhThucThanhLy = e.Value?.ToString();
+    }
+
+    private async Task HandleKeyPhiPhat(KeyboardEventArgs e)
+    {
+        // var valueStr = await JS.InvokeAsync<string>("getInputValueById", "PhiPhat");
+        // if (decimal.TryParse(valueStr, out decimal phiphat))
+        // {
+        //     Record.SoTienHoanTra = Record.SoTienDaThanhToan - phiphat;
+        //     Record.PhiPhat = phiphat;
+        // }
+    }
+    private void TinhTienHoanTra()
+    {
+        // Record.SoTienHoanTra = Record.SoTienDaThanhToan - Record.PhiPhat;
+    }
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await ThanhLyDatCocService.UpdatePhieuAsync(Record, ListTDTT);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/thanhlydatcoc");
+    }
+
+    private async Task GuiDuyetPhieu(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        await guiDuyetModalRef?.ShowQTD(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh, flag);
+    }
+
+    private async Task ReloadForm()
+    {
+        await JS.InvokeVoidAsync("location.reload");
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private async Task OnViewPDK(string maPhieuDK)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieudangky/edit/" + maPhieuDK);
+    }
+
+    private async Task OnViewPDC(string maPhieuDC)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieudatcoc/edit/" + maPhieuDC);
+    }
+
+    private async Task OnViewCH(string maCanHo)
+    {
+        if (canHoModalRef != null)
+        {
+            var canHo = await BaseService.ThongTinChiTietSanPham(Record.MaDuAn, PhieuDC.MaCanHo);
+            await canHoModalRef.Show(canHo);
+        }
+    }
+
+    private async Task OnMaKHRecord(string maKH)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/khachhang/edit/" + maKH);
+    }
+}

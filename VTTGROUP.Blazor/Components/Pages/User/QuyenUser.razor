@@ -1,0 +1,175 @@
+﻿@page "/user/quyen"
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject CongViecService CongViecService
+@inject UserService UserService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Danh sách Công việc theo người sử dụng</h1>
+
+<div class="container-search-home">
+	<div class="search-row" style="margin-bottom: 20px;">
+		<div class="col-search wapper-congtrinh container-form">
+			<div class="result-label-icon">
+				<i class="mdi mdi-file-document"></i>
+				<select id="MaUser" class="form-control" @onchange="OnUserChanged">
+					<option value=""></option>
+					@foreach (var item in Users)
+					{
+						<option value="@(item.Id)">@item.TenDangNhap</option>
+					}
+				</select>
+			</div>
+		</div>
+	</div>
+	<div class="search-row" style="display: none">
+	</div>
+</div>
+<div class="container-table-detail">
+	<div class="container-table-fixed">
+		<table class="tbl table-form table-detail treeTable" id="table-data">
+			<thead>
+				<tr class="cls_custome_back">
+					<th style="width: 300px" class="row-tr td-left-fixed">
+						Tên công việc
+					</th>
+					@if (VuViecs != null && VuViecs.Any() == true)
+					{
+						foreach (var item in VuViecs)
+						{
+							<th align="center" class="row-tr" style="width: 110px">
+								@item.TenVuViec
+							</th>
+						}
+					}
+				</tr>
+			</thead>
+			<tbody class="content-table">
+				@if (ChiTietVuViec != null && ChiTietVuViec.Any() == true)
+				{
+					@foreach (var item in ChiTietVuViec)
+					{
+						if (IsVisible(item))
+						{
+							var inputId = $"input-doUuTien-{item.MaCongViec}";
+							<tr id="node-@item.MaCongViec" class="initialized @(item.IsCapCon == 0 ? "parent table-group-header" : "") collapsed">
+								<td style="padding-left:@((item.LevelCay+1) * 16)px!important">
+									<span class="text-gray-500 item-name" @onclick:stopPropagation="true" @onclick="() => Toggle(item.MaCongViec)">
+										@if (HasChildren(item))
+										{
+											<i class="mdi @(expandedIds.Contains(item.MaCongViec!) ? "mdi-minus-box-outline" : "mdi-plus-box-outline")"></i>
+										}
+										else
+										{
+											<text><span class="dot-item pl-1"></span></text>
+										}
+									</span>
+									<span>@item.TenCongViec</span>
+								</td>
+
+								@if (item.IsCapCon != 0)
+								{
+									foreach (var vv in VuViecs)
+									{
+										var vvModel = item.vuViecs?.FirstOrDefault(x => x.MaVuViec == vv.MaVuViec && x.MaCongViec == item.MaCongViec);
+										<td class="text-center">
+											@if (vvModel != null)
+											{
+												<input type="checkbox" class="form-check-input"
+													   checked="@vvModel.IsCheckedBool"
+												@onclick:preventDefault
+												@onkeydown:preventDefault />
+											}
+											else
+											{
+												<input type="checkbox" class="form-check-input"
+												@onclick:preventDefault
+												@onkeydown:preventDefault />
+											}
+										</td>
+									}
+								}
+								else
+								{
+									<td colspan="@VuViecs.Count()" class="text-center"></td>
+								}
+
+							</tr>
+						}
+					}
+				}
+			</tbody>
+		</table>
+	</div>
+</div>
+@code {
+	private List<CongViecModel> ChiTietVuViec = new();
+	private List<VuViecModel> VuViecs = new();
+	private List<TblUser> Users = new();
+	private HashSet<string> expandedIds = new();
+	private string selectedUser;
+	private bool IsVisible(CongViecModel item)
+	{
+
+		if (item.LevelCay == 0)
+			return true;
+		var cha = item.MaCha;
+		while (!string.IsNullOrEmpty(cha))
+		{
+			if (!expandedIds.Contains(cha)) return false;
+			cha = ChiTietVuViec.FirstOrDefault(x => x.MaCongViec == cha)?.MaCha;
+		}
+		return true;
+
+	}
+	private bool HasChildren(CongViecModel item) =>
+		ChiTietVuViec.Any(x => x.MaCha == item.MaCongViec);
+	private bool showDropdown = false;
+
+
+	private void Toggle(string? id)
+	{
+		if (string.IsNullOrEmpty(id)) return;
+		if (expandedIds.Contains(id)) expandedIds.Remove(id);
+		else expandedIds.Add(id);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await BaseService.CheckPermissionAsync("NguoiSuDung", VuViec.Xem.GetDescription());
+			await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaUser", "Chọn người sử dụng", true);
+		}
+		if (ChiTietVuViec.Any())
+		{
+			var config = new List<FixColumnConfig>
+			{
+				new FixColumnConfig { left = 1 },
+				new FixColumnConfig { right = 0 }
+			};
+			await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+		}
+	}
+	protected override async Task OnInitializedAsync()
+	{
+		VuViecs = await CongViecService.GetVuViecAsync();
+		ChiTietVuViec = await UserService.GetTreeVuViecByCongViecUserAsync(selectedUser);
+		Users = await UserService.GetListUserAsync();
+	}
+	private async Task OnUserChanged(ChangeEventArgs e)
+	{
+		var newPB = e.Value?.ToString();
+		if (newPB == selectedUser)
+		{
+			return;
+		}
+		selectedUser = newPB;
+		ChiTietVuViec = await UserService.GetTreeVuViecByCongViecUserAsync(selectedUser);
+		expandedIds = new();
+	}
+}

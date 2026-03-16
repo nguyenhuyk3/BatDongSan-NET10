@@ -1,0 +1,91 @@
+﻿/* =========================
+                   POPUP TRỤC RESPONSIVE (FULL FIX - FINAL)
+                   - Không double scroll
+                   - Có scroll dọc trong bảng
+                   - Có scroll ngang bên dưới (khi table overflow)
+                   ========================= */
+
+/* --- DESKTOP --- */
+#PopupChonKHModalTam .modal-dialog {
+    max-width: 1400px;
+    width: calc(100% - 3rem);
+    margin: 1.5rem auto;
+}
+
+#PopupChonKHModalTam .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 3rem);
+}
+
+/* BODY: tắt scroll ngoài, giao cho vùng bảng xử lý */
+#PopupChonKHModalTam .modal-body.modal-wraper {
+    flex: 1 1 auto;
+    min-height: 0; /* QUAN TRỌNG */
+    overflow: hidden !important; /* tắt scrollbar ngoài */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Wrapper bảng: giữ scrollbar ngang ở đáy */
+#PopupChonKHModalTam .container-table-detail.truc-table {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden !important; /* ✅ không tạo scroll ở đây */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Scroll dọc nằm ở đây, nhưng KHÔNG được clip ngang */
+#PopupChonKHModalTam .container-table-fixed {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto !important; /* ✅ cả dọc + ngang */
+    scrollbar-gutter: stable both-edges; /* ✅ giữ chỗ cho scrollbar (Chrome mới) */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Table phải rộng theo tổng cột để sinh overflow ngang */
+#PopupChonKHModalTam #table-data {
+    width: max-content !important;
+    min-width: 100% !important;
+}
+
+/* Làm scrollbar ngang rõ hơn (Chrome/Edge) */
+#PopupTrucModal .container-table-detail.truc-table::-webkit-scrollbar {
+    height: 12px;
+}
+
+/* --- MOBILE / TABLET: FULL MÀN HÌNH --- */
+@media (max-width: 991.98px) {
+    #PopupChonKHModalTam {
+        padding: 0 !important;
+    }
+
+        #PopupChonKHModalTam .modal-dialog {
+            max-width: 100%;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+
+            #PopupChonKHModalTam .modal-dialog.modal-dialog-centered {
+                display: flex;
+                align-items: stretch;
+                min-height: 100vh;
+            }
+
+        #PopupChonKHModalTam .modal-content {
+            height: 100vh;
+            max-height: 100vh;
+            border-radius: 0;
+        }
+
+        #PopupChonKHModalTam .modal-body.modal-wraper {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden !important;
+            display: flex;
+            flex-direction: column;
+        }
+}

@@ -1,0 +1,8 @@
+﻿<input type="text" disabled 
+       class="form-control disabled-control @Class"
+       @bind="Value"/>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

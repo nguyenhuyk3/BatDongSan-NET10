@@ -1,0 +1,38 @@
+﻿@inject IJSRuntime JS
+
+<div id="zoomSlider" class="custom-slider-wrapper">
+    <button type="button" class="custom-slider-button btn-minus">−</button>
+
+    <div class="custom-slider-container">
+        <div class="custom-slider-track"></div>
+        <div class="custom-slider-marker"></div>
+        <div class="custom-slider-thumb"></div>
+    </div>
+
+    <button type="button" class="custom-slider-button btn-plus">+</button>
+    <span class="custom-slider-value">@ZoomValue%</span>
+</div>
+
+@code {
+    [Parameter] public int ZoomValue { get; set; } = 100;
+    [Parameter] public int Min { get; set; } = 10;
+    [Parameter] public int Max { get; set; } = 200;
+    [Parameter] public EventCallback<int> OnZoomChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("customZoomSlider.init", "zoomSlider", DotNetObjectReference.Create(this), Min, Max, ZoomValue);  
+        }
+    }
+
+    [JSInvokable("OnZoomChangedFromJs")]
+    public async Task OnZoomChangedFromJs(int value)
+    {
+        ZoomValue = value;
+        await OnZoomChanged.InvokeAsync(value);
+        await JS.InvokeVoidAsync("customZoomSlider.setTableZoom", value);
+        StateHasChanged();
+    }
+}

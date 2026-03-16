@@ -1,0 +1,24 @@
+﻿<div class="body-404">
+	<div class="container-404">
+		<div class="left-404">
+			<h1>Ooops<span class="ms-1">!</span></h1>
+			<p>Không tìm thấy trang bạn muốn tìm kiếm</p>
+			<a href="/dashboard" class="btn-home-404"><i class="bi bi-arrow-left me-2"></i>Quay lại trang chính</a>
+		</div>
+		<div class="right-404">
+			<div class="flex justify-center items-center relative">
+				<img src="assets/images/404.png" alt="Không tìm thấy trang"
+					 class="max-w-full max-h-full object-contain" />
+			</div>
+		</div>
+	</div>
+</div>
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            
+        }
+    }
+}

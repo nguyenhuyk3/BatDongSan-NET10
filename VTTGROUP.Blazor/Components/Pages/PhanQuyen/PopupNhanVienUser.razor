@@ -1,0 +1,142 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject PhanQuyenService PhanQuyenService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupViewNhanVien" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách nhân viên thuộc nhóm <strong>@Nhom?.TenNhomUser</strong></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="flex items-center gap-3 my-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px">
+                                        Họ và tên
+                                    </th>
+                                    <th style="width: 150px">
+                                        Email
+                                    </th>
+                                    <th style="width: 150px">
+                                        Số điện thoại
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (listNhanViens != null && listNhanViens.Count > 0)
+                                {
+                                    @foreach (var item in listNhanViens)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@item.STT</span>
+                                            </td>
+                                            <td>@item.TenNhanVien</td>
+                                            <td>
+                                                <span>@item.Email</span>
+                                            </td>
+                                            <td>
+                                                <span>@item.SoDienThoai</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (listNhanViens == null || !listNhanViens.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter] public NhomUserPagingDto? Nhom { get; set; } = new();
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<NhanVienNhomUserPagingDto> listNhanViens = new();
+
+    public async Task ShowPopupAsync(NhomUserPagingDto nhom)
+    {
+        Nhom = nhom;
+        _page = 1;
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupViewNhanVien");
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await PhanQuyenService.GetNhanVienByNhomPopupAsync(Nhom?.MaNhomUser, _page, _pageSize, search);
+            listNhanViens = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+}
+

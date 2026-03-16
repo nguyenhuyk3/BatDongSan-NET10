@@ -1,0 +1,63 @@
+﻿@page "/_Host"
+@namespace VTTGROUP.Blazor.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using Microsoft.AspNetCore.Components
+@using VTTGROUP.Blazor.Components
+@{
+	Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+	<meta charset="utf-8" />
+	<title>Bất động sản</title>
+	<link rel="shortcut icon" href="~/favicon.ico">
+	<base href="~/" />
+	<link href="css/app.css" rel="stylesheet" />
+	<link href="~/css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+	<link href="~/css/bootstrap/bootstrap-icons.css" rel="stylesheet" />
+	<link href="~/css/select2.min.css" rel="stylesheet" />
+	<link href="~/lib/flatpickr/flatpickr.min.css" rel="stylesheet" />
+	<link href="~/lib/flatpickr/material_blue.css" rel="stylesheet" />
+	<link href="~/lib/swiper/swiper-bundle.min.css" rel="stylesheet" />
+	<link href="~/css/main-layout.css" rel="stylesheet" />
+	<link href="~/css/icon.css" rel="stylesheet" />
+	<link href="~/css/index-layout.css" rel="stylesheet" />
+	<link href="~/css/custom-image-upload.css" rel="stylesheet" />
+	<link href="~/css/custom-import-popup.css" rel="stylesheet" />
+	<link href="~/css/custom-scroll-popup.css" rel="stylesheet" />
+	<link href="~/css/custom-header-group.css" rel="stylesheet" />
+	<link href="~/css/notfound.css" rel="stylesheet" />
+	<link href="~/css/login.css" rel="stylesheet" />
+</head>
+<body>
+	<app>
+		@* <component type="typeof(Routes)" render-mode="@RenderMode.ServerPrerendered" /> *@
+		<component type="typeof(Routes)" render-mode="Server" />
+	</app>
+	<script src="js/site.js"></script>
+	<script src="_framework/blazor.server.js"></script>
+	<script src="js/menu-helper.js"></script>
+	<script src="~/js/jquery-3.6.4.min.js"></script>
+	<script src="~/js/bootstrap/bootstrap.bundle.min.js"></script>
+	<script src="~/lib/swiper/swiper-bundle.min.js"></script>
+	<script src="~/lib/flatpickr/flatpickr.js"></script>
+	<script src="~/lib/tinymce/tinymce.min.js"></script>
+	<script src="~/js/select2.min.js"></script>
+	<script src="~/js/signalr.min.js"></script>
+	<script src="~/js/signalRInterop.js"></script>
+	<script src="~/js/treeselect.js"></script>
+	<script src="~/js/datatable.js"></script>
+	<script src="~/js/bootstrap-toast.js"></script>
+	<script src="~/js/input-utils.js"></script>
+	<script src="~/js/validate-form.js"></script>
+	<script src="~/js/fileuploader.js"></script>
+	<script src="~/js/ui-helper.js"></script>
+	<script src="~/js/modalhelper.js"></script>
+	<script src="~/js/swiper.js"></script>
+	<script src="~/js/tinymce-blazor.js"></script>
+	<script src="~/js/popover-helper.js"></script>
+	<script src="~/js/modal-stack.js"></script>
+
+</body>
+</html>

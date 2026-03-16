@@ -1,0 +1,156 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject NhanVienService NhanVienService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupChonNhanVien" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách nhân viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="flex items-center gap-3 my-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 180px" class="text-center">
+                                        Mã nhân viên
+                                    </th>
+                                    <th style="width: 180px" class="text-center">
+                                        Họ và tên
+                                    </th>
+                                    <th style="width: 170px" class="text-center">
+                                        Email
+                                    </th>
+                                    <th style="width: 170px" class="text-center">
+                                        Số điện thoại
+                                    </th>
+                                    <th style="width: 90px">
+                                        &nbsp;
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (nhanViens != null && nhanViens.Count > 0)
+                                {
+                                    @foreach (var item in nhanViens)
+                                    {
+                                        <tr class="initialized">
+                                            <td>
+                                                @item.MaNhanVien
+                                            </td>
+                                            <td>
+                                                @item.HoVaTen
+                                            </td>
+                                            <td>
+                                                @item.Email
+                                            </td>
+                                            <td>
+                                                @item.SoDienThoai
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center align-items-center">
+                                                    <div class="icon-button" data-title="Chọn" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => TriggerChoose(item)"><span><i class="bi bi-check-circle"></i></span></a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (nhanViens == null || !nhanViens.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<NhanVienPagingDto?> OnSelected { get; set; }
+
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<NhanVienPagingDto> nhanViens = new();
+
+    private async Task TriggerChoose(NhanVienPagingDto? item)
+    {
+        await OnSelected.InvokeAsync(item);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupChonNhanVien");
+    }
+
+    public async Task Show()
+    {
+        await LoadData();
+        // 👉 Show popup
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChonNhanVien");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+        StateHasChanged();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            var (data, total) = await NhanVienService.GetPopupNhanVienBySanGDPagingAsync(_page, _pageSize, search);
+            nhanViens = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+}

@@ -1,0 +1,380 @@
+﻿@page "/phieuduyetgia/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.PhieuDuyetGia
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject PhieuDuyetGiaService PhieuDuyetGiaService
+@inject LoadingService Loading
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Phiếu duyệt giá theo đợt</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2" @onclick="ShowCanHo">Căn hộ</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                        <option value=""></option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        @if (HasDuAn)
+                        {
+                            <div class="wapper-input col-lg-12">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Số kế hoạch</span>
+                                        <div class="item-phieu"><span class="input-value" @onclick="() => OnViewKeHoach(Record.MaKeHoach)">@Record.MaKeHoach</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Đợt mở bán <i class="point-validate">*</i></span>
+                                        <DisableTextBox Value="@Record.TenDotMoBan" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Giá bán theo kế hoạch</span>
+                                        <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.GiaBanKeHoach)" />
+                                    </div>
+                                </div>
+                            </div>
+
+                        }
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    @*   <span class="title-field">Tỷ lệ bán hàng</span> *@
+                                    <span class="title-field d-inline-flex align-items-center gap-1">
+                                        Tỷ lệ bán hàng
+                                        <span class="hint-icon"
+                                              data-bs-toggle="tooltip"
+                                              data-bs-placement="top"
+                                              data-bs-container="body"
+                                              title="@TyLeBanHangTooltip">
+                                            <i class="mdi mdi-information"></i>
+                                        </span>
+                                    </span>
+                                    <div class="input-group">
+                                        <input id="TyLeChuyenDoi" readonly="readonly" class="form-control is-numberic text-right" type="text" @bind="TyLeChuyenDoiText">
+                                        <div class="input-group-text">%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Giá bán thực tế <i class="point-validate">*</i></span>
+                                    <input id="GiaBanThucTe" class="input-form is-numberic input-validation text-right" type="text" @bind="GiaBanThucTeText">
+                                    <span class="error-validation">Vui lòng nhập giá bán thực tế</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nội dung</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <SoDoCanHo @ref="soDoCanHoRef" />
+                </div>
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="button-action-title" style="margin-left: 0;">
+                                <div class="icon-button" @onclick="AddChinhSachThanhToan">
+                                    <i class="mdi mdi-playlist-plus"></i>
+                                </div>
+                                <span>Chính sách thanh toán</span>
+                            </div>
+                            <div style="margin-left: auto; display: flex; align-items: center;">
+                            </div>
+                        </div>
+                        <table class="tbl table table-hover table-form table-detail" id="tblNhanViens">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px">
+                                        STT
+                                    </th>
+                                    <th style="width:200px">
+                                        Chính sách thanh toán
+                                    </th>
+                                    <th style="width:50px">
+
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (Record.ListChinhSachThanhToan != null && Record.ListChinhSachThanhToan.Any() == true)
+                                {
+                                    var i = 1;
+                                    foreach (var item in Record.ListChinhSachThanhToan)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                @i
+                                            </td>
+                                            <td>
+                                                @item.TenCSTT
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="icon-button" data-title="Xóa" data-position="left">
+                                                    <a href="javascript:void(0)" @onclick="() => DeleteRow(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupAddChinhSachThanhToan OnSelected="SelectedItem" @ref="popupRef" />
+@code {
+    private PopupAddChinhSachThanhToan? popupRef;
+    private EditContext editContext;
+    private PhieuDuyetGiaModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<BhKeHoachBanHang> ListKH = new();
+    private KHDotMoBanModel ListDotMoBan = new();
+    private string selectedDMBRaw;
+    private SoDoCanHo? soDoCanHoRef;
+    private bool? clickedTab2 = false;
+    private List<InfoItem> InfoItems = new();
+    private bool HasDuAn => !string.IsNullOrWhiteSpace(Record?.MaDuAn);
+    private string TyLeBanHangTooltip =>
+    "Tỷ lệ bán hàng = Tổng diện tích đợt này / Tổng diện tích dự án";
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("PhieuDuyetGia", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaPhieuKH", "Chọn phiếu kế hoạch", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDotMoBan", "Chọn đợt mở bán", true);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "is-numberic", 18, 2);
+            await JS.InvokeVoidAsync("tooltipHelper.init");
+            var result = await PhieuDuyetGiaService.FindGetByPhieuAsync(string.Empty);
+            if (result.Status)
+            {
+                Record = (PhieuDuyetGiaModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+
+            }
+            ListDA = await CanHoService.GetByDuAnAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        // Reset dữ liệu phụ thuộc
+        Record.MaKeHoach = null;
+        Record.MaDotMoBan = null;
+        Record.TenDotMoBan = null;
+        Record.GiaBanKeHoach = 0;
+        Record.ListChinhSachThanhToan = new();
+
+        // Nếu bỏ chọn Dự án => chỉ cần cập nhật UI và thoát
+        if (!HasDuAn)
+        {
+            StateHasChanged();
+            return;
+        }
+        ListDotMoBan = await PhieuDuyetGiaService.GetDotMoBanAsync(Record.MaDuAn);
+        if (ListDotMoBan != null)
+        {
+            Record.MaKeHoach = ListDotMoBan.MaKeHoach;
+            Record.MaDotMoBan = ListDotMoBan.MaDotMoBan;
+            Record.TenDotMoBan = ListDotMoBan.TenDotMoBan;
+            Record.GiaBanKeHoach = ListDotMoBan.DonGiaTBDot;
+            Record.TyLeChuyenDoi = ListDotMoBan.TyLeBanHang;
+        }
+        Record.ListChinhSachThanhToan = new();
+        clickedTab2 = false;
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await PhieuDuyetGiaService.SavePhieuDuyetGiaAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/phieuduyetgia/edit/{result.Id}");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+    public async Task AddChinhSachThanhToan()
+    {
+        if (popupRef != null)
+        {
+            await popupRef.ShowPopupAsync(Record.MaDuAn);
+        }
+    }
+    private async Task DeleteRow(PhieuDuyetGiaChinhSachThanhToanModel? item)
+    {
+        Record.ListChinhSachThanhToan.Remove(item);
+        StateHasChanged();
+    }
+    public async Task SelectedItem(List<PhieuDuyetGiaCSTTPagingDto?> listCSTT)
+    {
+        foreach (var nv in listCSTT)
+        {
+            bool isExist = Record.ListChinhSachThanhToan.Any(x => x.MaCSTT == nv.MaCSTT);
+            if (!isExist)
+            {
+                Record.ListChinhSachThanhToan.Add(new PhieuDuyetGiaChinhSachThanhToanModel
+                {
+                    MaCSTT = nv.MaCSTT,
+                    TenCSTT = nv.TenCSTT
+                });
+            }
+        }
+        StateHasChanged();
+    }
+    private string TyLeChuyenDoiText
+    {
+        get => string.Format("{0:#,##0.##}", Record.TyLeChuyenDoi);
+        set
+        {
+            if (decimal.TryParse(value.Replace(",", ""), out var gia))
+            {
+                Record.TyLeChuyenDoi = gia;
+            }
+        }
+    }
+    private string GiaBanThucTeText
+    {
+        get => string.Format("{0:#,##0}", Record.GiaBanThucTe);
+        set
+        {
+            if (decimal.TryParse(value.Replace(",", ""), out var gia))
+            {
+                Record.GiaBanThucTe = gia;
+            }
+        }
+    }
+    private async Task ShowCanHo()
+    {
+        if (clickedTab2 == false)
+        {
+            await soDoCanHoRef.OnloadCanHo(Record.MaDuAn, Record.MaDotMoBan, Record.MaPhieu);
+            clickedTab2 = true;
+        }
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/phieuduyetgia");
+    }
+
+    private async Task OnViewKeHoach(string maPhieuKH)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/kehoachbanhang/edit/" + maPhieuKH);
+    }
+}
+<style>
+  .hint-icon{
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(47,111,237,.12);
+    color: #2f6fed;
+    cursor: help;
+    transform: translateY(-1px);
+}
+.hint-icon i{ font-size: 14px; line-height: 1; }
+.hint-icon:hover{ background: rgba(47,111,237,.18); }
+
+</style>

@@ -1,0 +1,225 @@
+﻿@page "/user/process"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject CongViecService CongViecService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Danh sách công việc</PageTitle>
+
+<h1 class="legend-title">Danh sách Công việc</h1>
+<div class="container-form">
+    <div class="container-tabs">
+        <div class="row">
+            <div class="col-md-12">
+                <ul class="tab-element">
+                    <li class="tab-item actived-tab" data-id="1" id="linkTab1">Công việc cần xử lý</li>
+                    <li class="tab-item" data-id="2" id="linkTab2">Công việc đã xử lý</li>
+                    @* <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+					</div> *@
+                </ul>
+            </div>
+        </div>
+        <div class="wapper-content-tab" id="formCongViec">
+            <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                <div class="title-tab">Danh sách công việc cần xử lý <span class="text-danger">(@listCongViecDuyets?.Count())</span></div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed" id="container-table-fixed">
+                        <table class="tbl table-form table-detail treeTable table-congviec" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th class="row-tr" style="width: 50px">
+                                        STT
+                                    </th>
+                                    <th class="row-tr" style="width: 150px">
+                                        Người duyệt
+                                    </th>
+                                    <th style="width: 150px" class="row-tr">
+                                        Số phiếu
+                                    </th>
+                                    <th class="row-tr" style="width: 150px">
+                                        Tình trạng
+                                    </th>
+                                    <th class="row-tr" style="width: 120px">
+                                        Ngày gửi
+                                    </th>
+                                    <th class="row-tr" style="width: 250px">
+                                        Ghi chú
+                                    </th>
+                                    <th class="row-tr" style="width: 50px">
+
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @* @if (listCongViecDuyets != null && listCongViecDuyets.Count > 0)
+								{
+									foreach (var item in listCongViecDuyets)
+									{
+										<tr>
+											<td>
+												@item.TenCongViec
+											</td>
+											<td>
+												<div class="item-phieu" @onclick="() => OnEditRecord(item)">@item.MaPhieu</div>
+											</td>
+											<td>
+												@item.TenTrangThai
+											</td>
+											<td>
+												@item.NgayDuyet?.ToString("dd/MM/yyyy HH:mm")
+											</td>
+											<td>
+												@item.GhiChu
+											</td>
+										</tr>
+									}
+								} *@
+                                @foreach (var (grp, idx) in _groups.Select((g, i) => (g, i + 1)))
+                                {
+                                    var count = grp.Value.Count;
+                                    <tr class="group-row" @onclick="() => Toggle(grp.Key)">
+                                        <td class="text-center">@idx</td>
+                                        <td colspan="5" class="fw-600">
+                                            <div class="d-flex align-items-center gap-1">
+                                                <span class="expander">
+                                                    <i class="mdi @(IsOpen(grp.Key) ? "mdi-chevron-down" : "mdi-chevron-right")"></i>
+                                                </span>
+                                                @grp.Key.TenCongViec <span class="text-danger">(@count)</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                        </td>
+                                    </tr>
+
+                                    @if (IsOpen(grp.Key))
+                                    {
+                                        var stt = 1;
+                                        @foreach (var item in grp.Value)
+                                        {
+                                            <tr class="item-row">
+                                                <td class="text-center">@stt</td>
+                                                <td>@item.NguoiDuyet</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-1 @(item.IsPhieuBiTraLai == true ? "is-tralai" : "")">
+                                                        <span class="item-phieu" @onclick="() => OnEditRecord(item)">@item.MaPhieu</span>
+                                                        @if (item.IsPhieuBiTraLai == true)
+                                                        {
+                                                            <i class="mdi mdi-sync ms-1 text-danger" title="Phiếu bị trả lại"></i>
+                                                        }
+                                                        @if (item.IsGap == true)
+                                                        {
+                                                            <span class="urgent chip chip-warning ms-1">Gấp</span>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    @item.TenTrangThai
+                                                </td>
+                                                <td>
+                                                    <span class="created-date-label">@(string.Format("{0:dd/MM/yyyy HH:mm}", item.NgayDuyet))</span>
+                                                </td>
+                                                <td class="truncate" title="@item.GhiChu">@item.GhiChu</td>
+                                                <td class="text-center">
+                                                    <button class="icon-btn" title="Lịch sử duyệt" @onclick="() => LichSuDuyetPhieu(item.MaCongViec, item.MaPhieu)">
+                                                        <i class="mdi mdi-history"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            stt++;
+                                        }
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div data-id="2" class="tab-content-item" id="tab2">
+            </div>
+        </div>
+    </div>
+</div>
+<PopupLichSuDuyetPhieu @ref="guiDuyetModalRef" />
+@code {
+    private List<CongViecModel> DanhSach = new();
+    private List<CongViecDuyetModel>? listCongViecDuyets = new();
+    private Dictionary<(string MaCongViec, string TenCongViec), List<CongViecDuyetModel>> _groups
+        = new();
+    private HashSet<string> _openKeys = new();
+    private CongViecModel? Selected = new();
+    private CongViecModel? selectedMaCongViec = new();
+    private string? search;
+    private PopupLichSuDuyetPhieu? guiDuyetModalRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("NguoiSuDung", VuViec.Duyet.GetDescription());
+            listCongViecDuyets = await BaseService.GetDanhSachPhieuDuyet();
+            _groups = listCongViecDuyets
+                .GroupBy(x => (x.MaCongViec ?? "", x.TenCongViec ?? "Khác"))
+                .OrderBy(g => g.Key.Item1)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.NgayDuyet).ToList());
+
+        }
+        if (listCongViecDuyets.Any())
+        {
+            var config = new List<FixColumnConfig>
+            {
+                new FixColumnConfig { left = 0 },
+                new FixColumnConfig { right = 1 }
+            };
+            await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+            await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 55);
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        DanhSach = await CongViecService.GetTreeAllAsync();
+    }
+    private async Task OnSelected(CongViecModel item)
+    {
+        Selected = item;
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+    }
+
+    private async Task ResetAllParam()
+    {
+        search = null;
+        Selected = new();
+        selectedMaCongViec = new();
+        StateHasChanged();
+    }
+
+    private async Task OnEditRecord(CongViecDuyetModel item)
+    {
+        var controller = item.TenController.ToLower();
+        var url = $"/{controller}/edit/{item.MaPhieu}";
+        Nav.NavigateTo(url, forceLoad: true);
+        StateHasChanged();
+    }
+    private void Toggle((string MaCongViec, string TenCongViec) key)
+    {
+        if (_openKeys.Contains(key.MaCongViec)) _openKeys.Remove(key.MaCongViec);
+        else _openKeys.Add(key.MaCongViec);
+    }
+
+    private bool IsOpen((string MaCongViec, string TenCongViec) key)
+        => _openKeys.Contains(key.MaCongViec);
+
+    private async Task LichSuDuyetPhieu(string MaCongViec, string MaPhieu)
+    {
+        await guiDuyetModalRef?.ShowLSDP(MaCongViec, MaPhieu);
+    }
+}

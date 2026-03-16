@@ -1,0 +1,49 @@
+﻿<button type="@Type"
+        class="button @VariantClass @(IsBack ? "button-back" : null)"
+        @onclick="OnClick">
+    @if (IsBack)
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" class="ui-icon" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5" />
+            <path d="M12 19l-7-7 7-7" />
+        </svg>
+        <span>@(string.IsNullOrWhiteSpace(Text) ? "Trở về" : Text)</span>
+    }
+    else if (IsSave)
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" class="ui-icon" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12" />
+            <path d="M8 11l4 4 4-4" />
+            <path d="M4 21h16a1 1 0 0 0 1-1v-4H3v4a1 1 0 0 0 1 1z" />
+        </svg>
+        <span>@(string.IsNullOrWhiteSpace(Text) ? "Lưu" : Text)</span>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(Icon))
+        {
+            <i class="mdi @Icon ui-icon" aria-hidden="true"></i>
+        }
+        <span>@Text</span>
+    }
+</button>
+
+@code {
+    [Parameter] public string Icon { get; set; } = string.Empty;
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public string Variant { get; set; } = "primary";
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? Preset { get; set; }   // "back" | "save"
+
+    private bool IsBack => Preset?.Equals("back", StringComparison.OrdinalIgnoreCase) == true;
+    private bool IsSave => Preset?.Equals("save", StringComparison.OrdinalIgnoreCase) == true;
+    private string VariantClass => Variant == "secondary" ? "button-secondary" : "button-primary";
+
+    protected override void OnParametersSet()
+    {
+        if (IsBack && Variant == "primary") Variant = "secondary";
+    }
+}

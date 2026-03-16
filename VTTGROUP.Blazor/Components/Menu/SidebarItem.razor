@@ -1,0 +1,39 @@
+﻿@using VTTGROUP.Domain.Entities
+@using Microsoft.AspNetCore.Components.Routing
+
+@code {
+    [Parameter] public SystemMenu Item { get; set; }
+    private bool expanded = false;
+}
+
+<div class="pl-2">
+    <div class="flex items-center justify-between cursor-pointer hover:bg-gray-200 p-1"
+         @onclick="() => expanded = !expanded">
+        <NavLink href="@GetLink()" class="text-sm" Match="NavLinkMatch.All">
+            ▸ @Item.TenCongViec
+        </NavLink>
+        @if (Item.Children?.Any() == true)
+        {
+            <span>@(expanded ? "▲" : "▼")</span>
+        }
+    </div>
+
+    @if (expanded && Item.Children?.Any() == true)
+    {
+        <div class="ml-4 border-l border-gray-300">
+            @foreach (var child in Item.Children)
+            {
+                <SidebarItem Item="child" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string GetLink()
+    {
+        if (!string.IsNullOrEmpty(Item.TenController) && !string.IsNullOrEmpty(Item.TenAction))
+            return $"/{Item.TenController}/{Item.TenAction}";
+        return "#";
+    }
+}

@@ -1,0 +1,363 @@
+﻿@page "/khachhang/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Domain.Model.KhachHangTam
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject SanPhamService SanPhamService
+@inject BlockService BlockService
+@inject KhachHangTamService KhachHangTamService
+@inject DMKhachHangService DMKhachHangService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<h1 class="legend-title">Khách hàng</h1>
+<div class="container-form">
+    <div class="container-tabs" id="formDuAn">
+        <div class="row">
+            <div class="col-md-12">
+                @*  <ul class="tab-element">
+                <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                </div>
+                </ul> *@
+            </div>
+        </div>
+        <MessageErrorForm />
+        <div class="wapper-content-tab">
+            <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                <div class="col-lg-10 mx-auto row">
+                    <InfoList Items="@InfoItems" />
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Mã khách hàng tạm</span>
+                                <DisableTextBox Value="@Record.MaKhachHangTam" />
+                                <input id="MaKhachHangTam" name="MaKhachHangTam" type="hidden" value="@Record.MaKhachHangTam">
+                                <input id="MaKhachHang" name="MaKhachHang" type="hidden" value="@Record.MaKhachHang">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Tên khách hàng</span>
+                                <DisableTextBox Value="@Record.TenKhachHang" />
+                                <input class="input-form input-validation" id="TenKhachHang" name="TenKhachHang" type="hidden" value="@Record.TenKhachHang">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Đối tượng <i class="point-validate">*</i></span>
+                                <DisableTextBox Value="@Record.TenDoiTuongKhachHang" />
+                                <input class="input-form" id="MaDoiTuongKhachHang" name="MaDoiTuongKhachHang" readonly="readonly" type="hidden" value="@Record.MaDoiTuongKhachHang">
+                                <input class="input-form" id="TenDoiTuongKhachHang" name="TenDoiTuongKhachHang" readonly="readonly" type="hidden" value="@Record.TenDoiTuongKhachHang">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Giới tính <i class="point-validate">*</i></span>
+                                <select id="GioiTinh" name="GioiTinh" class="form-control input-validation">
+                                    <option value="">Chọn giới tính</option>
+                                    <option value="M">Nam</option>
+                                    <option value="F">Nữ</option>
+                                </select>
+                                <span class="error-validation">Vui lòng chọn giới tính</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Ngày sinh</span>
+                                <FlatpickrInput Id="NgaySinh" Name="NgaySinh" @bind-Value="Record.NgaySinh"
+                                                Placeholder=""
+                                                CssClass="form-control datetime-picker"
+                                                Options="dateOptions" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Quốc tịch <i class="point-validate">*</i></span>
+                                <select id="QuocTich" class="form-control input-validation" name="QuocTich">
+                                    <option value=""> Chọn quốc tịch </option>
+                                    @foreach (var item in ListQG)
+                                    {
+                                        <option value="@(item.MaQuocGia)">@item.TenQuocGia</option>
+                                    }
+                                </select>
+                                <span class="error-validation">Vui lòng chọn quốc tịch</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Loại card <i class="point-validate">*</i></span>
+                                <select id="MaLoaiIdCard" class="form-control input-validation" name="MaLoaiIdCard">
+                                    <option value=""> Chọn loại card </option>
+                                    @foreach (var item in ListLoaiCard)
+                                    {
+                                        <option value="@(item.MaLoaiIdCard)">@item.TenLoaiIdCard</option>
+                                    }
+                                </select>
+                                <span class="error-validation">Vui lòng chọn loại card</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">ID Card <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="IdCard" name="IdCard" type="text" value="@Record.IdCard">
+                                <span class="error-validation">Vui lòng nhập id card</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Ngày cấp</span>
+                                <FlatpickrInput Id="NgayCapIdCard" Name="NgayCapIdCard" @bind-Value="Record.NgayCapIdCard"
+                                                Placeholder=""
+                                                CssClass="form-control datetime-picker"
+                                                Options="dateOptions" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Nơi cấp</span>
+                                <input class="input-form" id="NoiCapIdCard" name="NoiCapIdCard" type="text" value="@Record.NoiCapIdCard">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Địa chỉ thường trú</span>
+                                <input class="input-form" id="DiaChiThuongTru" name="DiaChiThuongTru" type="text" value="@Record.DiaChiThuongTru">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Địa chỉ hiện nay</span>
+                                <input class="input-form" id="DiaChiHienNay" name="DiaChiHienNay" type="text" value="@Record.DiaChiHienNay">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Số điện thoại <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="SoDienThoai" name="SoDienThoai" type="text" value="@Record.SoDienThoai">
+                                <span class="error-validation">Vui lòng nhập số điện thoại</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Email</span>
+                                <input class="input-form" id="Email" name="Email" type="text" value="@Record.Email">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6 anHienDIV d-none">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Người đại diện</span>
+                                <input class="input-form" id="NguoiDaiDien" name="NguoiDaiDien" type="text" value="@Record.NguoiDaiDien">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6 anHienDIV d-none">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Số đt người đại diện</span>
+                                <input class="input-form" id="SoDienThoaiNguoiDaiDien" name="SoDienThoaiNguoiDaiDien" type="text" value="@Record.SoDienThoaiNguoiDaiDien">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-button">
+    <div class="actions-left">
+        <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+    </div>
+    <div class="actions-right">
+        <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+    </div>
+</div>
+@* <div class="container-button">
+    <div class="row">
+        <div class="col-md-12">
+            <button type="button" class="button button-action button-luu-phieu" @onclick="SubmitFormJs">
+                Lưu
+            </button>
+            <button type="button" class="button button-action button-tro-ve" @onclick="BackUrl">
+                Trở về
+            </button>
+        </div>
+    </div>
+</div> *@
+
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private KhachHangTamModel? Record = new();
+    private List<KhDmloaiCard> ListLoaiCard = new();
+    private List<HtDmquocGium> ListQG = new();
+    private bool _isRendered = false;
+    private List<Select2Config> _select2Configs = new();
+    private bool firstRenderDiv = true;
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+    private List<InfoItem> InfoItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        ListLoaiCard = await KhachHangTamService.GetByCardKhachHangAsync();
+        ListQG = await KhachHangTamService.GetByQuocGiaAsync();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("KhachHang", VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("InputUtils.restrictToEmailChars", "Email");
+            await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "SoDienThoai", 0);
+            await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "SoDienThoaiNguoiDaiDien", 0);
+            var result = await DMKhachHangService.GetByIdAsync(id ?? string.Empty);
+            if (result.Status)
+            {
+                Record = (KhachHangTamModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã khách hàng", Value=Record.MaKhachHang},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+            }
+            if (!_isRendered)
+            {
+                _isRendered = true;
+                _select2Configs = new()
+                {
+                    new("GioiTinh", "Chọn giới tính", Record.GioiTinh.ToString()),
+                    new("MaLoaiIdCard", "Chọn loại card", Record.MaLoaiIdCard.ToString()),
+                    new("QuocTich", "Chọn quốc tịch", Record.QuocTich?.ToString()),
+                };
+                await Task.Delay(150);
+                await JS.InvokeVoidAsync("select2Helper.initMany", _select2Configs);
+            }
+        }
+        if (firstRenderDiv && Record.MaDoiTuongKhachHang == "DN")
+        {
+            firstRenderDiv = false;
+            await JS.InvokeVoidAsync("UiHelper.showByClass", "anHienDIV");
+        }
+        StateHasChanged();
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm(Dictionary<string, JsonElement> data)
+    {
+        Loading.Show();
+        try
+        {
+            var khachHangTam = new KhachHangTamModel();
+            khachHangTam.MaKhachHang = data.GetValueOrDefault("MaKhachHang").GetString() ?? string.Empty;
+            khachHangTam.MaKhachHangTam = data.GetValueOrDefault("MaKhachHangTam").GetString() ?? string.Empty;
+            khachHangTam.TenKhachHang = data.GetValueOrDefault("TenKhachHang").GetString() ?? string.Empty;
+            khachHangTam.MaDoiTuongKhachHang = data.GetValueOrDefault("MaDoiTuongKhachHang").GetString() ?? string.Empty;
+            khachHangTam.SoDienThoai = data.GetValueOrDefault("SoDienThoai").GetString() ?? string.Empty;
+            khachHangTam.Email = data.GetValueOrDefault("Email").GetString() ?? string.Empty;
+            khachHangTam.QuocTich = (data.GetValueOrDefault("QuocTich").GetString()) ?? string.Empty;
+            khachHangTam.NgaySinh = ((data.GetValueOrDefault("NgaySinh").GetString()) ?? string.Empty);
+            khachHangTam.GioiTinh = ((data.GetValueOrDefault("GioiTinh").GetString()) ?? string.Empty);
+            khachHangTam.MaLoaiIdCard = data.GetValueOrDefault("MaLoaiIdCard").GetString() ?? string.Empty;
+            khachHangTam.IdCard = data.GetValueOrDefault("IdCard").GetString() ?? string.Empty;
+            khachHangTam.NgayCapIdCard = (data.GetValueOrDefault("NgayCapIdCard").GetString() ?? string.Empty);
+            khachHangTam.NoiCapIdCard = data.GetValueOrDefault("NoiCapIdCard").GetString() ?? string.Empty;
+            khachHangTam.DiaChiThuongTru = data.GetValueOrDefault("DiaChiThuongTru").GetString() ?? string.Empty;
+            khachHangTam.DiaChiHienNay = data.GetValueOrDefault("DiaChiHienNay").GetString() ?? string.Empty;
+            khachHangTam.NguoiDaiDien = data.GetValueOrDefault("NguoiDaiDien").GetString() ?? string.Empty;
+            khachHangTam.SoDienThoaiNguoiDaiDien = data.GetValueOrDefault("SoDienThoaiNguoiDaiDien").GetString() ?? string.Empty;
+            var result = await DMKhachHangService.UpdateByIdAsync(khachHangTam);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/khachhang/edit/{khachHangTam.MaKhachHang}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    public class Select2Config
+    {
+        public string id { get; set; }
+        public string placeholder { get; set; }
+        public string? value { get; set; }
+        public bool allowClear { get; set; } = true;
+
+        public Select2Config(string id, string placeholder, string? value)
+        {
+            this.id = id;
+            this.placeholder = placeholder;
+            this.value = value;
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/khachhang");
+    }
+
+    private async Task OnChangeDoiTuong(ChangeEventArgs e)
+    {
+        Record.MaDoiTuongKhachHang = e.Value?.ToString();
+        if (Record.MaDoiTuongKhachHang != "DN")
+        {
+            await JS.InvokeVoidAsync("UiHelper.hideByClass", "anHienDIV");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("UiHelper.showByClass", "anHienDIV");
+        }
+    }
+}

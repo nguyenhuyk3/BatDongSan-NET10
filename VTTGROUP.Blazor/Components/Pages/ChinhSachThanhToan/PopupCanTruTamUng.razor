@@ -1,0 +1,199 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.ChinhSachThanhToan
+@using VTTGROUP.Domain.Model.PhieuDeNghiHoanTienBooking
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject ChinhSachThanhToanService ChinhSachThanhToanService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách cấn trừ đặt cọc</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 70px" class="text-center">
+                                        Đợt TT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Giai đoạn thanh toán
+                                    </th>
+                                    <th style="width: 200px" class="text-center">
+                                        Nội dung TT
+                                    </th>
+                                    <th style="text-align: center;width:100px">Số Ngày</th>
+                                    <th style="text-align: center;width:100px">Đợt tham chiếu</th>
+                                    <th style="text-align: center;width:100px">Tỷ Lệ TT</th>
+                                    <th style="width: 50px" class="text-center">
+                                        <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                               @onchange="(e) => OnCheckboxAllChanged(e)" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (PhieuCanTruDCPopups != null && PhieuCanTruDCPopups.Count > 0)
+                                {
+                                    var stt = 1;
+                                    @foreach (var item in PhieuCanTruDCPopups)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@stt</span>
+                                            </td>
+                                            <td class="line-height-20">
+                                                @item.DotTT
+                                            </td>
+                                            <td>
+                                                @item.TenKyTT
+                                            </td>
+                                            <td>
+                                                <span>@item.NoiDungTT</span>
+                                            </td>
+                                            <td style="text-align:right">
+                                                @string.Format("{0:N0}", item.SoKhoangCachNgay)
+                                            </td>
+                                            <td>
+                                                <span>@item.DotThamChieu</span>
+                                            </td>
+                                            <td style="text-align:right">
+                                                @string.Format("{0:N2}", item.TyLeTTDatCoc)
+                                            </td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@item.IsSelected"
+                                                       @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                            </td>
+                                        </tr>
+                                        stt++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (PhieuCanTruDCPopups == null || !PhieuCanTruDCPopups.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">
+                    Chọn
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="OnClosePupop">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<List<ChinhSachThanhToanChiTietModel>?> OnSelected { get; set; }
+    [Parameter]
+    public string? MaCSTTPopup { get; set; }
+    public string? NoiDungTTPopup { get; set; }
+    public int DotTTPopup { get; set; }
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<ChinhSachThanhToanChiTietModel> PhieuCanTruDCPopups = new();
+    private bool IsSelectAll = false;
+    List<ChinhSachThanhToanChiTietModel> listSelecteds = new();
+    private HashSet<int> _excludedDots = new();
+    private async Task TriggerChoose()
+    {
+        var listPGC = PhieuCanTruDCPopups
+           .Where(x => x.IsSelected)
+           .ToList();
+        if (listPGC.Any())
+        {
+            listSelecteds = listPGC;
+            await OnSelected.InvokeAsync(listSelecteds);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Chọn phiếu cấn trừ đặt cọc thành công", true);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Không có phiếu cấn trừ nào được chọn", false);
+        }
+    }  
+
+    public async Task Show(string MaCSTT, int DotTT, string NoiDungTT, IEnumerable<int>? excludedDots = null)
+    {
+        PhieuCanTruDCPopups = new List<ChinhSachThanhToanChiTietModel>();
+        MaCSTTPopup = MaCSTT;
+        DotTTPopup = DotTT;
+        NoiDungTTPopup = NoiDungTT;
+
+        _excludedDots = excludedDots != null
+            ? excludedDots.Where(x => x > 0).ToHashSet()
+            : new HashSet<int>();
+
+        await LoadData();
+
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupBookingModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+        StateHasChanged();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var data = await ChinhSachThanhToanService.GetCanTruDatCocAsync(MaCSTTPopup ?? string.Empty, DotTTPopup);
+
+            // ✅ loại các đợt đặt cọc đã được cấn trừ
+            PhieuCanTruDCPopups = data
+                .Where(x => x.DotTT > 0 && !_excludedDots.Contains(x.DotTT))
+                .ToList();
+
+            IsSelectAll = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in PhieuCanTruDCPopups)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(ChinhSachThanhToanChiTietModel item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = PhieuCanTruDCPopups.All(x => x.IsSelected);
+    }
+
+    public async Task OnClosePupop()
+    {
+        IsSelectAll = false;
+        foreach (var item in PhieuCanTruDCPopups)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+        // 👉 Reset dữ liệu filter cũ
+        search = string.Empty;
+        StateHasChanged();
+    }
+}

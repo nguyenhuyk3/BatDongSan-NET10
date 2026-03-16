@@ -1,0 +1,429 @@
+﻿@page "/tonghopbooking/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.CongTrinh
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Domain.Model.PhieuDuyetGia
+@using VTTGROUP.Domain.Model.PhieuGiuCho
+@using VTTGROUP.Domain.Model.TongHopBooking
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject GioHangService GioHangService
+@inject TongHopBookingService TongHopBookingService
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Tổng hợp booking</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2" @onclick="ClickTab2">Danh sách booking</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        @if (string.IsNullOrEmpty(CongTrinhSan?.MaCongTrinh))
+                        {
+                            <div class="wapper-input col-lg-12">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                        <select id="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                            <option value=""></option>
+                                            @foreach (var item in ListDA)
+                                            {
+                                                <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                            }
+                                        </select>
+                                        <span class="error-validation">Vui lòng chọn dự án</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Record.MaSanGiaoDich) && Record.NguoiLap?.LoaiUser == "SGG")
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Sàn giao dịch</span>
+                                        <DisableTextBox Value="@Record.TenSanGiaoDich" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="wapper-input col-lg-6">
+                                <div class="row">
+                                    <div class="form-group-input">
+                                        <span class="title-field">Sàn giao dịch <i class="point-validate">*</i></span>
+                                        <select id="MaSanGiaoDich" class="form-control input-validation" @onchange="OnSanGiaoDichChanged">
+                                            <option value=""></option>
+                                            @foreach (var item in ListSanGiaoDich)
+                                            {
+                                                <option value="@(item.MaSanGiaoDich)">@item.TenSanGiaoDich</option>
+                                            }
+                                        </select>
+                                        <span class="error-validation">Vui lòng chọn sàn giao dịch</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày thu <i class="point-validate">*</i></span>
+                                    <FlatpickrInput Id="NgayThu" Name="NgayThu" @bind-Value="Record.NgayThu"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker input-validation"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nội dung <i class="point-validate">*</i></span>
+                                    <textarea class="textarea-input input-validation" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="action-buttons" style="display: flex;">
+                                @* <div class="button-action-title" style="margin-left: 0;">
+                                    <div class="icon-button" @onclick="AddPhieuGC">
+                                        <i class="mdi mdi-playlist-plus"></i>
+                                    </div>
+                                    <span>Booking</span>
+                                </div> *@
+                                <div class="button-action-title" style="margin-left: 0">
+                                    <div class="icon-button" id="btnThem" data-title="Import file" data-position="left" @onclick="SubmitFormJs">
+                                        <i class="mdi mdi-cloud-upload"></i>
+                                    </div>
+                                    <span>Import</span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; align-items: center;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-auto" id="container-table-fixed">
+                            <table class="tbl table table-hover table-form table-detail" id="table-data">
+                                <thead>
+                                    <tr class="cls_custome_back">
+                                        <th style="width:50px" rowspan="2" class="text-center">
+                                            STT
+                                        </th>
+                                        <th style="width:120px" rowspan="2" class="text-center">
+                                            Mã chứng từ
+                                        </th>
+                                        <th colspan="4" style="text-align:center">
+                                            Khách hàng
+                                        </th>
+                                        <th style="width:120px" rowspan="2" class="text-center">
+                                            Số tiền
+                                        </th>
+                                        <th style="width:150px" rowspan="2" class="text-center">
+                                            Ghi chú
+                                        </th>
+                                        <th style="width:50px" rowspan="2">
+                                        </th>
+                                    </tr>
+                                    <tr class="cls_custome_back">
+                                        <th style="width:120px;text-align:center">
+                                            Đối tượng KH
+                                        </th>
+                                        <th style="width:180px;text-align:center">
+                                            Tên khách hàng
+                                        </th>
+                                        <th style="width:120px;text-align:center">
+                                            Loại Id Card
+                                        </th>
+                                        <th style="width:140px;text-align:center">
+                                            Id Card
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (Record.ListCT != null && Record.ListCT.Any() == true)
+                                    {
+                                        <Virtualize ItemsProvider="LoadCanHoProvider" Context="x" ItemSize="40" @ref="virtualizeRef">
+                                            <tr>
+                                                <td class="text-center">@((x.index + 1))</td>
+                                                <td>@x.item.MaBooking</td>
+                                                <td>@x.item.TenDoiTuongKH</td>
+                                                <td>@x.item.TenKhachHang</td>
+                                                <td>@x.item.TenLoaiIDCard</td>
+                                                <td>@x.item.IDCard</td>
+                                                <td class="text-right">@($"{x.item.SoTien:#,##0.##}")</td>
+                                                <td>@x.item.GhiChu</td>
+                                                <td class="text-center">
+                                                    <div class="icon-button" data-title="Xóa" data-position="left">
+                                                        <a href="javascript:void(0)" @onclick="() => DeleteRow(x.item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </Virtualize>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupBooking @ref="phieuGCModalRef" OnSelected="SelectedPGC" />
+@code {
+    private EditContext editContext;
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+    private TongHopBookingModel? Record = new();
+    private List<DuAnTheoSanModel> ListDA = new();
+    private List<DmSanGiaoDich> ListSanGiaoDich = new();
+    private bool loadingTab2;
+    private Virtualize<(TongHopBookingCTModel item, int index)>? virtualizeRef;
+    private PopupBooking? phieuGCModalRef;
+    private CongTrinhSettingsModal CongTrinhSan;
+    private List<InfoItem> InfoItems = new();
+    private string[] allowedExtensions = FileTypeSets.Document;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("TongHopBooking", VuViec.Them.GetDescription());
+            CongTrinhSan = await BaseService.ThongTinCongTrinhSan();
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            if (string.IsNullOrEmpty(CongTrinhSan.MaCongTrinh))
+            {
+                await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+                ListDA = await TongHopBookingService.GetByDuAnTheoSanAsync();
+            }
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaSanGiaoDich", "Chọn sàn giao dịch", true);
+
+            var result = await TongHopBookingService.FindGetByPhieuAsync(string.Empty);
+            if (result.Status)
+            {
+                Record = (TongHopBookingModel)result.Data;
+                if (!string.IsNullOrEmpty(CongTrinhSan.MaCongTrinh))
+                {
+                    Record.MaDuAn = CongTrinhSan.MaCongTrinh;
+                    Record.TenDuAn = CongTrinhSan.TenCongTrinh;
+                    Record.ListCT = new();
+                    InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+                }
+                else
+                {
+                    InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+                }
+            }
+
+            if (string.IsNullOrEmpty(Record.MaSanGiaoDich))
+            {
+                ListSanGiaoDich = await TongHopBookingService.GetSanGiaoDichAsync();
+            }
+            StateHasChanged();
+        }
+        if (loadingTab2)
+        {
+            loadingTab2 = false;
+            await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 50);
+        }
+    }
+
+    private async ValueTask<ItemsProviderResult<(TongHopBookingCTModel item, int index)>> LoadCanHoProvider(ItemsProviderRequest request)
+    {
+        var items = Record.ListCT
+            .Skip(request.StartIndex)
+            .Take(request.Count)
+            .Select((item, i) => (item, request.StartIndex + i))
+            .ToList();
+
+        return new ItemsProviderResult<(TongHopBookingCTModel item, int index)>(items, Record.ListCT.Count);
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        Record.ListCT = new();
+    }
+
+    private async Task OnSanGiaoDichChanged(ChangeEventArgs e)
+    {
+        Record.MaSanGiaoDich = e.Value?.ToString();
+    }
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await TongHopBookingService.SavePhieuAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/tonghopbooking/edit/{result.Id}");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task ClickTab2()
+    {
+        loadingTab2 = true;
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/tonghopbooking");
+    }
+
+    private async Task SelectedPGC(List<TongHopBookingPhieuGiuChoModel?> listCH)
+    {
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = Record.ListCT.Any(x => x.MaBooking == item.MaPhieu);
+            if (!isExist)
+            {
+                Record.ListCT.Add(new TongHopBookingCTModel
+                {
+                    MaBooking = item.MaPhieu,
+                    TenDoiTuongKH = item.TenDoiTuongKhachHang,
+                    TenKhachHang = item.TenKhachHang,
+                    TenLoaiIDCard = item.TenLoaiIdCard,
+                    IDCard = item.IdCard,
+                    SoTien = item.SoTienGiuCho,
+                    GhiChu = item.NoiDung
+                });
+            }
+        }
+        //  listKey = Guid.NewGuid(); // ✅ đặt ở ngoài foreach, sau khi Add xong
+        if (virtualizeRef != null)
+        {
+            await virtualizeRef.RefreshDataAsync();
+        }
+        // StateHasChanged();
+    }
+
+    private async Task AddPhieuGC()
+    {
+        await phieuGCModalRef?.Show(Record.MaDuAn, Record.MaSanGiaoDich);
+    }
+
+    private async Task SelectedCanHo(List<TongHopBookingPhieuGiuChoModel?> listCH)
+    {
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = Record.ListCT.Any(x => x.MaBooking == item.MaPhieu);
+            if (!isExist)
+            {
+                Record.ListCT.Add(new TongHopBookingCTModel
+                {
+                    MaBooking = item.MaPhieu,
+                    TenDoiTuongKH = item.TenDoiTuongKhachHang,
+                    MaKhachHang = item.MaKhachHangTam,
+                    TenKhachHang = item.TenKhachHang,
+                    TenLoaiIDCard = item.TenLoaiIdCard,
+                    IDCard = item.IdCard,
+                    SoTien = item.SoTienGiuCho,
+                    GhiChu = item.NoiDung
+                });
+            }
+        }
+        if (virtualizeRef != null)
+        {
+            await virtualizeRef.RefreshDataAsync();
+        }
+    }
+
+    private async Task DeleteRow(TongHopBookingCTModel? item)
+    {
+        Record.ListCT.Remove(item);
+        await virtualizeRef?.RefreshDataAsync();
+        StateHasChanged();
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+}

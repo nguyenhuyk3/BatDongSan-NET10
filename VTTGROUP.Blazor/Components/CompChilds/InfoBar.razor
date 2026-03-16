@@ -1,0 +1,34 @@
+﻿<div style="
+    display:flex;
+    align-items:center;
+    width:100%;
+    background:rgba(238,233,232,0.5);
+    border:1px solid #E5E7EB;
+    border-radius:12px;
+    padding:0 16px;
+    height:53px;
+    margin-bottom: 16px;
+">
+    @if (Items != null && Items.Any())
+    {
+            <div style="display:grid; grid-template-columns: repeat(@Items.Count(), 1fr); gap:35px; width:100%;">
+            @foreach (var it in Items)
+            {
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-family:Inter, sans-serif; font-size:14px; line-height:14px; font-weight:400; color:#230F0C;">
+                        @it.Label:
+                            </span>
+                            <span style="margin-left:4px; font-family:Inter, sans-serif; font-size:14px; line-height:14px; font-weight:500; color:#2D3036;">
+                        @it.Value
+                            </span>
+                        </div>
+            }
+            </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<InfoItem> Items { get; set; } = new();
+
+    public record InfoItem(string Label, string? Value);
+}

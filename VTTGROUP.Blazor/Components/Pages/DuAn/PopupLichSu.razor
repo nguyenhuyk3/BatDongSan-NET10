@@ -1,0 +1,135 @@
+﻿@using System.Globalization
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Blazor.Components.CompChilds
+@inject DuAnService DuAnService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupLichSuModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">
+					Lịch sử cập nhật [@editingItem?.DisplayName]
+				</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+			</div>
+
+			<div class="modal-body modal-wraper" id="modal-body">
+				<div class="flex items-center gap-3 my-3">
+					<div class="ml-auto h-11 flex items-center">
+						<Pagination Page="@_page"
+									TotalPages="@totalPage"
+									OnPageChanged="HandlePageChanged"
+									OnPageSizeChanged="HandlePageSizeChanged" />
+					</div>
+				</div>
+				<div class="container-table-detail">
+					<div class="container-table-fixed has-paging">
+						<table class="tbl table-form table-detail treeTable" id="table-data">
+							<thead>
+								<tr class="cls_custome_back">
+									<th style="width:50px" class="text-center">STT</th>
+									<th style="width: 150px" class="text-center">Giá trị</th>
+									<th style="width: 200px" class="text-center">Nhân viên</th>
+									<th style="width: 150px" class="text-center">Ngày cập nhật</th>
+								</tr>
+							</thead>
+
+							<tbody>
+								@if (listLSConfig != null && listLSConfig.Any())
+								{
+									var i = 1;
+									foreach (var item in listLSConfig)
+									{
+										<tr class="initialized">
+											<td class="px-3 py-2 text-center">@i</td>
+											<td class="px-3 py-2">
+												@(item.TenTruong == "IsKichHoatGh" || item.TenTruong == "IsMoBanCoGia" || item.TenTruong == "ChoPhepNhieuBookingCho1Can" || item.TenTruong == "IsHienThiGiaTran"
+																						? item.GiaTri
+																						: ToFormattedNumber(item.GiaTri))
+											</td>
+											<td>@item.NguoiCapNhat</td>
+											<td style="text-align:center">
+												@string.Format("{0:dd/MM/yyyy HH:mm}", item.NgayCapNhat)
+											</td>
+										</tr>
+										i++;
+									}
+								}
+								else
+								{
+									<tr>
+										<td class="px-3 py-3 text-gray-500 text-center" colspan="4">
+											Không có dữ liệu
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<div class="modal-footer">
+				<button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	ConfigFieldDto? editingItem;
+	string? selectedDuAn;
+	int _page = 1;
+	int _pageSize = 10;
+	int totalPage = 1;
+	int totalCount;
+	List<LichSuConfigFieldDto> listLSConfig = new();
+
+	public async Task Show(string maDuAn, ConfigFieldDto item)
+	{
+		selectedDuAn = maDuAn;
+		editingItem = item;
+		_page = 1; // mở popup → về trang 1 cho nhất quán
+		await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupLichSuModal");
+		await LoadData();
+		StateHasChanged();
+	}
+
+	private async Task LoadData()
+	{
+		var (data, total) = await DuAnService.GetLichSuConfigAsyn(selectedDuAn, editingItem?.FieldName, _page, _pageSize);
+		listLSConfig = data;
+		totalCount = total;
+		totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+		StateHasChanged();
+	}
+
+	private async Task HandlePageChanged(int newPage)
+	{
+		_page = newPage;
+		await LoadData();
+	}
+
+	private async Task HandlePageSizeChanged(int newPageSize)
+	{
+		_pageSize = newPageSize;
+		_page = 1;
+		await LoadData();
+	}
+
+	public string ToFormattedNumber(string? input, string format = "#,#0.##")
+	{
+		if (string.IsNullOrWhiteSpace(input))
+			return string.Empty;
+
+		if (decimal.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out var value))
+		{
+			return value.ToString(format, CultureInfo.InvariantCulture);
+		}
+
+		return string.Empty;
+	}
+}

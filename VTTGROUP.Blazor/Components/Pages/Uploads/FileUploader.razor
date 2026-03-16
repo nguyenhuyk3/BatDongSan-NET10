@@ -1,0 +1,190 @@
+﻿@inject IJSRuntime JS
+@using System.Text.Json
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Infrastructure.Services
+@inject FileUploadService FileUploadService
+@inject IWebHostEnvironment _env
+@inject NavigationManager NavManager
+<div id="@UploaderId" class="uploader-wrapper">
+	<InputFile OnChange="HandleFileSelected" id="@($"{UploaderId}-input")" hidden name="Files" multiple="@AllowMultiple" accept="@AcceptExt" />
+
+	@if (!IsDuyet)
+	{
+		<div class="uploader-box" @onclick="TriggerSelect">
+			<div class="uploader-icon">
+				<i class="mdi mdi-upload"></i>
+			</div>
+			<p class="uploader-text">Click vào để tải file hoặc ảnh</p>
+		</div>
+	}
+
+	<div id="@($"{UploaderId}-preview")" class="mt-3 uploader-preview @(AllowMultiple ? "grid grid-cols-2 md:grid-cols-4 gap-3" : "grid grid-cols-2")"></div>
+</div>
+
+
+@code {
+	[Parameter] public string[] AllowExtensions { get; set; }
+	[Parameter] public long MaxFileSize { get; set; }
+	[Parameter]
+	public bool AllowMultiple { get; set; } = false;
+	[Parameter] public EventCallback<List<UploadedFileModel>> OnFilesChanged { get; set; }
+	public bool IsDuyet { get; set; } = false;
+	private List<UploadedFileModel> UploadedFiles { get; set; } = new();
+	private DotNetObjectReference<FileUploader>? objRef;
+	private string _fixedId = string.Empty;
+	private string UploaderId => _fixedId;
+
+	private List<IBrowserFile> uploadingFiles = new();
+	private string AcceptExt => string.Join(",", AllowExtensions);
+	protected override void OnInitialized()
+	{
+		_fixedId = $"uploader-{Guid.NewGuid():N}";
+	}
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			objRef = DotNetObjectReference.Create(this);
+			await JS.InvokeVoidAsync("initUploader", UploaderId, AllowExtensions, MaxFileSize, AllowMultiple, objRef);
+		}
+	}
+
+	public async Task HandleFileSelected(InputFileChangeEventArgs e)
+	{
+		uploadingFiles = e.GetMultipleFiles().Where(d => d.Size > 0).ToList();
+
+		var uploadPath = Path.Combine(_env.WebRootPath, "uploads");
+		Directory.CreateDirectory(uploadPath);
+
+		if (!AllowMultiple)
+		{
+			UploadedFiles.Clear(); // Ghi đè
+		}
+
+		foreach (var file in uploadingFiles)
+		{
+			var ext = Path.GetExtension(file.Name).ToLower();
+			if (!AllowExtensions.Contains(ext))
+			{
+				continue;
+			}
+
+			var fileName = Path.GetFileNameWithoutExtension(file.Name);
+			var ticks = DateTime.Now.Ticks;
+			var savedName = $"{fileName}_{ticks}{ext}";
+			var fullPath = Path.Combine(uploadPath, savedName);
+			var fileSize = GetReadableSize(file.Size);
+
+			bool exists = UploadedFiles.Any(f =>
+				f.FileName == file.Name &&
+				f.FileSize == fileSize
+			);
+			if (exists)
+				continue;
+
+
+			await using var fs = new FileStream(fullPath, FileMode.Create);
+			await file.OpenReadStream(maxAllowedSize: MaxFileSize).CopyToAsync(fs);
+
+			UploadedFiles.Add(new UploadedFileModel
+				{
+					FileNameSave = savedName,
+					FileName = file.Name,
+					ContentType = file.ContentType,
+					FolderUrl = "uploads/",
+					FileSize = fileSize,
+					FullDomain = $"{NavManager.BaseUri}uploads/{savedName}"
+				});
+		}
+
+		if (OnFilesChanged.HasDelegate)
+		{
+			await OnFilesChanged.InvokeAsync(UploadedFiles);
+			await JS.InvokeVoidAsync("updateFileNameSaves", UploadedFiles, UploaderId);
+			await JS.InvokeVoidAsync("renderUploadedPreviews", UploaderId, UploadedFiles, AllowMultiple);
+		}
+	}
+
+	[JSInvokable]
+	public async Task NotifyUploadComplete(List<UploadedFileModel> files)
+	{
+		await OnFilesChanged.InvokeAsync(UploadedFiles);
+	}
+
+	[JSInvokable]
+	public Task SyncUploadedFiles(List<UploadedFileModel> files)
+	{
+		UploadedFiles = files;
+		return Task.CompletedTask;
+	}
+
+	[JSInvokable]
+	public async Task DeletePhysicalFile(string fileNameSave, int? id)
+	{
+		try
+		{
+			var fileToDelete = UploadedFiles.FirstOrDefault(f => f.FileNameSave == fileNameSave);
+			if (fileToDelete != null)
+			{
+				UploadedFiles.Remove(fileToDelete);
+				var path = Path.Combine(_env.WebRootPath, "uploads", fileNameSave);
+				if (id != null)
+				{
+					path = Path.Combine(_env.WebRootPath, fileNameSave);
+				}
+				if (System.IO.File.Exists(path))
+					System.IO.File.Delete(path);
+
+			}
+			// Delete file trong dữ liệu HT_FileDinhKem nếu có
+			var result = await FileUploadService.DeleteFileDinhKem(id, fileNameSave);
+		}
+		catch (Exception ex)
+		{
+		}
+	}
+
+	[JSInvokable]
+	public async Task DownloadPhysicalFile(string fileNameSave, int? id)
+	{
+		string fileUrl = string.Empty;
+
+		if (id != null)
+			fileUrl = "/" + fileNameSave;
+		else
+			fileUrl = "/uploads/" + fileNameSave;
+
+		await JS.InvokeVoidAsync("downloadFileFromUrl", fileUrl);
+	}
+
+	public async Task RenderInitialFiles(List<UploadedFileModel> files, bool? isDuyet = null)
+	{
+		var json = JsonSerializer.Serialize(files);
+		UploadedFiles = files;
+		await JS.InvokeVoidAsync("renderUploadedPreviews", UploaderId, files, AllowMultiple, isDuyet);
+		IsDuyet = isDuyet ?? false;
+	}
+
+	private async Task TriggerSelect()
+	{
+		await JS.InvokeVoidAsync("triggerUploaderSelect", UploaderId);
+	}
+	public void Dispose()
+	{
+		objRef?.Dispose();
+	}
+	private static string GetReadableSize(long sizeInBytes)
+	{
+		double kb = sizeInBytes / 1024.0;
+		double mb = kb / 1024.0;
+		double gb = mb / 1024.0;
+
+		if (kb < 1024)
+			return $"{kb:F2} KB";
+		else if (mb < 1024)
+			return $"{mb:F2} MB";
+		else
+			return $"{gb:F2} GB";
+	}
+
+}

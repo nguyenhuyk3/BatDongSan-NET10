@@ -1,0 +1,19 @@
+﻿@page "/test-login"
+
+@rendermode InteractiveServer
+@using VTTGROUP.Infrastructure.Database
+@using Microsoft.EntityFrameworkCore
+@using VTTGROUP.Domain.Model
+@inject AppDbContext Db
+@using VTTGROUP.Infrastructure.Services
+@inject CongViecService CongViecService
+@inject IJSRuntime JS
+
+
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var vuViecs = await CongViecService.GetVuViecAsync();
+    }
+}

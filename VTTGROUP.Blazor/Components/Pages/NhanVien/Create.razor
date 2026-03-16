@@ -1,0 +1,482 @@
+﻿@page "/nhanvien/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject NhanVienService NhanVienService
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Nhân viên</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin cá nhân</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Thông tin liên hệ</li>
+                        <li class="tab-item" data-id="3" id="linkTab3">Thông tin tài khoản</li>
+                        <li class="tab-item" data-id="4" id="linkTab4">Hình ảnh</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên nhân viên <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.HoVaTen" />
+                                    <span class="error-validation">Vui lòng nhập họ tên nhân viên</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Phòng ban <i class="point-validate">*</i></span>
+                                    <select id="MaPhongBan" class="form-control input-validation" @bind="Record.MaPhongBan">
+                                        <option value=""></option>
+                                        @foreach (var item in ListPhongBan)
+                                        {
+                                            <option value="@(item.MaPhongBan)">@item.TenPhongBan</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng nhập phòng ban</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Chức vụ <i class="point-validate">*</i></span>
+                                    <select id="MaChucVu" class="form-control input-validation" @bind="Record.MaChucVu">
+                                        <option value=""></option>
+                                        @foreach (var item in ListChucVu)
+                                        {
+                                            <option value="@(item.MaChucVu)">@item.TenChucVu</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng nhập chức vụ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nơi sinh <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.NoiSinh" />
+                                    <span class="error-validation">Vui lòng nhập nơi sinh</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày sinh</span>
+                                    <FlatpickrInput @bind-Value="Record.NgaySinh"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Giới tính <i class="point-validate">*</i></span>
+                                    <select id="GioiTinh" class="form-control input-validation" @bind="Record.GioiTinh">
+                                        <option value=""></option>
+                                        <option value="0">Nam</option>
+                                        <option value="1">Nữ</option>
+                                        <option value="2">Khác</option>
+                                    </select>
+                                    <span class="error-validation">Vui lòng nhập giới tính</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số CCCD</span>
+                                    <InputText class="form-control" @bind-Value="Record.MaCanCuoc" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày cấp</span>
+                                    <FlatpickrInput @bind-Value="Record.NgayCapCc"
+                                                    Placeholder=""
+                                                    CssClass="form-control datetime-picker"
+                                                    Options="dateOptions" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nơi cấp</span>
+                                    <InputText class="form-control" @bind-Value="Record.NoiCapCc" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nguyên quán</span>
+                                    <InputText class="form-control" @bind-Value="Record.NguyenQuan" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dân tộc</span>
+                                    <select id="MaDanToc" class="form-control" @bind="Record.MaDanToc">
+                                        <option value=""></option>
+                                        @foreach (var item in ListDanToc)
+                                        {
+                                            <option value="@(item.MaDanToc)">@item.TenDanToc</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trình độ</span>
+                                    <select id="MaTrinhDoHocVan" class="form-control" @bind="Record.MaTrinhDoHocVan">
+                                        <option value=""></option>
+                                        @foreach (var item in ListTrinhDo)
+                                        {
+                                            <option value="@(item.MaTrinhDo)">@item.TenTrinhDo</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tình trạng hôn nhân</span>
+                                    <select id="TinhTrangHonNhan" class="form-control" @bind="Record.TinhTrangHonNhan">
+                                        <option value=""></option>
+                                        <option value="0">Độc thân</option>
+                                        <option value="1">Kết hôn</option>
+                                        <option value="3">Ly hôn</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trạng thái</span>
+                                    <select id="TrangThai" class="form-control" @bind="Record.TrangThai">
+                                        <option value="1" selected>Đang làm việc</option>
+                                        <option value="0">Đã nghỉ việc</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Thường trú <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.DiaChiThuongTru" />
+                                    <span class="error-validation">Vui lòng nhập thường trú</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tạm trú <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.DiaChiTamTru" />
+                                    <span class="error-validation">Vui lòng nhập tạm trú</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Điện thoại 1 <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" id="SoDienThoai" @bind-Value="Record.SoDienThoai" maxlength="10" />
+                                    <span class="error-validation">Vui lòng nhập số điện thoại 1</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Điện thoại 2</span>
+                                    <InputText class="form-control" id="SoDienThoai2" @bind-Value="Record.SoDienThoai2" maxlength="10" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Email <i class="point-validate">*</i></span>
+                                    <InputText type="email" id="Email" class="form-control input-validation" @bind-Value="Record.Email" />
+                                    <span class="error-validation">Vui lòng nhập email</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Email công ty</span>
+                                    <InputText class="form-control" id="EmailCongTy" type="email" @bind-Value="Record.EmailCongTy" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngân hàng <i class="point-validate">*</i></span>
+                                    <select id="MaNganHang" class="form-control input-validation" @bind="Record.MaNganHang" style="width:100%">
+                                        <option value=""></option>
+                                        @foreach (var item in ListNganHang)
+                                        {
+                                            <option value="@(item.MaNganHang)">@item.TenNganHang</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng nhập ngân hàng</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tài khoản <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.SoTaiKhoan" />
+                                    <span class="error-validation">Vui lòng nhập số tài khoản</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Chi nhánh</span>
+                                    <InputText class="form-control" @bind-Value="Record.MaChiNhanh" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên tài khoản</span>
+                                    <InputText class="form-control" @bind-Value="Record.TenTaiKhoan" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Địa chỉ ngân hàng</span>
+                                    <InputText class="form-control" @bind-Value="Record.DiaChiNganHang" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="4" class="tab-content-item" id="tab4">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ảnh CCCD mặt trước</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="false"
+                                                      OnFilesChanged="MatTruocHandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ảnh CCCD mặt sau</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="false"
+                                                      OnFilesChanged="MatSauHandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ảnh đại diện</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="false"
+                                                      OnFilesChanged="AnhDaiDienHandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">File đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private NhanVienModel? Record = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+    private List<TblNhanvienPhongban> ListPhongBan = new();
+    private List<TblNhanvienChucvu> ListChucVu = new();
+    private List<TblNhanvienDantoc> ListDanToc = new();
+    private List<TblNhanvienTrinhdo> ListTrinhDo = new();
+    private List<TblNganhang> ListNganHang = new();
+    private List<InfoItem> InfoItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        ListPhongBan = await NhanVienService.GetListPhongbBanAsync();
+        ListChucVu = await NhanVienService.GetListChucVuAsync();
+        ListDanToc = await NhanVienService.GetListDanTocAsync();
+        ListTrinhDo = await NhanVienService.GetListTrinhDoAsync();
+        ListNganHang = await NhanVienService.GetListNganHangAsync();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("NhanVien", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "TinhTrangHonNhan", "Chọn tình trạng hôn nhân", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaPhongBan", "Chọn phòng ban", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaChucVu", "Chọn chức vụ", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDanToc", "Chọn dân tộc", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaTrinhDoHocVan", "Chọn trình độ", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "GioiTinh", "Chọn giới tính", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "TrangThai", "Chọn trạng thái", false);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaNganHang", "Chọn ngân hàng", true);
+            await JS.InvokeVoidAsync("InputUtils.restrictToEmailChars", "Email");
+            await JS.InvokeVoidAsync("InputUtils.restrictToEmailChars", "EmailCongTy");
+            await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "SoDienThoai", 0);
+            await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "SoDienThoai2", 0);
+            var result = await NhanVienService.FindGetByNhanVienAsync(null, _env.WebRootPath);
+            if (result.Status)
+            {
+                Record = (NhanVienModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã nhân viên", Value=Record.MaNhanVien},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await NhanVienService.SaveNhanVienAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/nhanvien/edit/{result.Id}");
+            StateHasChanged();
+        }
+    }
+    public void MatTruocHandleFiles(List<UploadedFileModel> file)
+    {
+        Record.MatTruocFile = file;
+    }
+    public void MatSauHandleFiles(List<UploadedFileModel> file)
+    {
+        Record.MatSauFile = file;
+    }
+    public void AnhDaiDienHandleFiles(List<UploadedFileModel> file)
+    {
+        Record.AnhDaiDienFile = file;
+    }
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/nhanvien");
+    }
+}

@@ -1,0 +1,115 @@
+﻿@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Globalization
+
+@inject IJSRuntime JS
+
+@typeparam T
+@inherits InputBase<T?>
+
+<input value="@_displayValue"
+       class="@CssClass @(Readonly ? "readonly-mode" : "")"
+       style="@Style"
+       id="@Id"
+       @oninput="HandleInput"
+       readonly="@Readonly" />
+
+@code {
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "text-align:right";
+    [Parameter] public string Format { get; set; } = "#,##0.####";
+    [Parameter] public bool Readonly { get; set; } = false;
+
+    private string _displayValue = "";
+    private T? _lastValue;   // để biết khi nào value đổi từ bên ngoài
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _displayValue = FormatDisplay(CurrentValue);
+        _lastValue = CurrentValue;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("InputUtils.selectAllOnClickByClass", "select-on-click");
+        }
+    }
+
+    // Blazor dùng cái này khi có Value từ bên ngoài
+    protected override string FormatValueAsString(T? value)
+        => FormatDisplay(value);
+
+    protected override bool TryParseValueFromString(
+        string value,
+        out T? result,
+        out string validationErrorMessage)
+    {
+        var cleaned = (value ?? "").Replace(",", "").Trim();
+
+        try
+        {
+            object parsed;
+
+            if (typeof(T) == typeof(int))
+                parsed = int.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
+            else if (typeof(T) == typeof(double))
+                parsed = double.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
+            else if (typeof(T) == typeof(decimal))
+                parsed = decimal.Parse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture);
+            else
+                throw new InvalidOperationException($"Unsupported type {typeof(T)}");
+
+            result = (T?)parsed;
+            validationErrorMessage = null;
+            return true;
+        }
+        catch
+        {
+            result = default;
+            validationErrorMessage = "Giá trị không hợp lệ.";
+            return false;
+        }
+    }
+
+    private void HandleInput(ChangeEventArgs e)
+    {
+        if (Readonly) return;
+
+        var input = e.Value?.ToString() ?? "";
+        var cleaned = input.Replace(",", "").Trim();
+
+        // 1) luôn hiển thị đúng những gì user gõ -> không giật
+        _displayValue = input;
+
+        // 2) nếu parse được thì cập nhật CurrentValue (để cha tính toán)
+        if (TryParseValueFromString(cleaned, out var parsed, out _))
+        {
+            CurrentValue = parsed;
+            _lastValue = parsed; // đồng bộ để OnParametersSet không format lại nữa
+        }
+    }
+
+    private string FormatDisplay(T? value)
+    {
+        if (value == null) return "";
+
+        if (value is IFormattable fmt)
+            return fmt.ToString(Format, CultureInfo.InvariantCulture);
+
+        return value.ToString() ?? "";
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Chỉ format lại khi Value thực sự đổi từ bên ngoài
+        if (!EqualityComparer<T?>.Default.Equals(CurrentValue, _lastValue))
+        {
+            _displayValue = FormatDisplay(CurrentValue);
+            _lastValue = CurrentValue;
+        }
+    }
+}

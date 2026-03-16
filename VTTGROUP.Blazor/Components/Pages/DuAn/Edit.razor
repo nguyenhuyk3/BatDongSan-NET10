@@ -1,0 +1,1792 @@
+﻿@page "/duan/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.Block
+@using VTTGROUP.Domain.Model.DMLoaiThietKe
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Domain.Model.LoaiCanHo
+@using VTTGROUP.Domain.Model.LoaiGoc
+@using VTTGROUP.Domain.Model.ViTri
+@using VTTGROUP.Domain.Model.View
+@using VTTGROUP.Domain.Model.ViewMatKhoi
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject DuAnService DuAnService
+@inject LoadingService Loading
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+@inject NavigationManager Nav
+
+<PageTitle>Cập nhật dự án</PageTitle>
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Dự án</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã dự án</span>
+                                    <DisableTextBox Value="@Record.MaDuAn" />
+                                    <InputText hidden @bind-Value="Record.MaDuAn" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên dự án <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" id="TenDuAn" @bind-Value="Record.TenDuAn" />
+                                    <span class="error-validation">Vui lòng nhập tên dự án</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Địa chỉ <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" id="DiaChi" @bind-Value="Record.DiaChi" />
+                                    <span class="error-validation">Vui lòng nhập địa chỉ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tỉnh thành</span>
+                                    <InputText class="form-control" id="TinhThanh" @bind-Value="Record.TinhThanh" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Xã phường</span>
+                                    <InputText class="form-control" id="XaPhuong" @bind-Value="Record.XaPhuong" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trạng thái</span>
+                                    <select id="TrangThai" name="TrangThai" class="form-control" @bind="Record.TrangThai">
+                                        <option value="">-- Chọn trạng thái --</option>
+                                        <option value="1">Đang mở bán</option>
+                                        <option value="2">Sắp mở bán</option>
+                                        <option value="3">Đóng dự án</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tập tin đính kèm</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader @ref="uploaderRef" AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="true"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input p-2 text-sm" cols="20" rows="5" tabindex="2" @bind="Record.GhiChu"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Block"
+                                       OnAdd="AddBlock"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto block-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã block
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên block
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Tầng
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Trục
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi block"
+                                                        data-title="Lưu thay đổi block"
+                                                        data-position="right"
+                                                        @onclick="SaveBlockList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListBlock != null && Record.ListBlock.Any() == true)
+                                        {
+                                            int sttBlock = 0;
+                                            foreach (var item in Record.ListBlock)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttBlock + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaBlock" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaBlock" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenBlock" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <div class="cell-with-icon">
+                                                            <span>@($"{item.SoLuongTang:#,##0}")</span>
+                                                            @if (!item.IsNew)@* chỉ hiện icon khi block cũ *@
+                                                            {
+                                                                <button type="button"
+                                                                        class="icon-button icon-inline"
+                                                                        title="Thêm tầng cho block"
+                                                                        @onclick="() => AddTangForBlock(item)">
+                                                                    <i class="mdi mdi-plus-circle-outline"></i>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="cell-with-icon">
+                                                            <span>@($"{item.SoLuongTruc:#,##0}")</span>
+                                                            @if (!item.IsNew)@* chỉ hiện icon khi block cũ *@
+                                                            {
+                                                                <button type="button"
+                                                                        class="icon-button icon-inline"
+                                                                        title="Thêm trục cho block"
+                                                                        @onclick="() => AddTrucForBlock(item)">
+                                                                    <i class="mdi mdi-plus-circle-outline"></i>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongTang == 0 && item.SoLuongTruc == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowBlock(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttBlock++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Mặt khối"
+                                       OnAdd="AddView"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto loaiview-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã loại
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên loại
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi mặt khối"
+                                                        data-title="Lưu thay đổi mặt khối"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiViewList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListView != null && Record.ListView.Any() == true)
+                                        {
+                                            int sttViewMK = 0;
+                                            foreach (var item in Record.ListView)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttViewMK + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaView" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaView" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenView" class="form-control input-validation" /></td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongVMK == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowLoaiView(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttViewMK++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Loại căn"
+                                       OnAdd="AddLoaiCan"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto loaican-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã loại
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên loại
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi loại căn hộ"
+                                                        data-title="Lưu thay đổi loại căn hộ"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiCanHoList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListLoaiCan != null && Record.ListLoaiCan.Any() == true)
+                                        {
+                                            int sttLoaiCan = 0;
+                                            foreach (var item in Record.ListLoaiCan)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttLoaiCan + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaLoaiCanHo" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaLoaiCanHo" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenLoaiCanHo" class="form-control input-validation" /></td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongCanHo == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowLoaiCan(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttLoaiCan++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Loại diện tích"
+                                       OnAdd="AddLoaiDienTich"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto loaidientich-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã loại
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên loại
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Hệ số
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi loại diện tích"
+                                                        data-title="Lưu thay đổi loại diện tích"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiDienTichList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListLoaiDT != null && Record.ListLoaiDT.Any() == true)
+                                        {
+                                            int sttLDT = 0;
+                                            foreach (var item in Record.ListLoaiDT)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttLDT + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaLoaiDT" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaLoaiDT" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenLoaiDT" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <InputCurrency T="decimal"
+                                                                       Id=@($"HeSoLDT{sttLDT+1}")
+                                                                       Format="#,##0.####"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                                       @bind-Value="item.HeSo" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongCanHo == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowLoaiDT(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttLDT++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Loại layout"
+                                       OnAdd="AddLoaiLayout"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto loailayout-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã loại
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên loại
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Hình ảnh
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi loại layout"
+                                                        data-title="Lưu thay đổi loại layout"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiLayoutList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListLoaiLayout != null && Record.ListLoaiLayout.Any() == true)
+                                        {
+                                            int sttLayout = 0;
+                                            foreach (var item in Record.ListLoaiLayout)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttLayout + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaLoaiThietKe" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaLoaiThietKe" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenLoaiThietKe" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <div class="tang-image-cell">
+                                                            @if (!string.IsNullOrEmpty(item.HinhAnhUrl))
+                                                            {
+                                                                <!-- Chỉ render khi có hình -->
+                                                                <div class="tang-image-preview has-image">
+                                                                    <img src="@item.HinhAnhUrl"
+                                                                         class="tang-thumb-img"
+                                                                         title="Nhấn để xem lớn"
+                                                                         @onclick="@(() => JS.InvokeVoidAsync("window.open", item.HinhAnhUrl, "_blank"))" />
+
+                                                                    <!-- Nút Xóa hình -->
+                                                                    <button type="button"
+                                                                            class="img-btn-close"
+                                                                            title="Xóa hình"
+                                                                            @onclick="() => RemoveImage(item)">
+                                                                        <i class="mdi mdi-close"></i>
+                                                                    </button>
+
+                                                                    <!-- Nút Tải về (tròn vàng giữa khung) -->
+                                                                    <button type="button"
+                                                                            class="img-btn-download"
+                                                                            title="Tải ảnh về"
+                                                                            @onclick="() => DownloadImage(item)">
+                                                                        <i class="bi bi-download text-white"></i>
+                                                                    </button>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <!-- Không có hình: vẫn giữ chỗ cho cột, nhưng ẩn -->
+                                                                <div class="tang-image-preview no-image"></div>
+                                                            }
+
+                                                            <!-- Ô upload bên phải -->
+                                                            <label class="tang-upload-box">
+                                                                <i class="mdi mdi-upload tang-upload-icon"></i>
+                                                                <span>Click vào để tải ảnh</span>
+                                                                <InputFile key="@_imageInputKey" class="d-none"
+                                                                           OnChange="@(e => OnImageSelected(item, e))"
+                                                                           accept="image/*" />
+                                                            </label>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongCanHo == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowLoaiLayout(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttLayout++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Hướng"
+                                       OnAdd="AddLoaiHuong"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto huong-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã hướng
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên hướng
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Hệ số
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi hướng"
+                                                        data-title="Lưu thay đổi hướng"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiHuongsList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListHuong != null && Record.ListHuong.Any() == true)
+                                        {
+                                            int sttHuong = 0;
+                                            foreach (var item in Record.ListHuong)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttHuong + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaHuong" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaHuong" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenHuong" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <InputCurrency T="decimal"
+                                                                       Id=@($"HeSoHuong{sttHuong+1}")
+                                                                       Format="#,##0.####"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                                       @bind-Value="item.HeSo" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongCanHo == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowLoaiHuong(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttHuong++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="View"
+                                       OnAdd="AddViewMK"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto viewmk-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã view
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên view
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Hệ số
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi view"
+                                                        data-title="Lưu thay đổi view"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiViewMKsList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListVMK != null && Record.ListVMK.Any() == true)
+                                        {
+                                            int sttVMK = 0;
+                                            foreach (var item in Record.ListVMK)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttVMK + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaMatKhoi" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaMatKhoi" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenMatKhoi" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <InputCurrency T="decimal"
+                                                                       Id=@($"HeSoView{sttVMK+1}")
+                                                                       Format="#,##0.####"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                                       @bind-Value="item.HeSoMatKhoi" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongCanHo == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowVMK(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttVMK++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Loại góc"
+                                       OnAdd="AddLoaiGoc"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto loaigoc-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã loại
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên loại
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Hệ số
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi góc"
+                                                        data-title="Lưu thay đổi góc"
+                                                        data-position="right"
+                                                        @onclick="SaveLoaiGocsList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListLG != null && Record.ListLG.Any() == true)
+                                        {
+                                            int sttVMK = 0;
+                                            foreach (var item in Record.ListLG)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttVMK + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaLoaiGoc" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaLoaiGoc" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenLoaiGoc" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <InputCurrency T="decimal"
+                                                                       Id=@($"HeSoGoc{sttVMK+1}")
+                                                                       Format="#,##0.####"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                                       @bind-Value="item.HeSoGoc" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongVMK == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowLoaiGoc(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttVMK++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <SectionHeader Title="Vị trí"
+                                       OnAdd="AddVT"
+                                       DefaultExpanded="false">
+                            <div class="overflow-auto vitri-table" id="container-table-fixed">
+                                <table class="tbl table table-hover table-form table-detail">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px" class="text-center">
+                                                STT
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Mã vị trí
+                                            </th>
+                                            <th style="width:200px" class="text-center">
+                                                Tên vị trí
+                                            </th>
+                                            <th style="width:120px" class="text-center">
+                                                Hệ số
+                                            </th>
+                                            <th style="width:50px" class="text-center">
+                                                <button type="button"
+                                                        class="icon-button icon-inline icon-save"
+                                                        title="Lưu thay đổi vị trí"
+                                                        data-title="Lưu thay đổi vị trí"
+                                                        data-position="right"
+                                                        @onclick="SaveViTrisList">
+                                                    <i class="mdi mdi-content-save save-icon"></i>
+                                                </button>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="content-table">
+                                        @if (Record.ListVT != null && Record.ListVT.Any() == true)
+                                        {
+                                            int sttVT = 0;
+                                            foreach (var item in Record.ListVT)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">
+                                                        @(sttVT + 1)
+                                                    </td>
+                                                    <td>
+                                                        @if (item.IsNew == false)
+                                                        {
+                                                            <DisableTextBox Value="@item.MaViTri" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <InputText @bind-Value="item.MaViTri" class="form-control input-validation" />
+                                                        }
+                                                    </td>
+                                                    <td><InputText @bind-Value="item.TenViTri" class="form-control input-validation" /></td>
+                                                    <td>
+                                                        <InputCurrency T="decimal"
+                                                                       Id=@($"HeSoVT{sttVT+1}")
+                                                                       Format="#,##0.####"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 ms-2"
+                                                                       @bind-Value="item.HeSoViTri" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (item.SoLuongVMK == 0)
+                                                        {
+                                                            <button type="button"
+                                                                    class="icon-button icon-inline icon-delete"
+                                                                    title="Xóa"
+                                                                    data-title="Xóa"
+                                                                    data-position="left"
+                                                                    @onclick="() => DeleteRowViTri(item)">
+                                                                <i class="mdi mdi-delete"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                sttVT++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SectionHeader>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupTang @ref="tangModalRef" OnSaved="HandleTangSaved" />
+<PopupTruc @ref="trucModalRef" OnSaved="HandleTrucSaved" />
+@code {
+    [Parameter]
+    public string? id { get; set; }
+
+    private EditContext editContext;
+    private string[] allowedExtensions = FileTypeSets.Image;
+    private FileUploader uploaderRef;
+
+    private DuAnModel? Record = new();
+    private bool _isRendered = false;
+    private List<Select2Config> _select2Configs = new();
+    private PopupTang? tangModalRef;
+    private PopupTruc? trucModalRef;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("DMDuAn", VuViec.CapNhat.GetDescription());
+            var result = await DuAnService.GetByIdAsync(id ?? string.Empty, _env.WebRootPath);
+            if (result.Status)
+            {
+                Record = (DuAnModel?)result.Data ?? new DuAnModel();
+                // 🔥 Recreate EditContext sau khi có dữ liệu thật
+                editContext = new EditContext(Record);
+                // Render file đã có (nếu có)
+                if (Record?.Files?.Any() == true)
+                {
+                    await uploaderRef.RenderInitialFiles(Record.Files);
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            }
+            _isRendered = true;
+
+            // Khởi tạo Select2 theo chuẩn Block (initMany)
+            _select2Configs = new()
+            {
+                new("TrangThai", "Chọn trạng thái", Record?.TrangThai?.ToString())
+            };
+
+            // Chờ control render xong rồi init
+            await Task.Delay(150);
+            await JS.InvokeVoidAsync("select2Helper.initMany", _select2Configs);
+            await ReapplyCurrencyFormat();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await DuAnService.UpdateByIdAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/duan");
+    }
+
+    // Chuẩn cấu hình Select2 giống Block
+    public class Select2Config
+    {
+        public string id { get; set; }
+        public string placeholder { get; set; }
+        public string? value { get; set; }
+        public bool allowClear { get; set; } = true;
+
+        public Select2Config(string id, string placeholder, string? value)
+        {
+            this.id = id;
+            this.placeholder = placeholder;
+            this.value = value;
+        }
+    }
+
+    private async Task AddBlock()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListBlock đang null thì khởi tạo trước
+        if (Record.ListBlock == null)
+            Record.ListBlock = new List<BlockModel>();
+
+        var newBlock = new BlockModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            SoLuongTang = 0,
+            SoLuongTruc = 0
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListBlock.Insert(0, newBlock);
+
+        // Nếu cần chắc ăn, gọi lại render
+        // await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleTangSaved(PopupTang.TangSavedArgs e)
+    {
+        var blk = Record?.ListBlock?.FirstOrDefault(x =>
+                     string.Equals(x.MaBlock, e.MaBlock, StringComparison.OrdinalIgnoreCase));
+        if (blk != null)
+        {
+            blk.SoLuongTang = e.SoLuongTang;   // ← cập nhật số tầng ngay
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTrucSaved(PopupTruc.TrucSavedArgs e)
+    {
+        var blk = Record?.ListBlock?.FirstOrDefault(x =>
+                     string.Equals(x.MaBlock, e.MaBlock, StringComparison.OrdinalIgnoreCase));
+        if (blk != null)
+        {
+            blk.SoLuongTruc = e.SoLuongTruc;   // ← cập nhật số trục ngay
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveBlockList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+    "validateContainer",
+    ".block-table",                      // id container phần Block
+    ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+    "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveBlocksAsync(Record.MaDuAn, Record.ListBlock);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả block coi như không còn "mới" nữa
+                if (Record.ListBlock != null)
+                {
+                    foreach (var b in Record.ListBlock)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowBlock(BlockModel? item)
+    {
+        Record.ListBlock.Remove(item);
+    }
+
+    private async Task AddTangForBlock(BlockModel block)
+    {
+        // TODO: mở popup cấu hình tầng cho block này
+        // hoặc tăng SoLuongTang, hoặc navigate sang tab Tầng với filter theo block...
+        await tangModalRef!.Show(Record.MaDuAn, Record.TenDuAn, block.MaBlock, block.TenBlock);
+    }
+
+    private async Task AddTrucForBlock(BlockModel block)
+    {
+        // TODO: như trên nhưng cho trục
+        await trucModalRef!.Show(Record.MaDuAn, Record.TenDuAn, block.MaBlock, block.TenBlock);
+    }
+
+    private async Task AddLoaiCan()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListLoaiCan đang null thì khởi tạo trước
+        if (Record.ListLoaiCan == null)
+            Record.ListLoaiCan = new List<LoaiCanHoModel>();
+
+        var newLoaiCan = new LoaiCanHoModel
+        {
+            IsNew = true,
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListLoaiCan.Insert(0, newLoaiCan);
+    }
+
+    private async Task SaveLoaiCanHoList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".loaican-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveLoaiCansAsync(Record.MaDuAn, Record.ListLoaiCan);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại căn coi như không còn "mới" nữa
+                if (Record.ListLoaiCan != null)
+                {
+                    foreach (var b in Record.ListLoaiCan)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowLoaiCan(LoaiCanHoModel? item)
+    {
+        Record.ListLoaiCan.Remove(item);
+    }
+
+    private async Task AddLoaiDienTich()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListBlock đang null thì khởi tạo trước
+        if (Record.ListLoaiDT == null)
+            Record.ListLoaiDT = new List<LoaiDienTichModel>();
+
+        var newBlock = new LoaiDienTichModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSo = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListLoaiDT.Insert(0, newBlock);
+        await ReapplyCurrencyFormat();
+    }
+
+    private async Task SaveLoaiDienTichList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".loaidientich-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveLoaiDienTichsAsync(Record.MaDuAn, Record.ListLoaiDT);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại diện tích coi như không còn "mới" nữa
+                if (Record.ListLoaiDT != null)
+                {
+                    foreach (var b in Record.ListLoaiDT)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+
+    private async Task DeleteRowLoaiDT(LoaiDienTichModel? item)
+    {
+        Record.ListLoaiDT.Remove(item);
+    }
+
+    private async Task AddLoaiLayout()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListLoaiLayout đang null thì khởi tạo trước
+        if (Record.ListLoaiLayout == null)
+            Record.ListLoaiLayout = new List<LoaiThietKeModel>();
+
+        var newBlock = new LoaiThietKeModel
+        {
+            IsNew = true,
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListLoaiLayout.Insert(0, newBlock);
+    }
+
+    private async Task SaveLoaiLayoutList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".loailayout-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveLoaiLayoutsAsync(Record.MaDuAn, Record.ListLoaiLayout, _env.WebRootPath);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại diện tích coi như không còn "mới" nữa
+                if (Record.ListLoaiLayout != null)
+                {
+                    foreach (var b in Record.ListLoaiLayout)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowLoaiLayout(LoaiThietKeModel? item)
+    {
+        Record.ListLoaiLayout.Remove(item);
+    }
+
+    // private async Task OnImageSelected(LoaiThietKeModel item, InputFileChangeEventArgs e)
+    // {
+    //     var file = e.File;
+    //     if (file == null)
+    //         return;
+
+    //     // Validate: phải là file hình
+    //     if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+    //     {
+    //         await JS.InvokeVoidAsync("showToast", "Lỗi", "File phải là hình ảnh.", false);
+    //         return;
+    //     }
+
+    //     try
+    //     {           
+    //         var fullDomain = Nav.BaseUri.TrimEnd('/');
+    //         // Thư mục lưu: wwwroot/uploads/tang
+    //         var uploadFolder = Path.Combine(_env.WebRootPath, "uploads", "LoaiLayout");
+    //         if (!Directory.Exists(uploadFolder))
+    //         {
+    //             Directory.CreateDirectory(uploadFolder);
+    //         }
+
+    //         var ext = Path.GetExtension(file.Name);
+    //         var fileName = $"{(item.MaLoaiThietKe ?? "LoaiLayout")}_{Guid.NewGuid():N}{ext}";
+    //         var physicalPath = Path.Combine(uploadFolder, fileName);
+
+    //         // Giới hạn ~5MB
+    //         await using var readStream = file.OpenReadStream(5 * 1024 * 1024);
+    //         await using var writeStream = File.Create(physicalPath);
+    //         await readStream.CopyToAsync(writeStream);
+
+    //         // Đường dẫn để hiển thị trên web
+    //         var relativePath = $"/uploads/LoaiLayout/{fileName}";
+
+    //         // Gán vào model
+    //         item.HinhAnhUrl = relativePath;
+    //         item.FullDomain = fullDomain + relativePath;
+    //         // Thông báo nhẹ
+    //         await JS.InvokeVoidAsync("showToast", "Thông báo", "Upload hình thành công.", true);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+    //     }
+    // }
+
+    // 5MB
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
+    // Dùng để reset input (không cho giữ file đã chọn)
+    private string _imageInputKey = Guid.NewGuid().ToString();
+
+    private async Task OnImageSelected(LoaiThietKeModel item, InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        // 1) Validate type
+        if (string.IsNullOrWhiteSpace(file.ContentType) ||
+            !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", "File phải là hình ảnh.", false);
+            _imageInputKey = Guid.NewGuid().ToString(); // reset selection
+            StateHasChanged();
+            return;
+        }
+
+        // 2) Validate size (chặn ngay từ đầu)
+        if (file.Size > MaxImageBytes)
+        {
+            var mb = (file.Size / 1024d / 1024d);
+            await JS.InvokeVoidAsync("showToast", "Lỗi", $"Hình vượt quá 5MB (hiện ~{mb:0.00}MB).", false);
+            _imageInputKey = Guid.NewGuid().ToString(); // reset selection
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var fullDomain = Nav.BaseUri.TrimEnd('/');
+
+            var uploadFolder = Path.Combine(_env.WebRootPath, "uploads", "LoaiLayout");
+            Directory.CreateDirectory(uploadFolder);
+
+            var ext = Path.GetExtension(file.Name);
+            var fileName = $"{(item.MaLoaiThietKe ?? "LoaiLayout")}_{Guid.NewGuid():N}{ext}";
+            var physicalPath = Path.Combine(uploadFolder, fileName);
+
+            // 3) Double safety: OpenReadStream vẫn set 5MB
+            await using var readStream = file.OpenReadStream(MaxImageBytes);
+            await using var writeStream = File.Create(physicalPath);
+            await readStream.CopyToAsync(writeStream);
+
+            var relativePath = $"/uploads/LoaiLayout/{fileName}";
+            item.HinhAnhUrl = relativePath;
+            item.FullDomain = fullDomain + relativePath;
+
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Upload hình thành công.", true);
+        }
+        catch (IOException)
+        {
+            // trường hợp stream bị lỗi IO
+            await JS.InvokeVoidAsync("showToast", "Lỗi", "Không đọc được file. Vui lòng thử lại.", false);
+            _imageInputKey = Guid.NewGuid().ToString();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // nếu lỡ vượt size mà lọt (hiếm), Blazor có thể ném exception tại OpenReadStream/Copy
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+            _imageInputKey = Guid.NewGuid().ToString();
+            StateHasChanged();
+        }
+    }
+
+    private Task RemoveImage(LoaiThietKeModel item)
+    {
+        // Chỉ cần clear URL, khi Lưu sẽ update DB luôn
+        item.HinhAnhUrl = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task DownloadImage(LoaiThietKeModel item)
+    {
+        if (string.IsNullOrEmpty(item.HinhAnhUrl))
+            return;
+
+        // Lấy tên file từ URL (nếu muốn gợi ý tên file khi tải)
+        string fileName = System.IO.Path.GetFileName(item.HinhAnhUrl);
+
+        await JS.InvokeVoidAsync(
+            "downloadHelper.download",
+            item.HinhAnhUrl,
+            fileName
+        );
+    }
+
+    private async Task AddLoaiHuong()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListBlock đang null thì khởi tạo trước
+        if (Record.ListHuong == null)
+            Record.ListHuong = new List<HuongModel>();
+
+        var newBlock = new HuongModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSo = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListHuong.Insert(0, newBlock);
+        await ReapplyCurrencyFormat();
+    }
+
+    private async Task SaveLoaiHuongsList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".huong-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveHuongsAsync(Record.MaDuAn, Record.ListHuong);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại diện tích coi như không còn "mới" nữa
+                if (Record.ListHuong != null)
+                {
+                    foreach (var b in Record.ListHuong)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowLoaiHuong(HuongModel? item)
+    {
+        Record.ListHuong.Remove(item);
+    }
+
+    private async Task AddViewMK()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListVMK đang null thì khởi tạo trước
+        if (Record.ListVMK == null)
+            Record.ListVMK = new List<ViewMatKhoiModel>();
+
+        var newBlock = new ViewMatKhoiModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSoMatKhoi = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListVMK.Insert(0, newBlock);
+        await ReapplyCurrencyFormat();
+    }
+
+    private async Task SaveLoaiViewMKsList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".viewmk-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveViewMKsAsync(Record.MaDuAn, Record.ListVMK);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại diện tích coi như không còn "mới" nữa
+                if (Record.ListVMK != null)
+                {
+                    foreach (var b in Record.ListVMK)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowVMK(ViewMatKhoiModel? item)
+    {
+        Record.ListVMK.Remove(item);
+    }
+
+    private async Task AddLoaiGoc()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListVMK đang null thì khởi tạo trước
+        if (Record.ListLG == null)
+            Record.ListLG = new List<LoaiGocModel>();
+
+        var newBlock = new LoaiGocModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSoGoc = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListLG.Insert(0, newBlock);
+        await ReapplyCurrencyFormat();
+    }
+
+    private async Task SaveLoaiGocsList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".loaigoc-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveLoaiGocsAsync(Record.MaDuAn, Record.ListLG);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại góc coi như không còn "mới" nữa
+                if (Record.ListLG != null)
+                {
+                    foreach (var b in Record.ListLG)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowLoaiGoc(LoaiGocModel? item)
+    {
+        Record.ListLG.Remove(item);
+    }
+
+    private async Task AddVT()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListVMK đang null thì khởi tạo trước
+        if (Record.ListVT == null)
+            Record.ListVT = new List<ViTriModel>();
+
+        var newBlock = new ViTriModel
+        {
+            IsNew = true,
+            // có thể set thêm default nếu cần
+            HeSoViTri = 1
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListVT.Insert(0, newBlock);
+        await ReapplyCurrencyFormat();
+    }
+
+    private async Task SaveViTrisList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".vitri-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveViTrisAsync(Record.MaDuAn, Record.ListVT);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại vị trí coi như không còn "mới" nữa
+                if (Record.ListVT != null)
+                {
+                    foreach (var b in Record.ListVT)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowViTri(ViTriModel? item)
+    {
+        Record.ListVT.Remove(item);
+    }
+
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "input-currency", 8, 4);
+    }
+
+    private async Task AddView()
+    {
+        if (Record == null)
+            return;
+
+        // Nếu ListLoaiCan đang null thì khởi tạo trước
+        if (Record.ListView == null)
+            Record.ListView = new List<ViewModel>();
+
+        var newLoaiCan = new ViewModel
+        {
+            IsNew = true,
+        };
+
+        // ✅ Chèn vào vị trí 0 để nằm trên cùng
+        Record.ListView.Insert(0, newLoaiCan);
+    }
+
+    private async Task SaveLoaiViewList()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+   "validateContainer",
+   ".loaiview-table",                      // id container phần Block
+   ".container-mess-error",           // (tuỳ chọn) hộp báo lỗi đang dùng
+   "Có trường dữ liệu không chính xác hoặc không hợp lệ" // (tuỳ chọn) message
+);
+        if (!ok) return; // dừng, không lưu
+        Loading.Show();
+        try
+        {
+            var result = await DuAnService.SaveLoaiViewAsync(Record.MaDuAn, Record.ListView);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                // Sau khi lưu thành công: tất cả loại căn coi như không còn "mới" nữa
+                if (Record.ListView != null)
+                {
+                    foreach (var b in Record.ListView)
+                    {
+                        b.IsNew = false;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task DeleteRowLoaiView(ViewModel? item)
+    {
+        Record.ListView.Remove(item);
+    }
+}
+
+<style>
+    .cell-with-icon {
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Đẩy số sang trái, icon sang phải */
+        width: 100%; /* Cho group này chiếm hết chiều ngang ô */
+    }
+
+        .cell-with-icon span {
+            display: inline-block;
+            /* nếu muốn số sát trái: */
+            text-align: left;
+            /* nếu muốn số ở giữa phần bên trái thì bỏ text-align hoặc dùng center */
+        }
+
+    /* icon-inline vẫn giữ như trước */
+    .icon-button.icon-inline {
+        padding: 0 3px;
+    }
+
+        .icon-button.icon-inline i {
+            font-size: 22px;
+        }
+
+    /* Nút lưu trong header (ô th cuối cùng) */
+    th .icon-button.icon-save {
+        background: transparent !important; /* bỏ nền tròn vàng cũ */
+        border: none !important;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border-radius: 0; /* bỏ bo tròn nếu có */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none !important;
+    }
+
+        /* Icon bên trong nút lưu */
+        th .icon-button.icon-save .save-icon {
+            font-size: 20px;
+            line-height: 1;
+            color: #f6a623 !important; /* cam giống các icon khác */
+        }
+
+        /* Nếu style cũ dùng ::before / ::after để vẽ chấm tròn thì tắt luôn */
+        th .icon-button.icon-save::before,
+        th .icon-button.icon-save::after {
+            content: none !important;
+        }
+
+</style>

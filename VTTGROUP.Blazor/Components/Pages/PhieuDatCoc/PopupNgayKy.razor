@@ -1,0 +1,138 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Domain.Model.HopDongMuaBan
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Domain.Model.PhieuDatCoc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject PhieuDatCocService PhieuDatCocService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupSGDModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cập nhật ngày ký phiếu đặt cọc @Record.MaPhieuDC</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper container-form" id="modal-body">
+                <div class="col-lg-6 mx-auto row">
+                    <div class="wapper-input col-lg-12">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Ngày ký</span>
+                                <FlatpickrInput Id="NgayKy" Name="NgayKy" @bind-Value="Record.NgayKi"
+                                                Placeholder=""
+                                                CssClass="form-control datetime-picker input-validation"
+                                                Options="dateOptions" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-12">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Tập tin đính kèm</span>
+                                <div class="contatiner-upload-files">
+                                    <FileUploader @ref="uploaderRef" AllowExtensions="allowedExtensions"
+                                                  MaxFileSize="10485760"
+                                                  AllowMultiple="true"
+                                                  OnFilesChanged="HandleFiles" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="() => TriggerChoose(false)">
+                    Lưu
+                </button>
+                <button type="button" class="button button-action button-duyet-phieu" @onclick="() => XacNhanNgayKy()">
+                    Xác nhận
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmXacNhanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Xác nhận ngày ký phiếu đặt cọc @Record.MaPhieuDC</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc muốn xác nhận không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @onclick="() => TriggerChoose(true)">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {    
+    [Parameter] public EventCallback<PhieuDatCocModel> OnSelected { get; set; }
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+
+    private PhieuDatCocModel? Record = new();
+    private FileUploader uploaderRef;
+    private string[] allowedExtensions = FileTypeSets.Document;
+
+    public async Task ShowThongTin(PhieuDatCocPaginDto item)
+    {
+        await LoadData(item);
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupSGDModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+    private async Task TriggerChoose(bool loaiXN)
+    {
+        if (OnSelected.HasDelegate)
+        {
+            Record.IsDaKy = loaiXN;
+            await OnSelected.InvokeAsync(Record);
+        }
+        if (loaiXN)
+        {
+            await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupSGDModal");
+        }
+    }
+
+    private async Task XacNhanNgayKy()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmXacNhanModal");
+    }
+
+
+    private async Task LoadData(PhieuDatCocPaginDto item)
+    {
+        var result = await PhieuDatCocService.GetByIdAsync(item.MaPhieuDC);
+        if (result.Status)
+        {
+            Record = (PhieuDatCocModel)result.Data;
+            if (Record?.Files?.Any() == true)
+            {
+                await uploaderRef.RenderInitialFiles(Record.Files, false);
+            }
+            uploaderRef.IsDuyet = false;
+        }
+        StateHasChanged();
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+}

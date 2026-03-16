@@ -1,0 +1,210 @@
+﻿@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model.KhachHangTam
+@using VTTGROUP.Infrastructure.Services
+
+@inject DMKhachHangService DMKhachHangService
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupLichSuKHChiTietModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">LỊCH SỬ THAY ĐỔI THÔNG TIN KHÁCH HÀNG — @_maKhachHang</h5>
+                @* <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button> *@
+            </div>
+            <div class="modal-body modal-wraper" style="padding: 16px;">
+                @* Search + Paging top bar *@
+                <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="input-group" style="width: 260px;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="mdi mdi-magnify"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control border-start-0"
+                                   placeholder="Tìm kiếm..."
+                                   @bind="_searchText" />
+                        </div>
+                        <button class="btn btn-warning text-white fw-semibold px-4" @onclick="OnSearchClick" style="background-color:#e6a817;border-color:#e6a817;">
+                            Tìm kiếm
+                        </button>
+                    </div>
+                    <Pagination Page="_currentPage"
+                                TotalPages="_totalPages"
+                                TotalItems="@((float)_filteredList.Count)"
+                                PageSize="_pageSize"
+                                OnPageChanged="OnPageChanged"
+                                OnPageSizeChanged="OnPageSizeChanged" />
+                </div>
+
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        @if (_isLoading)
+                        {
+                            <div class="text-center py-3">
+                                <span class="spinner-border spinner-border-sm me-1"></span> Đang tải...
+                            </div>
+                        }
+                        else if (!_pagedList.Any())
+                        {
+                            <div class="p-2 text-muted">Không có dữ liệu lịch sử.</div>
+                        }
+                        else
+                        {
+                            <table class="tbl table table-form table-detail mb-0">
+                                <thead>
+                                    <tr class="cls_custome_back">
+                                        <th class="text-center" style="width:55px">STT</th>
+                                        <th class="text-center" style="min-width:120px">Lần điều chỉnh</th>
+                                        <th class="text-center" style="min-width:140px">Ngày cập nhật</th>
+                                        <th class="text-center" style="min-width:80px">Giới tính</th>
+                                        <th class="text-center" style="min-width:100px">Ngày sinh</th>
+                                        <th class="text-center" style="min-width:110px">Quốc tịch</th>
+                                        <th class="text-center" style="min-width:130px">Loại Card</th>
+                                        <th class="text-center" style="min-width:110px">ID Card</th>
+                                        <th class="text-center" style="min-width:100px">Ngày cấp</th>
+                                        <th class="text-center" style="min-width:130px">Nơi cấp</th>
+                                        <th class="text-center" style="min-width:160px">Địa chỉ thường trú</th>
+                                        <th class="text-center" style="min-width:160px">Địa chỉ hiện nay</th>
+                                        <th class="text-center" style="min-width:120px">Số điện thoại</th>
+                                        <th class="text-center" style="min-width:150px">Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @{
+                                        int stt = (_currentPage - 1) * _pageSize + 1;
+                                    }
+                                    @foreach (var item in _pagedList)
+                                    {
+                                        <tr class="initialized">
+                                            <td class="text-center">@stt</td>
+                                            <td class="text-center">@item.IDLanDieuChinh</td>
+                                            <td class="text-center">@string.Format("{0:dd/MM/yyyy HH:mm}", item.NgayCapNhat)</td>
+                                            <td class="text-center">@MapGioiTinh(item.GioiTinh)</td>
+                                            <td class="text-center">@item.NgaySinh</td>
+                                            <td>@(!string.IsNullOrEmpty(item.TenQuocTich) ? item.TenQuocTich : item.QuocTich)</td>
+                                            <td>@item.TenLoaiIdCard</td>
+                                            <td>@item.IdCard</td>
+                                            <td class="text-center">@item.NgayCapIdCard</td>
+                                            <td>@item.NoiCapIdCard</td>
+                                            <td>@item.DiaChiThuongTru</td>
+                                            <td>@item.DiaChiHienNay</td>
+                                            <td>@item.SoDienThoai</td>
+                                            <td>@item.Email</td>
+                                        </tr>
+                                        stt++;
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? _maKhachHang;
+    private List<KhachHangTamModel> _allList = new();
+    private List<KhachHangTamModel> _filteredList = new();
+    private List<KhachHangTamModel> _pagedList = new();
+    private bool _isLoading = false;
+
+    private string _searchText = string.Empty;
+    private int _currentPage = 1;
+    private int _pageSize = 10;
+    private int _totalPages = 1;
+
+    public async Task Show(string maKhachHang)
+    {
+        _maKhachHang = maKhachHang;
+        _isLoading = true;
+        _allList = new();
+        _filteredList = new();
+        _pagedList = new();
+        _searchText = string.Empty;
+        _currentPage = 1;
+        StateHasChanged();
+
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupLichSuKHChiTietModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+
+        _allList = await DMKhachHangService.GetLichSuChiTietAsync(maKhachHang);
+        _isLoading = false;
+        ApplyFilterAndPage();
+        StateHasChanged();
+    }
+
+    private void OnSearchClick()
+    {
+        _currentPage = 1;
+        ApplyFilterAndPage();
+    }
+
+    private void OnPageChanged(int page)
+    {
+        _currentPage = page;
+        ApplyFilterAndPage();
+    }
+
+    private void OnPageSizeChanged(int size)
+    {
+        _pageSize = size == int.MaxValue ? _filteredList.Count : size;
+        _currentPage = 1;
+        ApplyFilterAndPage();
+    }
+
+    private void ApplyFilterAndPage()
+    {
+        var q = _searchText?.Trim() ?? string.Empty;
+
+        _filteredList = string.IsNullOrEmpty(q)
+            ? _allList
+            : _allList.Where(x =>
+                Contains(x.IDLanDieuChinh, q) ||
+                Contains(x.IdCard, q) ||
+                Contains(x.SoDienThoai, q) ||
+                Contains(x.Email, q) ||
+                Contains(x.DiaChiThuongTru, q) ||
+                Contains(x.DiaChiHienNay, q) ||
+                Contains(x.NoiCapIdCard, q) ||
+                Contains(x.TenLoaiIdCard, q) ||
+                Contains(x.TenQuocTich, q)
+            ).ToList();
+
+        int effectivePageSize = _pageSize <= 0 ? 10 : _pageSize;
+        _totalPages = (int)Math.Ceiling(_filteredList.Count / (double)effectivePageSize);
+        if (_totalPages < 1) _totalPages = 1;
+        if (_currentPage > _totalPages) _currentPage = _totalPages;
+
+        _pagedList = _filteredList
+            .Skip((_currentPage - 1) * effectivePageSize)
+            .Take(effectivePageSize)
+            .ToList();
+
+        StateHasChanged();
+    }
+
+    private static bool Contains(string? value, string q) =>
+        value?.Contains(q, StringComparison.OrdinalIgnoreCase) == true;
+
+    private static string MapGioiTinh(string? gt) => gt?.ToUpperInvariant() switch
+    {
+        "M" => "Nam",
+        "F" => "Nữ",
+        _ => string.Empty
+    };
+}
+
+<style>
+    #PopupLichSuKHChiTietModal .content-table td {
+        color: #666;
+        font-weight: 400;
+    }
+</style>

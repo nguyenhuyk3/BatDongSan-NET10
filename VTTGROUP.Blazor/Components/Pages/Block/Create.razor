@@ -1,0 +1,132 @@
+﻿@page "/block/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.Block
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Block</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    @*  <ul class="tab-element">
+                    <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                    <div class="line-bot-nav"></div>
+                    </ul> *@
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-6 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" @bind="Record.MaDuAn" class="form-control input-validation">
+                                        <option value="">-- Chọn dự án --</option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã block <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MaBlock" id="MaBlock" />
+                                    <span class="error-validation">Vui lòng nhập mã  block</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên block <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenBlock" id="TenBlock" />
+                                    <span class="error-validation">Vui lòng nhập tên block</span>
+                                </div>
+                            </div>
+                        </div>
+                        @*  <div class="contatiner-upload-files">
+                        <FileUploader AllowExtensions="allowedExtensions"
+                        MaxFileSize="10485760"
+                        AllowMultiple="true"
+                        OnFilesChanged="HandleFiles" />
+                        </div> *@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private BlockModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        ListDA = await BlockService.GetByDuAnAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("Block", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaBlock");
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await BlockService.SaveBlockAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/block/edit/{Record.MaBlock}");
+        }
+    }
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/block");
+
+    }
+}

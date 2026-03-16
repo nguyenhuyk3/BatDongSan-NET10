@@ -1,0 +1,135 @@
+﻿@using VTTGROUP.Domain.Entities
+@inject IJSRuntime JS
+@code {
+    [Parameter]
+    public List<SystemMenu> Menus { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<string> OnMenuClick { get; set; }
+}
+@if (Menus != null && Menus.Any() == true)
+{
+    <ul>
+        @foreach (var item in Menus.OrderBy(x => x.DoUuTien))
+        {
+            <li @key="item.MaCongViec" class="group @(item.Children != null && item.Children?.Any() == true ? "relative" : "") @(string.IsNullOrEmpty(item.MaCha) ? "item-root pl-5 pr-5" : "")" data-menu-cha="@item.MaCha"
+                @onmouseover="@(item.MaCha == "" ? (() => OnHoverMenu(item.MaCongViec)) : null)">
+                @* <a class="nav_li_a py-3"
+				   href="@GetMenuLink(item)" @onclick="@(!string.IsNullOrWhiteSpace(item.TenController) && !string.IsNullOrWhiteSpace(item.TenAction) ? async () => await OnMenuClick.InvokeAsync() : null )">
+					@item.TenCongViec
+				</a> *@
+                <a class="nav_li_a @(item.SoLuongCongViecCon == 0 ? "is-children" : null)"
+                   href="@GetMenuLink(item)" @onclick="() => HandleMenuClick(item)">
+                    @item.TenCongViec
+                </a>
+
+                @if (item.Children != null && item.Children?.Any() == true)
+                {
+                    <div class="mega-menu wapper-nav-child @(hoveredMenu == item.MaCongViec ? "not-parent" : "")">
+                        <RecursiveSidebar Menus="item.Children" OnMenuClick="OnMenuClick" />
+                    </div>
+                }
+
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private string hoveredMenu = "";
+
+    private string GetMenuLink(SystemMenu item)
+    {
+        // if (!string.IsNullOrWhiteSpace(item.TenController) && !string.IsNullOrWhiteSpace(item.TenAction))
+        // {
+        // 	return $"/{item.TenController}/{item.TenAction}";
+        // }
+        // if (!string.IsNullOrWhiteSpace(item.TenController) && !string.IsNullOrWhiteSpace(item.TenAction))
+        // {
+        // 	var controller = item.TenController.ToLower();
+
+        // 	// Nếu action là Index hoặc null → chỉ return controller
+        // 	if (item.TenAction.ToLower() == "index")
+        // 	{
+        // 		return $"/{controller}";
+        // 	}
+
+        // 	// Nếu action khác Index → return controller/action
+        // 	return $"/{controller}/{item.TenAction.ToLower()}";
+        // }
+        string url = string.Empty;
+        if (!string.IsNullOrWhiteSpace(item.TenController) && !string.IsNullOrWhiteSpace(item.TenAction) && item.SoLuongCongViecCon == 0)
+        {
+            var controller = item.TenController.ToLower();
+
+            // Nếu action là Index hoặc null → chỉ return controller
+            if (item.TenAction.ToLower() == "index")
+                url = $"/{controller}";
+            else url = $"/{controller}/{item.TenAction.ToLower()}";
+
+        }
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            return url;
+        }
+        return "javascript:void(0)";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("menuHelper.initResizeListener");
+            await JS.InvokeVoidAsync("menuHelper.updateSubMenuPosition");
+        }
+    }
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    // 	if (!firstRender) return;
+
+    // 	var authState = await Auth.GetAuthenticationStateAsync();
+    // 	if (authState.User?.Identity?.IsAuthenticated != true)
+    // 		return; // chưa login thì đừng init menu JS
+
+    // 	try
+    // 	{
+    // 		await JS.InvokeVoidAsync("menuHelper.initResizeListener");
+    // 		await JS.InvokeVoidAsync("menuHelper.updateSubMenuPosition");
+    // 	}
+    // 	catch (Microsoft.JSInterop.JSDisconnectedException)
+    // 	{
+    // 		// circuit disconnect -> bỏ qua
+    // 	}
+    // }
+
+
+    private async Task OnHoverMenu(string maCongViec)
+    {
+        hoveredMenu = maCongViec;
+        await JS.InvokeVoidAsync("menuHelper.updateSubMenuPosition");
+    }
+
+    private async Task HandleMenuClick(SystemMenu item)
+    {
+        if (item.Children?.Any() == false)
+        {
+            string url = string.Empty;
+            if (!string.IsNullOrWhiteSpace(item.TenController) && !string.IsNullOrWhiteSpace(item.TenAction))
+            {
+                var controller = item.TenController.ToLower();
+
+                // Nếu action là Index hoặc null → chỉ return controller
+                if (item.TenAction.ToLower() == "index")
+                    url = $"/{controller}";
+                else url = $"/{controller}/{item.TenAction.ToLower()}";
+
+            }
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                await OnMenuClick.InvokeAsync(url);
+            }
+        }
+    }
+
+}

@@ -1,0 +1,75 @@
+﻿/* ✅ Modal import rộng hơn một chút */
+.import-file-popup-modal .modal-dialog.modal-import-lg {
+    max-width: 720px; /* cần to nữa: tăng 800 / 900 */
+}
+
+/* ✅ 2 cột: Dự án - Loại sản phẩm */
+.import-file-popup-modal .import-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.import-file-popup-modal .wraper-select-file {
+    min-width: 260px;
+}
+
+/* 🔔 Khối cảnh báo */
+.import-file-popup-modal .import-file-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    background-color: #ffe4e4;
+    color: #b71c1c;
+    font-size: 13px;
+}
+
+    .import-file-popup-modal .import-file-alert .icon {
+        font-size: 20px;
+        line-height: 1;
+        margin-top: 2px;
+    }
+
+    .import-file-popup-modal .import-file-alert .title {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    /* Danh sách lưu ý */
+    .import-file-popup-modal .import-file-alert ul {
+        margin: 0;
+        padding-left: 0;
+        list-style: none;
+    }
+
+    /* mỗi dòng lưu ý: chừa khoảng bên trái cho chấm tròn */
+    .import-file-popup-modal .import-file-alert li {
+        position: relative;
+        padding-left: 16px; /* khoảng cách từ chấm tới chữ */
+        line-height: 1.5; /* chiều cao 1 dòng chữ */
+    }
+
+        /* chấm tròn đỏ rỗng – luôn canh giữa dòng chữ đầu tiên */
+        .import-file-popup-modal .import-file-alert li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0.75em; /* 1.5 / 2 = 0.75em => đúng giữa dòng */
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid #b71c1c;
+        }
+
+/* Responsive: dưới mobile, 2 combobox xếp 1 cột */
+@media (max-width: 576px) {
+    .import-file-popup-modal .import-grid {
+        grid-template-columns: 1fr;
+    }
+}

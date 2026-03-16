@@ -1,0 +1,274 @@
+﻿@page "/phuluchopdongmuaban/index/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.HopDongMuaBan
+@using VTTGROUP.Domain.Model.PhieuDatCoc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject HopDongMuaBanService HopDongMuaBanService
+@inject PhuLucHopDongMuaBanService PhuLucHopDongMuaBanService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Phụ lục hợp đồng mua bán</h1>
+
+<div class="container-top-form">
+    <div class="container-form">
+        <div class="col-lg-10 mx-auto row">
+            <div class="wapper-input col-lg-6">
+                <div class="row">
+                    <div class="form-group-input">
+                        <span class="title-field">Số hợp đồng</span>
+                        <span class="input-value">@Record?.SoHopDong</span>
+                    </div>
+                </div>
+            </div>
+            <div class="wapper-input col-lg-6">
+                <div class="row">
+                    <div class="form-group-input">
+                        <span class="title-field">Khách hàng</span>
+                        <span class="input-value">@Record?.TenKhachHang</span>
+                    </div>
+                </div>
+            </div>
+            <div class="wapper-input col-lg-6">
+                <div class="row">
+                    <div class="form-group-input">
+                        <span class="title-field">Dự án</span>
+                        <span class="input-value">@Record?.TenDuAn</span>
+                    </div>
+                </div>
+            </div>
+            <div class="wapper-input col-lg-6">
+                <div class="row">
+                    <div class="form-group-input">
+                        <span class="title-field">Căn hộ</span>
+                        <span class="input-value">@Record?.TenCanHo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-search-home">   
+    <div class="search-row">
+        @* <InputSearch @bind-Value="search" OnSearch="Search" /> *@
+        <div class="button-action-title m-0">
+            <div class="icon-button" id="btnThem" data-title="Thêm" data-position="top" @onclick="Insert">
+                <i class="mdi mdi-plus-circle-outline"></i>
+            </div>
+            <span>Phụ lục</span>
+        </div>
+    </div>
+</div>
+<div class="container-table-detail">
+    <div class="container-table-fixed has-paging">
+        <table class="tbl table-form table-detail treeTable" id="table-data">
+            <thead>
+                <tr class="cls_custome_back">
+                    <th style="width: 50px">
+                        STT
+                    </th>
+                    <th style="width: 130px">
+                        Hệ thống
+                    </th>
+                    <th style="width: 220px">
+                        Số phụ lục
+                    </th>
+                    <th style="width: 130px">
+                        Ngày ký
+                    </th>
+                    <th style="width: 150px">
+                        Giá bán trước thuế
+                    </th>
+                    <th style="width: 150px">
+                        Giá bán sau thuế
+                    </th>
+                    <th style="width: 250px">
+                        Nội dung
+                    </th>
+                    <th style="width: 150px">
+                        Trạng thái
+                    </th>
+                    <th style="width: 90px">
+                        &nbsp;
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="content-table">
+                @if (listPL != null && listPL.Count > 0)
+                {
+                    @foreach (var item in listPL)
+                    {
+                        int i = 1;
+                        <tr class="initialized">
+                            <td style="text-align:center">
+                                <span>@i</span>
+                            </td>
+                            <td>
+                                <div class="item-phieu" @onclick="() => OnEditRecord(item.SoPhuLuc)">@item.SoPhuLuc</div>
+                                <span><i class="bi bi-person-fill me-1"></i>@item.HoVaTen</span>
+                            </td>
+                            <td>
+                                <span>@item.SoPhuLuc</span>
+                            </td>
+                            <td>
+                                <span>@string.Format("{0:dd/MM/yyyy}", item.NgayKyPL)</span>
+                            </td>
+                            <td style="text-align:right">
+                                @string.Format("{0:N0}", item.GiaBanTruocThue)
+                            </td>
+                            <td style="text-align:right">
+                                @string.Format("{0:N0}", item.GiaBanSauThue)
+                            </td>
+                            <td>
+                                <span>@item.NoiDung</span>
+                            </td>
+                            <td>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                        <a href="javascript:void()" @onclick="() => OnEditRecord(item.SoPhuLuc!)">
+                                            <span>
+                                                <i class="mdi mdi-pencil">
+                                                </i>
+                                            </span>
+                                        </a>
+                                    </div>
+                                    <div class="icon-button" data-title="Xóa" data-position="left">
+                                        <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.SoPhuLuc!)"><span><i class="mdi mdi-delete "></i></span></a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+        @if (listPL == null || !listPL.Any())
+        {
+            <div class="p-2">Không có dữ liệu</div>
+        }
+    </div>
+    <div class="container-button">
+        <div class="row">
+            <div class="col-md-12">
+                <button type="button" class="button button-action button-tro-ve" @onclick="BackUrl">
+                    Trở về
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Xác nhận xóa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc muốn xóa hợp đồng mua bán <strong>@selectedMaPhieu</strong> không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Xác nhận xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private string? selectedMaPhieu;
+    private bool isLoading = false;
+    List<PhucLucHopDongPaginDTO> listPL = new();
+    private HopDongMuaBanModel? Record = new();
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await HopDongMuaBanService.GetByIdAsync(id);// thông tin hợp đồng ở đây
+        if (result.Status)
+        {
+            Record = (HopDongMuaBanModel)result.Data;
+        }
+        await LoadPhuLucHopDongMuaBan();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("tooltipHelper.init");
+        }
+        if (listPL.Any())
+        {
+            var config = new List<FixColumnConfig>
+            {
+                new FixColumnConfig { left = 0 },
+                new FixColumnConfig { right = 0 }
+            };
+            await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+        }
+    }
+
+    private async Task ShowConfirmDelete(string maPhieu)
+    {
+        selectedMaPhieu = maPhieu;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaPhieu == null || string.IsNullOrEmpty(selectedMaPhieu))
+        {
+            return;
+        }
+        var result = await PhuLucHopDongMuaBanService.DeletePLHDMBAsync(selectedMaPhieu);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadPhuLucHopDongMuaBan();
+        selectedMaPhieu = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task LoadPhuLucHopDongMuaBan()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await PhuLucHopDongMuaBanService.GetPagingAsync(id);
+            listPL = data;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnEditRecord(string maPhieu)
+    {
+        Nav.NavigateTo($"/phuluchopdongmuaban/edit/{maPhieu}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo($"/phuluchopdongmuaban/create/{id}");
+        return;
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo($"/hopdongmuaban");
+    }
+}

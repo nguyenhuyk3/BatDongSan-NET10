@@ -1,0 +1,240 @@
+﻿@using System.Text.Json
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.CanHo
+@using VTTGROUP.Domain.Model.DMLoaiThietKe
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject DuAnService DuAnService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<div class="modal fade modal-product-detail" id="PopupDetailSPModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Thông tin sản phẩm</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+			</div>
+			<div class="modal-body modal-wraper" id="modal-body">
+				<div class="product-wraper">
+					<div class="product-container">
+						@if (listThietKes != null && listThietKes.Any())
+						{
+							<div class="wraper-slider">
+								<div class="swiper main-swiper @(listThietKes.Count > 1 ? "show-swiper-thumb" : "hide-swiper-thumb")">
+									<div class="swiper-wrapper">
+										@foreach (var item in listThietKes)
+										{
+											<div class="swiper-slide">
+												@if (item.IsVideo)
+												{
+													<video controls muted loop>
+														<source src="@item.FileNameSave" type="video/mp4" />
+													</video>
+												}
+												else
+												{
+													<img src="@item.FileNameSave" onerror="this.onerror=null; this.src='/assets/images/placeholder.png'" />
+												}
+											</div>
+										}
+									</div>
+
+									@if (listThietKes.Count > 1)
+									{
+										<div class="swiper-button-next"></div>
+										<div class="swiper-button-prev"></div>
+										<div class="swiper-pagination-custom">@CurrentSlide/@TotalSlides</div>
+									}
+								</div>
+								@if (listThietKes.Count > 1)
+								{
+									<div class="swiper swiper-thumb">
+										<div class="swiper-wrapper">
+											@foreach (var item in listThietKes)
+											{
+												<div class="swiper-slide @(item.ContentType == "video" ? "video-thumbnail" : "")">
+													@if (item.IsVideo)
+													{
+														<video muted loop playsinline>
+															<source src="@item.FileNameSave" type="video/mp4" />
+														</video>
+													}
+													else
+													{
+														<img src="@item.FileNameSave" onerror="this.onerror=null; this.src='/assets/images/placeholder.png'" />
+													}
+												</div>
+											}
+										</div>
+									</div>
+								}
+							</div>
+						}
+						else
+						{
+							<div class="no-media">
+								<img src="/assets/images/no-media.png" alt="Không có hình ảnh" />
+								<p>Hiện tại chưa có hình ảnh hoặc video nào cho căn hộ này.</p>
+							</div>
+						}
+
+						<div class="product-info">
+							<div class="product-top-info">
+								<span>@sanPham?.TenDuAn</span>
+							</div>
+							<div class="product-main-info">
+								<div>Tên căn</div> <div class="value-apartment">@sanPham?.TenSanPham</div>
+								<div>View</div> <div class="value-apartment">@sanPham?.TenView</div>
+								<div>Hướng</div> <div class="value-apartment">@sanPham?.TenHuong</div>
+								@* <div>Vị trí</div> <div>@sanPham?.TenViTri</div>
+							<div>Loại góc</div> <div>@sanPham?.TenLoaiGoc</div> *@
+
+								<div class="pt-3">Loại căn hộ</div> <div class="pt-3 value-apartment">@sanPham?.TenLoaiCanHo</div>
+								<div>Diện tích tim tường</div> <div class="value-apartment">@($"{sanPham?.DienTichCanHo:#,##0.##}")m²</div>
+								<div>Diện tích thông thủy</div> <div class="value-apartment">@($"{sanPham?.DienTichLotLong:#,##0.##}")m²</div>
+								<div>Diện tích sân vườn</div> <div class="value-apartment">@($"{sanPham?.DienTichSanVuon:#,##0.##}")m²</div>
+							</div>
+							<div class="product-price">
+								<div>Giá bán</div>
+								@if (CauHinhDuAn?.IsMoBanCoGia == true)
+								{
+									<div class="value-apartment">@($"{sanPham?.GiaBan:#,##0}")</div>
+								}
+								@if (!string.IsNullOrEmpty(MaGioHang) & sanPham != null && sanPham?.FlagPDK == true && canShowDangKy)
+								{
+									<button type="button" class="button button-action button-create-phieu button-primary" @onclick="CreatePhieuDangKy" data-bs-dismiss="modal">Đăng ký</button>
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			@* <div class="modal-footer">
+				@if (!string.IsNullOrEmpty(MaGioHang) & sanPham != null && sanPham?.FlagPDK == true)
+				{
+					<button type="button" class="button button-action button-create-phieu button-primary" @onclick="CreatePhieuDangKy" data-bs-dismiss="modal">Đăng ký</button>
+				}
+				<button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+			</div> *@
+		</div>
+	</div>
+</div>
+
+
+@code {
+	public string? MaGioHang { get; set; }
+	public string? MaCanHo { get; set; }
+	public SoDoCanHoModel? sanPham { get; set; }
+	public SoDoCanHoModel? thongTinSanPham { get; set; }
+	public List<UploadedFileModel>? listThietKes { get; set; }
+	private int CurrentSlide = 1;
+	private int TotalSlides => listThietKes?.Count ?? 0;
+	private DotNetObjectReference<CanHoDetails>? dotNetRef;
+	private string NhanVienThuocSanGG;
+	private string HienTrangKDSP = string.Empty;
+	private CauHinhDuAnModel? CauHinhDuAn = new();
+	private bool canShowDangKy;
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			dotNetRef = DotNetObjectReference.Create(this);
+		}
+	}
+	public async Task Show(SoDoCanHoModel? canHo, string? maPhieu = null)
+	{
+
+		CurrentSlide = 1;
+		sanPham = canHo;
+		MaCanHo = canHo?.MaSanPham ?? string.Empty;
+		MaGioHang = canHo.MaGioHang ?? string.Empty;
+		HienTrangKDSP = await BaseService.HienTrangKinhDoanhSanPham(canHo?.MaDuAn ?? string.Empty, MaCanHo);
+		if (dotNetRef == null)
+		{
+			dotNetRef = DotNetObjectReference.Create(this);
+		}
+		await JS.InvokeVoidAsync("initSwiper", dotNetRef);
+		await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupDetailSPModal");
+		// await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+		var result = await DuAnService.GetCauHinhByIdAsync(canHo.MaDuAn ?? string.Empty);
+		if (result.Status)
+		{
+			CauHinhDuAn = (CauHinhDuAnModel?)result.Data;
+		}
+		listThietKes = await CanHoService.GetThongTinThietKeAsync(sanPham?.MaDuAn ?? string.Empty, sanPham?.MaSanPham ?? string.Empty);
+		thongTinSanPham = await CanHoService.GetViewMatKhoiHuongAsync(canHo?.MaDuAn ?? string.Empty, canHo?.MaSanPham ?? string.Empty);
+		sanPham.TenView = thongTinSanPham?.TenView;
+		sanPham.TenHuong = thongTinSanPham?.TenHuong;
+		var rs = await BaseService.CanShowDangKyAsync(sanPham?.MaDuAn ?? string.Empty, sanPham?.MaSanPham ?? string.Empty, MaGioHang);
+		canShowDangKy = rs.Status; // hoặc rs.IsSuccess tuỳ field của ResultModel
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public void UpdateSlideIndex(int index)
+	{
+		CurrentSlide = index;
+		InvokeAsync(StateHasChanged);
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		dotNetRef?.Dispose();
+	}
+
+	private async Task CreatePhieuDangKyCu()
+	{
+		var gioHang = new
+		{
+			MaGioHang = sanPham?.MaGioHang,
+			MaSanPham = sanPham?.MaSanPham,
+			TenSanPham = sanPham?.TenSanPham
+		};
+		string json = JsonSerializer.Serialize(gioHang);
+		await JS.InvokeAsync<bool>("localGioHangHelper.addSanPhamToLocal", json);
+		NhanVienThuocSanGG = await BaseService.NhanVienThuocSGG();
+		if (NhanVienThuocSanGG == "SGG")
+		{
+			var url = Nav.ToAbsoluteUri($"/phieudangkysangd/create/{MaGioHang}").ToString();
+			await JS.InvokeVoidAsync("open", url, "_blank");
+			//Nav.NavigateTo($"/phieudangkysangd/create/{MaGioHang}");
+		}
+		else if (NhanVienThuocSanGG == "NV")
+		{
+			var url = Nav.ToAbsoluteUri($"/phieudangky/create/{MaGioHang}").ToString();
+			await JS.InvokeVoidAsync("open", url, "_blank");
+			//Nav.NavigateTo($"/phieudangky/create/{MaGioHang}");
+		}
+	}
+
+	private async Task CreatePhieuDangKy()
+	{
+		if (sanPham == null)
+			return;
+
+		// đảm bảo có MaGioHang, MaSanPham
+		sanPham.MaGioHang = (sanPham.MaGioHang ?? MaGioHang ?? "").Trim();
+		sanPham.MaSanPham = (sanPham.MaSanPham ?? "").Trim();
+
+		if (string.IsNullOrWhiteSpace(sanPham.MaGioHang) || string.IsNullOrWhiteSpace(sanPham.MaSanPham))
+			return;
+
+		var json = JsonSerializer.Serialize(sanPham);
+
+		// Lưu nguyên SoDoCanHoModel vào localStorage
+		await JS.InvokeAsync<bool>("localGioHangHelper.addSoDoCanHoToLocal", json);
+
+		NhanVienThuocSanGG = await BaseService.NhanVienThuocSGG();
+
+		var url = NhanVienThuocSanGG == "SGG"
+			? Nav.ToAbsoluteUri($"/phieudangkysangd/create/{sanPham.MaGioHang}").ToString()
+			: Nav.ToAbsoluteUri($"/phieudangky/create/{sanPham.MaGioHang}").ToString();
+
+		// mở tab mới
+		await JS.InvokeVoidAsync("window.open", url, "_blank");
+	}
+
+}

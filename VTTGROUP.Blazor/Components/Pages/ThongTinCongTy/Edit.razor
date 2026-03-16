@@ -1,0 +1,216 @@
+﻿@page "/thongtincongty/edit"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.ThongTinCongTy
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject ThongTinCongTyService ThongTinService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Thông tin công ty</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Thông tin tài khoản</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên công ty <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenCongTy" />
+                                    <span class="error-validation">Vui lòng nhập tên công ty</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Điện thoại <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.DienThoai" />
+                                    <span class="error-validation">Vui lòng nhập số điện thoại</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Email <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.Email" id="Email" />
+                                    <span class="error-validation">Vui lòng nhập email</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã số thuế <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MaSoThue" id="MaSoThue" />
+                                    <span class="error-validation">Vui lòng nhập mã số thuế</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Fax</span>
+                                    <InputText class="form-control" @bind-Value="Record.Fax" id="SoFax" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Người đại diện <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.DaiDienCongTy" />
+                                    <span class="error-validation">Vui lòng nhập người đại diện</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Chức vụ</span>
+                                    <InputText class="form-control" @bind-Value="Record.ChucVuNguoiDaiDien" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Địa chỉ <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.DiaChiCongTy" />
+                                    <span class="error-validation">Vui lòng nhập địa chỉ công ty</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Logo</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader @ref="uploaderRef1" AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="false"
+                                                      OnFilesChanged="LogoHandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngân hàng</span>
+                                    <InputText class="form-control" @bind-Value="Record.TenNganHang" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Chi nhánh</span>
+                                    <InputText class="form-control" @bind-Value="Record.TenChiNhanh" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tài khoản </span>
+                                    <InputText class="form-control" @bind-Value="Record.TaiKhoan" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên tài khoản</span>
+                                    <InputText class="form-control" @bind-Value="Record.TenTaiKhoan" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private EditContext editContext;
+    private ThongTinCongTyModel? Record = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+
+    private FileUploader uploaderRef1;
+    private string MaCongViec = "TTCongTy";
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.Xem.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("InputUtils.restrictToEmailChars", "Email");
+            await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "MaSoThue", 0);
+            await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", "SoFax", 0);
+            var result = await ThongTinService.GetThongTinCongTy();
+            if (result.Status)
+            {
+                Record = (ThongTinCongTyModel)result.Data;
+                if (Record.Logo.Any())
+                {
+                    await uploaderRef1.RenderInitialFiles(Record.Logo);
+                }
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await ThongTinService.UpdateAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    public void LogoHandleFiles(List<UploadedFileModel> file)
+    {
+        Record.Logo = file;
+    }
+}

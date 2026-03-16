@@ -1,0 +1,163 @@
+﻿@page "/kehoachbanhang/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject NhanVienService NhanVienService
+@inject CanHoService CanHoService
+@inject KeHoachBanHangService KeHoachBanHangService
+@inject LoadingService Loading
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+	<h1 class="legend-title">Kế hoạch bán hàng</h1>
+	<div class="container-form">
+		<div class="container-tabs">
+			<div class="row">
+				<div class="col-md-12">
+					<ul class="tab-element">
+						<li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+						<li class="tab-item" data-id="2" id="linkTab2" @onclick="SubmitFormJs">Căn hộ</li>
+						<li class="tab-item" data-id="3" id="linkTab3" @onclick="SubmitFormJs">Giá bán theo đợt</li>
+						<div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+						</div>
+					</ul>
+				</div>
+			</div>
+			<MessageErrorForm/>
+			<div class="wapper-content-tab">
+				<div data-id="1" class="tab-content-item actived-tab" id="tab1">
+					<div class="col-lg-10 mx-auto row">
+						<InfoList Items="@InfoItems" />
+						<div class="wapper-input col-lg-12">
+							<div class="row">
+								<div class="form-group-input">
+									<span class="title-field">Dự án <i class="point-validate">*</i></span>
+									<select id="MaDuAn" class="form-control input-validation" @bind="Record.MaDuAn">
+										<option value=""></option>
+										@foreach (var item in ListDA)
+										{
+											<option value="@(item.MaDuAn)">@item.TenDuAn</option>
+										}
+									</select>
+									<span class="error-validation">Vui lòng chọn dự án</span>
+								</div>
+							</div>
+						</div>
+						<div class="wapper-input col-lg-12">
+							<div class="row">
+								<div class="form-group-input">
+									<span class="title-field">Ghi chú</span>
+									<textarea class="textarea-input" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3" tabindex="2"></textarea>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div data-id="2" class="tab-content-item" id="tab2">
+				</div>
+				<div data-id="3" class="tab-content-item" id="tab3">
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="container-button">
+		<div class="actions-left">
+			<VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+		</div>
+		<div class="actions-right">
+			<VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+		</div>
+	</div>
+</EditForm>
+@code {
+	private EditContext editContext;
+	private KeHoachBanHangModel? Record = new();
+	private List<DaDanhMucDuAn> ListDA = new();
+	private List<DaDanhMucDotMoBan> ListDMBCanHo = new();
+	private List<InfoItem> InfoItems = new();
+	private string[] allowedExtensions = FileTypeSets.Image;
+	private string MaCongViec = "KHBH";
+
+	protected override async Task OnInitializedAsync()
+	{
+		editContext = new EditContext(Record);
+		ListDA = await CanHoService.GetByDuAnAsync();
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await BaseService.CheckPermissionAsync(MaCongViec, VuViec.Them.GetDescription());
+			await JS.InvokeVoidAsync("tabHelper.initTabs");
+			await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+			var result = await KeHoachBanHangService.FindGetByKeHoachBHAsync(string.Empty);
+			if (result.Status)
+			{
+				Record = (KeHoachBanHangModel)result.Data;
+				InfoItems = new()
+				{
+					new() { Text="Mã phiếu", Value=Record.MaPhieuKH},
+					new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+					new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+				};
+				StateHasChanged();
+			}
+		}
+	}
+
+	private async Task SubmitFormJs()
+	{
+		var dotNetRef = DotNetObjectReference.Create(this);
+		await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+	}
+
+	[JSInvokable]
+	public async Task SubmitForm()
+	{
+		Loading.Show();
+		try
+		{
+			var result = await KeHoachBanHangService.SaveKeHoachBanHangAsync(Record);
+			await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+			if (result.Status)
+			{
+				Nav.NavigateTo($"/kehoachbanhang/edit/{result.Id}");
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+		}
+		finally
+		{
+			Loading.Hide();
+		}
+	}
+
+	private void BackUrl()
+	{
+		Nav.NavigateTo("/kehoachbanhang");
+	}
+
+	// private async Task OnDuAnChanged(ChangeEventArgs e)
+	// {
+	//     Record.MaDuAn = e.Value?.ToString();
+	//     ListDMBCanHo = await KeHoachBanHangService.GetDotMoBanTheoDuAnAsync(Record.MaDuAn);
+	// }
+
+	private async Task AddCanHo()
+	{
+		// await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupAddNhanVien");
+	}
+
+}

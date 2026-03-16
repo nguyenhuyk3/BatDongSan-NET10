@@ -1,0 +1,40 @@
+﻿<button type="@Type"
+        class="@Class"
+        disabled="@Disabled"
+        title="@Title"
+        @onclick="OnClick">
+    @if (!string.IsNullOrWhiteSpace(IconClass) && !IconAfter)
+    {
+        <i class="@IconClass" aria-hidden="true"></i>
+    }
+
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        @Label
+    }
+
+    @if (!string.IsNullOrWhiteSpace(IconClass) && IconAfter)
+    {
+        <i class="@IconClass" aria-hidden="true" style="margin-left:6px"></i>
+    }
+</button>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Button";
+    [Parameter] public string Class { get; set; } = "button";
+    [Parameter] public string Type { get; set; } = "button"; // hoặc "submit"
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    // Icon options
+    [Parameter] public string? IconClass { get; set; }    // ví dụ: "mdi mdi-send" hoặc "bi bi-check2"
+    [Parameter] public bool IconAfter { get; set; } = false; // true = icon nằm sau text
+
+    // Tuỳ chọn nội dung custom (nếu muốn icon SVG riêng)
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

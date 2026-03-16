@@ -1,0 +1,197 @@
+﻿@page "/phieucongnophaithu/edit/{id}"
+@using System.Globalization
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.HopDongChuyenNhuong
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Domain.Model.PhieuXacNhanThanhToan
+@using VTTGROUP.Domain.Model.TongHopCongNoPhaiThu
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject PhieuCongNoPhaiThuService PhieuCongNoPhaiThuService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Tổng hợp công nợ phải thu</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Số chứng từ </span>
+                                    <div class="item-phieu" @onclick="() => OnViewPDK(Record.MaChungTu, Record.MaCongViec)">@Record.MaChungTu</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Khách hàng </span>
+                                    <div class="item-phieu" @onclick="() => OnMaKHRecord(Record.MaKhachHang.ToString())">@Record.TenKhachHang</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Hạn thanh toán</span>
+                                    @string.Format("{0:dd/MM/yyyy}", Record.HanThanhToan)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Phiếu thanh toán</span>
+                                    @if (!string.IsNullOrWhiteSpace(Record.DanhSachPhieuXNTT))
+                                    {
+                                        var ds = Record.DanhSachPhieuXNTT
+                                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                                        <div class="xntt-list">
+                                            @foreach (var maPhieu in ds)
+                                            {
+                                                <span class="item-phieu xntt-item"
+                                                      @onclick="() => OnViewXNTT(maPhieu)">
+                                                    @maPhieu
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Số tiền</span>
+                                    @string.Format("{0:N0}", Record.SoTien)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Số tiền đã thu</span>
+                                    @string.Format("{0:N0}", Record.SoTienDaThu)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input group-input-grid">
+                                    <span class="title-field">Nội dung</span>
+                                    <span>@Record.NoiDung</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public string id { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery(Name = "maDuAn")]
+    public string? MaDuAn { get; set; }
+
+    private EditContext? editContext;
+    private TongHopCongNoPhaiThuPaginDto Record = new();
+
+    private string? maNhanVienHT;
+    private List<InfoItem> InfoItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1) Bắt buộc mã phiếu
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            Nav.NavigateTo("/phieucongnophaithu", true);
+            return;
+        }
+
+        // 2) Bắt buộc mã dự án
+        if (string.IsNullOrWhiteSpace(MaDuAn))
+        {
+            Nav.NavigateTo("/phieucongnophaithu", true);
+            return;
+        }
+
+        // init record + edit context ban đầu (tạm)
+        editContext = new EditContext(Record);
+
+        maNhanVienHT = await BaseService.MaNhanVienHienTai();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await BaseService.CheckPermissionAsync("PhieuCongNoPhaiThu", VuViec.Xem.GetDescription());
+
+        var result = await PhieuCongNoPhaiThuService.GetByIdAsync(id, MaDuAn);
+        if (result.Status && result.Data != null)
+        {
+            Record = (TongHopCongNoPhaiThuPaginDto)result.Data;
+
+            // ✅ FIX QUAN TRỌNG: tạo lại EditContext theo Record mới
+            editContext = new EditContext(Record);
+
+            InfoItems = new()
+        {
+            new() { Text="Mã phiếu", Value=Record.MaPhieu},
+            new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+            new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+        };
+        }
+        else
+        {
+            // không tìm thấy -> đá về list (optional nhưng nên có)
+            Nav.NavigateTo("/phieucongnophaithu", true);
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/phieucongnophaithu");
+    }
+
+    private async Task OnMaKHRecord(string maKH)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/khachhang/edit/" + maKH);
+    }
+
+    private async Task OnViewPDK(string maPhieuDK, string maCongViec)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/" + maCongViec + "/edit/" + maPhieuDK);
+    }
+
+    private async Task OnViewXNTT(string maPhieu)
+    {
+        await JS.InvokeVoidAsync(
+            "openInNewTab",
+            $"/phieuxacnhanthanhtoan/edit/{maPhieu}"
+        );
+    }
+}

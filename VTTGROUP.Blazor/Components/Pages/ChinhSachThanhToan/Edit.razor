@@ -1,0 +1,827 @@
+﻿@page "/chinhsachthanhtoan/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.ChinhSachThanhToan
+@using VTTGROUP.Domain.Model.PhieuDuyetGia
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject ChinhSachThanhToanService ChinhSachThanhToanService
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">CHÍNH SÁCH THANH TOÁN</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Tiến độ thanh toán đặt cọc</li>
+                        <li class="tab-item" data-id="3" id="linkTab3">Tiến độ thanh toán hợp đồng</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên chính sách <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="TenCSTT" name="TenCSTT" type="text" @bind="@Record.TenCSTT">
+                                    <span class="error-validation">Vui lòng nhập tên chính sách thanh toán</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tỷ lệ chiết khấu <i class="point-validate">*</i></span>
+                                    <input id="TyLeChietKhau" class="input-form input-validation text-right" type="text" @bind-value="Record.TyLeChietKhau">
+                                    <span class="error-validation">Vui lòng nhập tỷ lệ chiết khấu</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nội dung</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="button-action-title" style="margin-left: 0;">
+                                <div class="icon-button" @onclick="AddChinhSachThanhToan">
+                                    <i class="mdi mdi-playlist-plus"></i>
+                                </div>
+                                <span>Tiến độ</span>
+                            </div>
+                            <div style="margin-left: auto; display: flex; align-items: center;">
+                            </div>
+                        </div>
+                        <table class="tbl table table-hover table-form table-detail" id="tblNhanViens">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="text-align: center;width:70px">STT</th>
+                                    <th rowspan="2" style="text-align: center;width:70px">Đợt TT</th>
+                                    <th rowspan="2" style="text-align: center;width:100px">Giai Đoạn TT</th>
+                                    <th rowspan="2" style="text-align: center;width:200px">Nội Dung Thanh Toán</th>
+                                    <th colspan="2" style="text-align: center;">Khoảng Cách Ngày</th>
+                                    <th colspan="3" style="text-align: center;">Đặt Cọc</th>
+                                    <th rowspan="2" style="text-align: center;width:70px"></th>
+                                </tr>
+                                <tr>
+                                    <th style="text-align: center;width:100px">Số Ngày</th>
+                                    <th style="text-align: center;width:100px">Đợt tham chiếu</th>
+                                    <th style="text-align: center;width:100px">Tỷ Lệ TT</th>
+                                    <th style="text-align: center;width:100px">Tỷ Lệ VAT</th>
+                                    <th style="text-align: center;width:100px">Công Nợ Phải Thu</th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (Record.ListChinhSachThanhToan != null && Record.ListChinhSachThanhToan.Any() == true)
+                                {
+                                    var i = 0;
+                                    foreach (var item in Record.ListChinhSachThanhToan)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                @(i + 1)
+                                            </td>
+                                            <td>
+                                                <input class="form-control input-form input-validation text-right currency-input"
+                                                       type="text"
+                                                       value="@item.DotTT"
+                                                       @onchange="e => OnDotTTChanged(e, item)" />
+                                            </td>
+                                            <td>
+                                                <select style="width:100%" id="MaKyTT_@i" class="form-control" @onchange="e => OnKyThanhToanChanged(e, item)">
+                                                    @foreach (var option in ListKTT)
+                                                    {
+                                                        <option value="@option.MaKyTt" selected="@(option.MaKyTt == item.MaKyTT)">
+                                                            @option.TenKyTt
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td><InputText @bind-Value="item.NoiDungTT" class="form-control input-validation" /></td>
+                                            <td>
+                                                <input id="SoKhoangCachNgay@(i)" name="SoKhoangCachNgay" class="form-control input-form input-validation text-right currency-input" type="text" @bind-value="item.SoKhoangCachNgay">
+                                            </td>
+                                            <td>
+                                                <select class="form-control input-validation"
+                                                        @bind="item.DotThamChieu">
+                                                    <option value="">Chọn</option>
+                                                    @foreach (var dot in DotTTHienTai)
+                                                    {
+                                                        <option value="@dot">@dot</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input id="TyLeTTDatCoc@(i)" name="TyLeTTDatCoc" class="form-control input-form input-validation text-right currency-input" type="text" @bind-value="item.TyLeTTDatCoc">
+                                            </td>
+                                            <td>
+                                                <input id="TyLeTTVAT@(i)" name="TyLeTTVAT" class="form-control input-form input-validation text-right currency-input" type="text" @bind-value="item.TyLeTTVAT">
+                                            </td>
+                                            <td style="text-align:center">
+                                                <label class="custom-checkbox">
+                                                    <input id="IsCongNoDC@(i)" name="IsCongNoDC" type="checkbox" @bind="item.IsCongNoDC" />
+                                                    <span class="checkmark"></span>
+                                                </label>
+                                            </td>
+                                            <td style="text-align:center">
+                                                <div class="icon-button" data-title="Xóa" data-position="left">
+                                                    <a href="javascript:void(0)" @onclick="() => DeleteRow(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        i++;
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div data-id="3" class="tab-content-item" id="tab3">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="button-action-title" style="margin-left: 0;">
+                                <div class="icon-button" @onclick="AddChinhSachThanhToanHD">
+                                    <i class="mdi mdi-playlist-plus"></i>
+                                </div>
+                                <span>Tiến độ</span>
+                            </div>
+                            <div style="margin-left: auto; display: flex; align-items: center;">
+                            </div>
+                        </div>
+                        <table class="tbl table table-hover table-form table-detail" id="tblNhanViens">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="text-align: center;width:70px">STT</th>
+                                    <th rowspan="2" style="text-align: center;width:70px">Đợt TT</th>
+                                    <th rowspan="2" style="text-align: center;width:100px">Giai Đoạn TT</th>
+                                    <th rowspan="2" style="text-align: center;width:200px">Nội Dung Thanh Toán</th>
+                                    <th colspan="2" style="text-align: center;">Khoảng Cách Ngày</th>
+                                    <th colspan="3" style="text-align: center;">Hợp Đồng</th>
+                                    <th colspan="3" style="text-align: center;">Cấn trừ đặt cọc</th>
+                                    <th rowspan="2" style="text-align: center;width:70px"></th>
+                                </tr>
+                                <tr>
+                                    <th style="text-align: center;width:100px">Số Ngày</th>
+                                    <th style="text-align: center;width:100px">Đợt tham chiếu</th>
+                                    <th style="text-align: center;width:100px">Tỷ Lệ TT</th>
+                                    <th style="text-align: center;width:100px">Tỷ Lệ VAT</th>
+                                    <th style="text-align: center;width:100px">Công Nợ Phải Thu</th>
+                                    <th style="text-align: center;width:100px">Đợt đặt cọc</th>
+                                    <th style="text-align: center;width:100px">Tỷ lệ đặt cọc</th>
+                                    <th style="text-align: center;width:50px"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @{
+                                    var hdList = Record.ListChinhSachThanhToanHD?.OrderBy(x => x.DotTT).ToList()
+                                    ?? new List<ChinhSachThanhToanHopDongChiTietModel>();
+
+                                    var mapList = Record.ListChinhSachHopDongCanTruDatCoc
+                                    ?? new List<ChinhSachThanhToanHopDongChiTietCanTruDatCoc>();
+                                }
+
+                                @if (hdList.Any())
+                                {
+                                    for (var i = 0; i < hdList.Count; i++)
+                                    {
+                                        var hd = hdList[i];
+
+                                        // list cấn trừ theo đợt HĐ
+                                        var sub = mapList
+                                        .Where(x => x.DotTTHD == hd.DotTT)
+                                        .OrderBy(x => x.DotTTDC)
+                                        .ToList();
+
+                                        // nếu chưa có cấn trừ thì vẫn render 1 dòng trống (để giống hình 2)
+                                        if (sub.Count == 0)
+                                        {
+                                            sub.Add(new ChinhSachThanhToanHopDongChiTietCanTruDatCoc
+                                            {
+                                                MaCSTT = hd.MaCSTT,
+                                                DotTTHD = hd.DotTT,
+                                                DotTTDC = 0,
+                                                TyLeTTDC = 0
+                                            });
+                                        }
+
+                                        var rowspan = sub.Count;
+
+                                        for (var j = 0; j < sub.Count; j++)
+                                        {
+                                            var ct = sub[j];
+
+                                            <tr @key="(hd.DotTT, j)">
+                                                @* ====== MERGE CÁC CỘT TRÁI ====== *@
+                                                @if (j == 0)
+                                                {
+                                                    <td class="text-center" rowspan="@rowspan">@(i + 1)</td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <input class="form-control input-form input-validation text-right currency-input"
+                                                               type="text"
+                                                               value="@hd.DotTT"
+                                                               @onchange="e => OnDotTTHDChanged(e, hd)" />
+                                                    </td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <select style="width:100%" id="MaKyTTHD_@i" class="form-control"
+                                                                @onchange="e => OnKyThanhToanHDChanged(e, hd)">
+                                                            @foreach (var option in ListKTT)
+                                                            {
+                                                                <option value="@option.MaKyTt" selected="@(option.MaKyTt == hd.MaKyTT)">
+                                                                    @option.TenKyTt
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <InputText @bind-Value="hd.NoiDungTT" class="form-control input-validation" />
+                                                    </td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <input id="SoKhoangCachNgayHD@(i)"
+                                                               class="form-control input-form input-validation text-right currency-input"
+                                                               type="text" @bind-value="hd.SoKhoangCachNgay">
+                                                    </td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <select class="form-control input-validation" @bind="hd.DotThamChieu">
+                                                            <option value="">Chọn</option>
+                                                            @foreach (var dot in DotTTHienTaiHD)
+                                                            {
+                                                                <option value="@dot">@dot</option>
+                                                            }
+                                                        </select>
+                                                    </td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <input id="TyLeTTHopDong@(i)"
+                                                               class="form-control input-form input-validation text-right currency-input"
+                                                               type="text" @bind-value="hd.TyLeTTHopDong">
+                                                    </td>
+
+                                                    <td rowspan="@rowspan">
+                                                        <input id="TyLeTTVATHD@(i)"
+                                                               class="form-control input-form input-validation text-right currency-input"
+                                                               type="text" @bind-value="hd.TyLeTTVAT">
+                                                    </td>
+
+                                                    <td style="text-align:center" rowspan="@rowspan">
+                                                        <label class="custom-checkbox">
+                                                            <input id="IsCongNoHD@(i)" type="checkbox" @bind="hd.IsCongNoHD" />
+                                                            <span class="checkmark"></span>
+                                                        </label>
+                                                    </td>
+                                                }
+
+                                                @* ====== CẤN TRỪ ĐẶT CỌC (KHÔNG MERGE) ====== *@
+                                                <td>
+                                                    @ct.NoiDungTTDC
+                                                </td>
+
+                                                <td style="text-align:center">
+                                                    @ct.TyLeTTDC
+                                                </td>
+
+                                                @* nút + / x cho dòng cấn trừ *@
+                                                <td class="text-center" style="width:50px">
+                                                    @if (ct.DotTTDC > 0)
+                                                    {
+                                                        <div class="icon-button" data-title="Xóa dòng cấn trừ" data-position="left">
+                                                            <a href="javascript:void(0)" @onclick="() => RemoveCanTruRow(ct)">
+                                                                <span><i class="mdi mdi-delete"></i></span>
+                                                            </a>
+                                                        </div>
+                                                    }
+                                                </td>
+
+                                                @* ====== CỘT XÓA DÒNG HĐ (MERGE) ====== *@
+                                                @if (j == 0)
+                                                {
+                                                    <td style="text-align:center;width:70px; vertical-align: middle" rowspan="@rowspan">
+                                                        <div class="td-actions__wrap">
+                                                            <div class="cell-with-icon">
+                                                                <button type="button"
+                                                                        class="icon-button icon-inline"
+                                                                        title="Thêm đợt đặt cọc cấn trừ"
+                                                                        @onclick="() => AddCanTruRow(hd)">
+                                                                    <i class="mdi mdi-plus-circle-outline"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="icon-button" data-title="Xóa" data-position="left">
+                                                                <a href="javascript:void(0)" @onclick="() => DeleteRowHD(hd)">
+                                                                    <span><i class="mdi mdi-delete"></i></span>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    }
+                                }
+                            </tbody>
+
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupCanTruTamUng @ref="phieuCanTruDCModalRef" OnSelected="SelectedCanTruDC" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private ChinhSachThanhToanModel? Record = new();
+    private List<DaDanhMucTienDoKyThanhToan> ListKTT = new();
+    private List<int> DotTTHienTai = new(); // ✅ Danh sách các DotTT hiện có
+    private List<int> DotTTHienTaiHD = new(); // ✅ Danh sách các DotTTHD hiện có
+    private List<InfoItem> InfoItems = new();
+    private PopupCanTruTamUng? phieuCanTruDCModalRef;
+    private ChinhSachThanhToanHopDongChiTietModel? _hdPickingCanTru;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("ChinhSachThanhToan", VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "TyLeChietKhau", 18, 2);
+
+            var result = await ChinhSachThanhToanService.FindGetByPhieuAsync(id);
+            if (result.Status)
+            {
+                Record = (ChinhSachThanhToanModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaCSTT},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+                if (Record.ListChinhSachThanhToan == null)
+                {
+                    Record.ListChinhSachThanhToan = new();
+                }
+                ListKTT = await ChinhSachThanhToanService.GetByTienDoKyThanhToanAsync(Record.MaDuAn ?? string.Empty);
+            }
+            else
+            {
+                Record = new ChinhSachThanhToanModel();
+                Record.ListChinhSachThanhToan = new();
+            }
+            CapNhatDanhSachDotTT();
+            CapNhatDanhSachDotTTHD();
+            await ReapplyCurrencyFormat();
+            StateHasChanged();
+            await InitAllSelect2Async();
+            await InitAllSelect2HDAsync();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        if (!IsDotThamChieuHopLe())
+        {
+            // Có lỗi → dừng không lưu
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Giá trị của các đợt tham chiếu phải nằm trong các đợt thanh toán đặt cọc", false);
+            return;
+        }
+        if (!IsDotThamChieuHopLeHD())
+        {
+            // Có lỗi → dừng không lưu
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Giá trị của các đợt tham chiếu phải nằm trong các đợt thanh toán hợp đồng", false);
+            return;
+        }
+        var result = await ChinhSachThanhToanService.UpdateByIdAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    public async Task AddChinhSachThanhToan()
+    {
+        int? nextDotTT = Record?.ListChinhSachThanhToan?.Count + 1; // Tăng theo số dòng
+        Record?.ListChinhSachThanhToan?.Add(new ChinhSachThanhToanChiTietModel
+        {
+            DotTT = nextDotTT ?? 1
+        });
+        await ReapplyCurrencyFormat();
+        CapNhatDanhSachDotTT();
+        StateHasChanged();
+        await InitAllSelect2Async();
+    }
+    private async Task DeleteRow(ChinhSachThanhToanChiTietModel? item)
+    {
+        Record?.ListChinhSachThanhToan?.Remove(item);
+        RecalculateDotTT();
+        CapNhatDanhSachDotTT();
+        // Kiểm tra lại các đợt tham chiếu
+        foreach (var itemCT in Record.ListChinhSachThanhToan)
+        {
+            if (!DotTTHienTai.Contains(itemCT.DotThamChieu))
+            {
+                itemCT.DotThamChieu = itemCT.DotTT;
+                //JS.InvokeVoidAsync("showToast", "Lỗi", $"Đợt tham chiếu không còn hợp lệ, đã reset về 0", "error");
+            }
+        }
+        StateHasChanged();
+    }
+
+    public async Task AddChinhSachThanhToanHD()
+    {
+        int? nextDotTT = Record?.ListChinhSachThanhToanHD?.Count + 1; // Tăng theo số dòng
+        Record?.ListChinhSachThanhToanHD?.Add(new ChinhSachThanhToanHopDongChiTietModel
+        {
+            DotTT = nextDotTT ?? 1
+        });
+        await ReapplyCurrencyFormat();
+        CapNhatDanhSachDotTTHD();
+        StateHasChanged();
+        await InitAllSelect2HDAsync();
+    }
+
+    private async Task DeleteRowHD(ChinhSachThanhToanHopDongChiTietModel? item)
+    {
+        Record?.ListChinhSachThanhToanHD?.Remove(item);
+        RecalculateDotTTHD();
+        CapNhatDanhSachDotTTHD();
+        // Kiểm tra lại các đợt tham chiếu
+        foreach (var itemCT in Record.ListChinhSachThanhToanHD)
+        {
+            if (!DotTTHienTaiHD.Contains(itemCT.DotThamChieu))
+            {
+                itemCT.DotThamChieu = itemCT.DotTT;
+                //JS.InvokeVoidAsync("showToast", "Lỗi", $"Đợt tham chiếu không còn hợp lệ, đã reset về 0", "error");
+            }
+        }
+        StateHasChanged();
+    }
+
+    //Reset lại đợt thanh toán
+    private void RecalculateDotTT()
+    {
+        for (int i = 0; i < Record?.ListChinhSachThanhToan?.Count; i++)
+        {
+            Record.ListChinhSachThanhToan[i].DotTT = i + 1;
+        }
+    }
+
+    //Reset lại đợt thanh toán
+    private void RecalculateDotTTHD()
+    {
+        for (int i = 0; i < Record?.ListChinhSachThanhToanHD?.Count; i++)
+        {
+            Record.ListChinhSachThanhToanHD[i].DotTT = i + 1;
+        }
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        ListKTT = await ChinhSachThanhToanService.GetByTienDoKyThanhToanAsync(Record.MaDuAn ?? string.Empty);
+        // 👉 Reset bảng chính sách thanh toán
+        Record.ListChinhSachThanhToan?.Clear();
+        Record.ListChinhSachThanhToanHD?.Clear();
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/chinhsachthanhtoan");
+    }
+
+    //Format định dạng số thập phân
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 2);
+    }
+
+    private async Task InitAllSelect2Async()
+    {
+        for (int i = 0; i < Record?.ListChinhSachThanhToan?.Count; i++)
+        {
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", $"MaKyTT_{i}", "Chọn kỳ thanh toán", true);
+        }
+    }
+
+    private async Task InitAllSelect2HDAsync()
+    {
+        for (int i = 0; i < Record?.ListChinhSachThanhToanHD?.Count; i++)
+        {
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", $"MaKyTTHD_{i}", "Chọn kỳ thanh toán", true);
+        }
+    }
+
+    private void OnKyThanhToanChanged(ChangeEventArgs e, ChinhSachThanhToanChiTietModel item)
+    {
+        var selectedValue = e.Value?.ToString();
+        item.MaKyTT = selectedValue;
+        var selected = ListKTT.FirstOrDefault(x => x.MaKyTt == selectedValue);
+        if (selected != null)
+        {
+            item.TenKyTT = selected.TenKyTt;
+        }
+    }
+
+    private void OnKyThanhToanHDChanged(ChangeEventArgs e, ChinhSachThanhToanHopDongChiTietModel item)
+    {
+        var selectedValue = e.Value?.ToString();
+        item.MaKyTT = selectedValue;
+        var selected = ListKTT.FirstOrDefault(x => x.MaKyTt == selectedValue);
+        if (selected != null)
+        {
+            item.TenKyTT = selected.TenKyTt;
+        }
+    }
+
+    private void CapNhatDanhSachDotTT()
+    {
+        DotTTHienTai = Record.ListChinhSachThanhToan
+            .Where(x => x.DotTT > 0)
+            .Select(x => x.DotTT)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    private void CapNhatDanhSachDotTTHD()
+    {
+        DotTTHienTaiHD = Record.ListChinhSachThanhToanHD
+            .Where(x => x.DotTT > 0)
+            .Select(x => x.DotTT)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    private void OnDotTTChanged(ChangeEventArgs e, ChinhSachThanhToanChiTietModel item)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            item.DotTT = value;
+            CapNhatDanhSachDotTT(); // Cập nhật danh sách các đợt thanh toán
+        }
+    }
+
+    private void OnDotTTHDChanged(ChangeEventArgs e, ChinhSachThanhToanHopDongChiTietModel item)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            item.DotTT = value;
+            CapNhatDanhSachDotTTHD(); // Cập nhật danh sách các đợt thanh toán
+        }
+    }
+
+    private bool IsDotThamChieuHopLe()
+    {
+        var listDotTT = Record.ListChinhSachThanhToan
+                             .Select(x => x.DotTT)
+                             .Distinct()
+                             .ToHashSet();
+
+        bool hasError = false;
+
+        foreach (var item in Record.ListChinhSachThanhToan)
+        {
+            if (!listDotTT.Contains(item.DotThamChieu))
+            {
+                item.IsDotThamChieuInvalid = true; // Gắn cờ lỗi
+                hasError = true;
+                // _ = JS.InvokeVoidAsync("showToast", "Lỗi", $"Đợt tham chiếu {item.DotThamChieu} không hợp lệ!", "error");
+            }
+            else
+            {
+                item.IsDotThamChieuInvalid = false;
+            }
+        }
+
+        return !hasError;
+    }
+
+    private bool IsDotThamChieuHopLeHD()
+    {
+        var listDotTT = Record.ListChinhSachThanhToanHD
+                             .Select(x => x.DotTT)
+                             .Distinct()
+                             .ToHashSet();
+
+        bool hasError = false;
+
+        foreach (var item in Record.ListChinhSachThanhToanHD)
+        {
+            if (!listDotTT.Contains(item.DotThamChieu))
+            {
+                item.IsDotThamChieuInvalid = true; // Gắn cờ lỗi
+                hasError = true;
+                // _ = JS.InvokeVoidAsync("showToast", "Lỗi", $"Đợt tham chiếu {item.DotThamChieu} không hợp lệ!", "error");
+            }
+            else
+            {
+                item.IsDotThamChieuInvalid = false;
+            }
+        }
+
+        return !hasError;
+    }
+
+    private async Task AddCanTruRow(ChinhSachThanhToanHopDongChiTietModel hd)
+    {
+        _hdPickingCanTru = hd;
+
+        // ✅ lấy tất cả DotTTDC đã cấn trừ trên toàn CSTT (không cho chọn lại)
+        var usedDots = (Record.ListChinhSachHopDongCanTruDatCoc ?? new List<ChinhSachThanhToanHopDongChiTietCanTruDatCoc>())
+            .Where(x => x.DotTTDC > 0)
+            .Select(x => x.DotTTDC)
+            .Distinct()
+            .ToList();
+
+        await phieuCanTruDCModalRef?.Show(Record.MaCSTT, hd.DotTT, hd.NoiDungTT, usedDots)!;
+        // await phieuCanTruDCModalRef?.Show(Record.MaCSTT, hd.DotTT,hd.NoiDungTT);
+    }
+
+    private void RemoveCanTruRow(ChinhSachThanhToanHopDongChiTietCanTruDatCoc row)
+    {
+        Record.ListChinhSachHopDongCanTruDatCoc?.Remove(row);
+    }
+
+    private async Task SelectedCanTruDC(List<ChinhSachThanhToanChiTietModel>? selected)
+    {
+        if (_hdPickingCanTru is null) return;
+        if (selected is null || selected.Count == 0) return;
+
+        var hd = _hdPickingCanTru;
+
+        Record.ListChinhSachHopDongCanTruDatCoc ??= new List<ChinhSachThanhToanHopDongChiTietCanTruDatCoc>();
+
+        // ✅ xoá placeholder trống của đợt HĐ này
+        Record.ListChinhSachHopDongCanTruDatCoc.RemoveAll(x =>
+            x.DotTTHD == hd.DotTT && x.DotTTDC <= 0);
+
+        // ✅ tập DotTTDC đã dùng toàn CSTT
+        var usedDots = Record.ListChinhSachHopDongCanTruDatCoc
+            .Where(x => x.DotTTDC > 0)
+            .Select(x => x.DotTTDC)
+            .ToHashSet();
+
+        var added = 0;
+        var skippedUsed = 0;
+        var skippedOver = new List<int>(); // các dot bị vượt %
+
+        // ✅ distinct theo DotTT (đợt đặt cọc)
+        var pickList = selected
+            .Where(x => x.DotTT > 0)
+            .GroupBy(x => x.DotTT)
+            .Select(g => g.First())
+            .OrderBy(x => x.DotTT)
+            .ToList();
+
+        foreach (var dc in pickList)
+        {
+            // 1) đã dùng rồi => skip
+            if (usedDots.Contains(dc.DotTT))
+            {
+                skippedUsed++;
+                continue;
+            }
+
+            // 2) check vượt % hợp đồng => không cho add
+            var percent = (decimal)(dc.TyLeTTDatCoc ?? 0);
+            if (!CanAddCanTruPercent(hd, percent))
+            {
+                skippedOver.Add(dc.DotTT);
+                continue;
+            }
+
+            // 3) add đúng tỷ lệ DB (không sửa)
+            Record.ListChinhSachHopDongCanTruDatCoc.Add(new ChinhSachThanhToanHopDongChiTietCanTruDatCoc
+            {
+                MaCSTT = Record.MaCSTT ?? string.Empty,
+
+                DotTTHD = hd.DotTT,
+                NoiDungTTHD = hd.NoiDungTT,
+                TyLeTTHD = hd.TyLeTTHopDong,
+
+                DotTTDC = dc.DotTT,
+                NoiDungTTDC = dc.NoiDungTT,
+                TyLeTTDC = dc.TyLeTTDatCoc ?? 0
+            });
+
+            usedDots.Add(dc.DotTT);
+            added++;
+        }
+
+        // Toast thông báo
+        if (skippedUsed > 0)
+            await JS.InvokeVoidAsync("showToast", "Thông báo",
+                $"Có {skippedUsed} đợt đặt cọc đã được cấn trừ trước đó nên không thể chọn lại.", false);
+
+        if (skippedOver.Count > 0)
+            await JS.InvokeVoidAsync("showToast", "Thông báo",
+                $"Không thể thêm các đợt: {string.Join(", ", skippedOver.Select(x => $"Đợt {x}"))} vì tổng tỷ lệ cấn trừ vượt tỷ lệ hợp đồng.", false);
+
+        if (added > 0)
+            await JS.InvokeVoidAsync("showToast", "Thông báo",
+                $"Đã thêm {added} đợt đặt cọc vào đợt HĐ {hd.DotTT}.", true);
+
+        StateHasChanged();
+    }
+
+    private bool CanAddCanTruPercent(ChinhSachThanhToanHopDongChiTietModel hd, decimal newPercent)
+    {
+        if (Record.ListChinhSachHopDongCanTruDatCoc is null) return newPercent <= (decimal)(hd.TyLeTTHopDong ?? 0);
+
+        var max = (decimal)(hd.TyLeTTHopDong ?? 0);
+
+        var currentSum = Record.ListChinhSachHopDongCanTruDatCoc
+            .Where(x => x.DotTTHD == hd.DotTT && x.DotTTDC > 0)
+            .Sum(x => x.TyLeTTDC ?? 0);
+
+        return currentSum + newPercent <= max;
+    }
+}
+
+<style>
+    table thead th {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .td-actions__wrap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px; /* khoảng cách 2 icon */
+        white-space: nowrap; /* không xuống dòng */
+    }
+
+        /* cell-with-icon của bạn đang justify-content: space-between; -> đổi lại cho cột icon */
+        .td-actions__wrap .cell-with-icon {
+            width: auto; /* bỏ 100% */
+            justify-content: center; /* không đẩy trái-phải nữa */
+        }
+
+        /* div icon-button mặc định hay là block -> cho nó inline-flex */
+        .td-actions__wrap .icon-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+    /* icon-inline vẫn giữ như trước */
+    .icon-button.icon-inline {
+        padding: 0 3px;
+    }
+
+        .icon-button.icon-inline i {
+            font-size: 22px;
+        }
+</style>

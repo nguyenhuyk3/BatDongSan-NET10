@@ -1,0 +1,595 @@
+﻿@inherits LayoutComponentBase
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using System.Text
+@using Microsoft.AspNetCore.Components.Sections
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Menu
+@using VTTGROUP.Domain.Entities
+@using VTTGROUP.Blazor.Services.Auth
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Infrastructure.Services
+@inject IAuthorizationService AuthService
+@inject ICurrentUserService CurrentUser
+@inject IBaseService BaseService
+@inject NavigationManager Nav
+
+<div class="h-screen app-screen">
+	<!-- Main content -->
+	<div class="flex-1 main-layout">
+		<header class="bg-white header-layout d-flex align-items-center position-relative p-3">
+			<div class="left-sidebar wapper-main-menu">
+				<div class="wapper-logo-sys gap-3 px-4">
+					<div class="icon-nav icon-show-nav @showMenu" @onclick="ToggleMenu">
+						<i class="mdi mdi-menu"></i>
+					</div>
+					<a title="Trở về trang chủ" style="text-decoration: none" href="/dashboard">
+						<img src="../assets/images/logo.png" alt="Logo" class="w-32" />
+					</a>					
+				</div>
+			</div>
+			<div class="flex items-center justify-end gap-3 ml-auto mr-3">
+				@* <button class="w-9 h-9 rounded-lg border text-gray-500 hover:bg-gray-100 flex items-center justify-center">
+					<i class="bi bi-arrows-fullscreen"></i>
+				</button> *@
+				<div class="relative">
+					<button class="w-9 h-9 rounded-lg border text-gray-500 hover:bg-gray-100 flex items-center justify-center"
+							@onclick="@(() => ToggleDropdown("notification"))">
+						<i class="bi bi-bell"></i>
+						@if (listCongViec.Any())
+						{
+							<span class="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500 animate-ping"></span>
+							<span class="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500 count-congviec">@(pendingCount > 9 ? $"9+" : $"{pendingCount}")</span>
+						}
+					</button>
+					@if (OpenDropdown == "notification")
+					{
+						<div id="notification-dropdown" class="dropdown-popup absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border animate-slide-up">
+							<div class="flex items-center justify-between p-3 border-b">
+								<h3 class="font-semibold text-gray-800">Thông báo</h3>
+								<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">@pendingCount</span>
+							</div>
+
+							<div class="max-h-80 overflow-y-auto divide-y">
+								@if (listCongViec != null && listCongViec.Any())
+								{
+									foreach (var item in listCongViec)
+									{
+										<div class="item-phieu-duyet flex items-center gap-3 py-2 pl-4 pr-4 hover:bg-gray-50" @onclick="@(() => OnGotoPhieuDuyet(item))">
+											@if (item.IsPhieuBiTraLai == true)
+											{
+												<span class="icon-notification is-tra-lai w-8 h-8 rounded-full object-cover"><i class="mdi mdi-replay"></i></span>
+											}
+											else
+											{
+												<span class="icon-notification w-8 h-8 rounded-full object-cover"><i class="bi bi-send-check"></i></span>
+											}
+
+											<div class="flex-1">
+												<p class="font-medium text-sm text-gray-800">@($"[{item.MaPhieu}] {item.TenCongViec}")</p>
+												<p class="text-xs text-gray-500">@((MarkupString)item.GhiChu)</p>
+												<p class="text-xs text-gray-400 mt-1">@item.NgayDuyet?.ToString("dd/MM/yyyy HH:mm")</p>
+											</div>
+											@* <button class="text-gray-400 hover:text-gray-600 text-sm">✕</button> *@
+										</div>
+									}
+								}
+								else
+								{
+									<div class="item-phieu-duyet flex items-center gap-3 py-2 pl-4 pr-4">
+										<span class="icon-notification w-8 h-8 rounded-full object-cover"><i class="bi bi-bell-slash-fill"></i></span>
+										<div class="flex-1">
+											<p class="font-medium text-sm text-gray-800">Hiện tại không có công việc nào.</p>
+										</div>
+									</div>
+								}
+							</div>
+							@if (pendingCount > 0)
+							{
+								<div class="p-3 border-t">
+									<button class="w-full text-white py-2 rounded-md text-sm font-medium btn-viewall-notifications" @onclick="GotoListCongViec">
+										Xem tất cả
+									</button>
+								</div>
+							}
+						</div>
+					}
+				</div>
+				<div class="relative" id="user-dropdown-wrapper">
+					<button class="w-9 h-9 rounded-lg border text-gray-500 hover:bg-gray-100 flex items-center justify-center"
+							@onclick="@(() => ToggleDropdown("user"))">
+						<i class="bi bi-person"></i>
+					</button>
+					@if (OpenDropdown == "user")
+					{
+						<div id="user-dropdown"
+							 class="dropdown-popup absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg animate-slide-up border text-gray-700">
+							<div class="px-2 pt-3 pb-2 text-center border-b">
+								<p class="font-bold">@user?.HoVaTen</p>
+								<p class="text-sm text-gray-400">@user?.ChucVu</p>
+							</div>
+
+							<ul class="divide-y">
+								@foreach (var item in MenuItems)
+								{
+									<li class="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer">
+										<div class="flex items-center gap-3">
+											<i class="@item.Icon text-purple-500"></i>
+											<span>@item.Title</span>
+										</div>
+										@if (!string.IsNullOrEmpty(item.Badge))
+										{
+											<span class="bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+												@item.Badge
+											</span>
+										}
+									</li>
+								}
+								<li class="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer" @onclick="ChangePassword">
+									<div class="flex items-center gap-3">
+										<i class="bi bi-lock text-purple-500"></i>
+										<span>Đổi mật khẩu</span>
+									</div>
+								</li>
+							</ul>
+
+							<div class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 border-t cursor-pointer text-red-500" @onclick="LogOut">
+								<i class="bi bi-box-arrow-right"></i> Đăng xuất
+							</div>
+						</div>
+					}
+
+				</div>
+				@* <button class="w-9 h-9 rounded-lg border text-gray-500 hover:bg-gray-100 flex items-center justify-center">
+					<i class="bi bi-gear"></i>
+				</button> *@
+			</div>
+			<div id="legend-title-outlet" class="legend-title-header"></div>
+		</header>
+		<main class="py-4 px-8 main-body @showMenu">@Body</main>
+		@* <footer class="p-4 bg-white footer-layout">Copyright @DateTime.Now.Year</footer> *@
+	</div>
+</div>
+<div class="container-sidebar-open @showMenu">
+	<aside class="w-70 bg-white shadow-md relative left-sidebar wapper-main-menu">
+		<div class="wapper-logo-sys gap-3 px-4 py-4">
+			<div class="icon-nav icon-show-nav @showMenu" @onclick="ToggleMenu">
+				<i class="mdi mdi-menu"></i>
+			</div>
+			<a title="Trở về trang chủ" style="text-decoration: none" href="/dashboard">
+				<img src="../assets/images/logo.png" alt="Logo" class="w-32" />
+			</a>			
+		</div>
+		<div class="container-search-main pt-3 pb-3">
+			<div class="wapper-input-search-main">
+				<i class="mdi mdi-magnify button-search-main"></i>
+				<input type="text" class="input-form" placeholder="Tìm kiếm..." id="text-search-main">				
+			</div>
+		</div>
+		<div class="jqueryslidemenu" id="jqueryslidemenu">
+			<RecursiveSidebar Menus="menus" OnMenuClick="HandleMenuItemClicked" />
+		</div>
+	</aside>
+</div>
+<div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+	<div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="toast-header bg-success text-white">
+			<strong class="me-auto" id="toastTitle">Thông báo</strong>
+			<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+		</div>
+		<div class="toast-body" id="toastBody">
+		</div>
+	</div>
+</div>
+@if (isMenuVisible)
+{
+	<div class="sidebar-overlay" @onclick="ToggleMenu"></div>
+}
+@if (_showSessionPopup)
+{
+	<div class="session-token overlay"></div>
+	<div class="session-token session-popup">
+		<h3>Phiên làm việc sắp hết hạn, sẽ tự động đăng xuất sau <b>@_countdown</b> giây.</h3>
+		<p class="mt-2">Bạn có muốn tiếp tục không?</p>
+		<div class="buttons">
+			<button type="button" class="button button-action button-duyet-phieu" @onclick="ContinueSession">
+				Tiếp tục
+			</button>
+			<button type="button" class="button button-action button-huy" @onclick="ForceLogoutUI">
+				Thoát
+			</button>
+		</div>
+	</div>
+}
+<LoadingOverlay />
+@code {
+	private IJSObjectReference? _legendModule;
+	private bool _legendSubscribed;
+	private EventHandler<LocationChangedEventArgs>? _legendHandler;
+	private List<SystemMenu>? menus;
+	private string? OpenDropdown = null;
+	private DotNetObjectReference<MainLayout>? dotNetRef;
+	private NguoiLapModel? user;
+	private bool _checkedAuth = false;
+	private List<CongViecDuyetModel> listCongViec = new();
+	private List<CongViecDuyetModel> oldList = new();
+	private int pendingCount = 0;
+	private Timer? _logoutTimer;
+	private Timer? _warnTimer;
+	private bool _showSessionPopup = false;
+	private int _countdown = 10;
+	private Timer? _countdownTimer;
+	private async Task ToggleDropdown(string type)
+	{
+		if (OpenDropdown == type)
+			OpenDropdown = null;
+		else
+			OpenDropdown = type;
+		StateHasChanged();
+		await JS.InvokeVoidAsync("registerAllClickOutside", $"{type}-dropdown", dotNetRef);
+	}
+
+	public class UserMenuItem
+	{
+		public string Title { get; set; } = "";
+		public string Icon { get; set; } = "";
+		public string? Badge { get; set; }
+	}
+
+	private List<UserMenuItem> MenuItems = new()
+	{
+		// new UserMenuItem { Title = "Profile", Icon = "bi bi-person" },
+		// new UserMenuItem { Title = "Mail Inbox", Icon = "bi bi-envelope" },
+		// new UserMenuItem { Title = "File Manger", Icon = "bi bi-archive", Badge = "2" },
+		// new UserMenuItem { Title = "Settings", Icon = "bi bi-gear" },
+		// new UserMenuItem { Title = "Help", Icon = "bi bi-question-circle" }
+	};
+
+	[JSInvokable]
+	public void CloseAllDropdowns()
+	{
+		OpenDropdown = null;
+		StateHasChanged();
+	}
+
+	public void Dispose()
+	{
+		dotNetRef?.Dispose();
+	}
+
+	private bool _initialized = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+
+		// try
+		// {
+		//     if (!await AuthService.IsAuthenticatedAsync())
+		//     {
+		//          Nav.NavigateTo("/login", forceLoad: true);
+		//         return;
+		//     }
+
+		//     var token = await JS.InvokeAsync<string>("blazorGetCookie", "accessToken");
+		//     if (!string.IsNullOrEmpty(token))
+		//     {
+		//         Http.DefaultRequestHeaders.Authorization =
+		//             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+		//     }
+		//     menus = await Http.GetFromJsonAsync<List<SystemMenu>>("api/menu/tree");
+		// }
+		// catch (Exception ex)
+		// {
+		//     Console.WriteLine("Không load được menu: " + ex.Message);
+		// }
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		// if (firstRender && !_initialized)
+		// {
+		// 	var token = await JS.InvokeAsync<string>("blazorGetCookie", "accessToken");
+		// 	if (!string.IsNullOrEmpty(token))
+		// 	{
+		// 		CurrentUser.LoadFromToken(token);
+		// 		_initialized = true;
+		// 		user = await CurrentUser.GetThongTinNguoiLapAsync();
+
+		// 		StateHasChanged();
+		// 	}
+		// }
+		await InitLegendTitleAsync();
+		if (firstRender && !_checkedAuth)
+		{
+			try
+			{
+				if (!await AuthService.IsAuthenticatedAsync())
+				{
+					Nav.NavigateTo("/login", forceLoad: true);
+					return;
+				}
+
+				await CurrentUser.EnsureUserLoadedFromJSAsync(JS);
+				user = await CurrentUser.GetThongTinNguoiLapAsync();
+
+				var token = await JS.InvokeAsync<string>("blazorGetCookie", "accessToken");
+				if (!string.IsNullOrEmpty(token))
+				{
+					Http.DefaultRequestHeaders.Authorization =
+						new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+					// 🌲 Load menu
+					menus = await Http.GetFromJsonAsync<List<SystemMenu>>("api/menu/tree");
+
+					var exp = GetTokenExpiry(token);
+					if (exp.HasValue)
+						ScheduleLogout(exp.Value);
+
+				}
+				dotNetRef = DotNetObjectReference.Create(this);
+				await LoadListCongViecAsync();
+
+				await JS.InvokeVoidAsync("signalRInterop.init", dotNetRef, new { useJwt = false });
+
+				_checkedAuth = true;
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+			}
+		}
+	}
+
+	private async Task InitLegendTitleAsync()
+	{
+		_legendModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/legendTitle.js");
+		await _legendModule.InvokeVoidAsync("scanAndHoistLegendTitle", ".main-body", "#legend-title-outlet");
+		if (!_legendSubscribed)
+		{
+			_legendHandler = async (_, __) =>
+			{
+				try { await _legendModule!.InvokeVoidAsync("scanAndHoistLegendTitle", ".main-body", "#legend-title-outlet"); }
+				catch { }
+			};
+			Nav.LocationChanged += _legendHandler;
+			_legendSubscribed = true;
+		}
+	}
+	public async ValueTask DisposeAsync()
+	{
+		try { if (_legendModule is not null) await _legendModule.DisposeAsync(); } catch { }
+		if (_legendSubscribed && _legendHandler is not null)
+		{
+			try { Nav.LocationChanged -= _legendHandler; } catch { }
+		}
+	}
+
+	private bool isMenuVisible = false;
+
+	private string showMenu => isMenuVisible ? "clicked" : "";
+
+	private async Task ToggleMenu()
+	{
+		isMenuVisible = !isMenuVisible;
+		await JS.InvokeVoidAsync("menuHelper.toggleBodyClass", isMenuVisible);
+	}
+
+	private async Task HandleMenuItemClicked(string url)
+	{
+		isMenuVisible = false;
+		await InvokeAsync(async () =>
+		{
+
+			await JS.InvokeVoidAsync("menuHelper.closeSidebarOverlay");
+			await JS.InvokeVoidAsync("menuHelper.toggleBodyClass", false);
+		});
+		if (Nav.Uri != Nav.BaseUri + url.TrimStart('/'))
+		{
+			Nav.NavigateTo(url);
+		}
+	}
+	private async Task OnGotoPhieuDuyet(CongViecDuyetModel item)
+	{
+		var controller = item.TenController.ToLower();
+		var url = $"/{controller}/edit/{item.MaPhieu}";
+		Nav.NavigateTo(url, forceLoad: true);
+		OpenDropdown = null;
+		StateHasChanged();
+	}
+	private async Task GotoListCongViec()
+	{
+		var url = "user/process";
+		Nav.NavigateTo(url);
+		OpenDropdown = null;
+		StateHasChanged();
+	}
+	private async Task ChangePassword()
+	{
+		Nav.NavigateTo("/change-password");
+		OpenDropdown = null;
+	}
+	private async Task LoadListCongViecAsync()
+	{
+		try
+		{
+			// Gọi API hoặc gọi service nội bộ
+			listCongViec = await BaseService.GetDanhSachPhieuDuyet();
+			pendingCount = listCongViec.Count;
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"❌ LỖI khi load công việc: {ex.Message}");
+		}
+	}
+	[JSInvokable("ReloadListCongViec")]
+	public async Task ReloadListCongViec(string message)
+	{
+		var newList = await BaseService.GetDanhSachPhieuDuyet();
+		if (!IsSameList(newList, oldList))
+		{
+			listCongViec = newList;
+			oldList = newList;
+			pendingCount = newList.Count;
+			await JS.InvokeVoidAsync("showToast", "Thông báo", message, true);
+			StateHasChanged();
+		}
+	}
+
+	[JSInvokable]
+	public async Task ReloadCanHoList()
+	{
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public async Task OnForceLogout()
+	{
+		//await LogOut();
+	}
+
+	private bool IsSameList(List<CongViecDuyetModel> a, List<CongViecDuyetModel> b)
+	{
+		return a.Count == b.Count && !a.ExceptBy(b.Select(x => x.MaPhieu), x => x.MaPhieu).Any();
+	}
+
+	public class TokenResponse
+	{
+		public string? AccessToken { get; set; }
+		public string? RefreshToken { get; set; }
+	}
+
+	private async Task ContinueSession()
+	{
+		try
+		{
+			var refreshToken = await JS.InvokeAsync<string>("blazorGetCookie", "refreshToken");
+
+			if (!string.IsNullOrEmpty(refreshToken))
+			{
+				var response = await Http.PostAsJsonAsync("/api/auth/refresh", refreshToken);
+
+				if (response.IsSuccessStatusCode)
+				{
+					var token = await response.Content.ReadFromJsonAsync<TokenResponse>();
+					if (token != null && !string.IsNullOrEmpty(token.AccessToken))
+					{
+
+						await JS.InvokeVoidAsync("blazorSetCookie", "accessToken", token.AccessToken, 60 * 24 * 1);
+						await JS.InvokeVoidAsync("blazorSetCookie", "refreshToken", token.RefreshToken, 60 * 24 * 7);
+
+						Http.DefaultRequestHeaders.Authorization =
+							new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.AccessToken);
+
+						var exp = GetTokenExpiry(token.AccessToken);
+						if (exp.HasValue)
+							ScheduleLogout(exp.Value);
+
+						// đóng popup
+						_showSessionPopup = false;
+						_countdownTimer?.Dispose();
+						StateHasChanged();
+						return;
+					}
+				}
+			}
+
+			// Nếu fail -> logout
+			await ForceLogoutUI();
+		}
+		catch (Exception ex)
+		{
+			await ForceLogoutUI();
+		}
+	}
+
+
+	private DateTime? GetTokenExpiry(string accessToken)
+	{
+		try
+		{
+			var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+			var jwt = handler.ReadJwtToken(accessToken);
+			var exp = jwt.Claims.FirstOrDefault(c => c.Type == "exp")?.Value;
+			if (long.TryParse(exp, out var expUnix))
+				return DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+		}
+		catch { }
+		return null;
+	}
+
+	private void ScheduleLogout(DateTime exp)
+	{
+		var delay = exp - DateTime.UtcNow;
+		if (delay.TotalMilliseconds <= 0)
+		{
+			_ = InvokeAsync(ForceLogoutUI);
+			return;
+		}
+
+
+		var warnDelay = delay - TimeSpan.FromSeconds(10);
+		if (warnDelay.TotalMilliseconds > 0)
+		{
+			_warnTimer?.Dispose();
+			_warnTimer = new Timer(_ =>
+			{
+				_ = InvokeAsync(() =>
+				{
+					_countdown = 10;
+					_showSessionPopup = true;
+					StateHasChanged();
+					_countdownTimer?.Dispose();
+					_countdownTimer = new Timer(_ =>
+					{
+						_ = InvokeAsync(() =>
+						{
+							if (_countdown > 0)
+							{
+								_countdown--;
+								StateHasChanged();
+							}
+						});
+					}, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+				});
+			}, null, warnDelay, Timeout.InfiniteTimeSpan);
+		}
+
+		_logoutTimer?.Dispose();
+		_logoutTimer = new Timer(_ =>
+		{
+			_ = InvokeAsync(ForceLogoutUI);
+		}, null, delay, Timeout.InfiniteTimeSpan);
+	}
+
+	private async Task ForceLogoutUI()
+	{
+		try
+		{
+			// xoá cookie dùng blazorSetCookie (chắc ăn hơn eval)
+			await JS.InvokeVoidAsync("blazorSetCookie", "accessToken", "", 0);
+			await JS.InvokeVoidAsync("blazorSetCookie", "refreshToken", "", 0);
+		}
+		catch { }
+
+		Nav.NavigateTo("/login", forceLoad: true);
+	}
+
+	private async Task LogOut()
+	{
+		var refreshToken = await JS.InvokeAsync<string>("blazorGetCookie", "refreshToken");
+		if (!string.IsNullOrEmpty(refreshToken))
+		{
+			var result = await Http.PostAsJsonAsync("/api/auth/logout", refreshToken);
+			if (result.IsSuccessStatusCode)
+			{
+				await JS.InvokeVoidAsync("eval", @"
+					document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+					document.cookie = 'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+				");
+				Nav.NavigateTo("/login", forceLoad: true);
+				return;
+			}
+		}
+	}
+}

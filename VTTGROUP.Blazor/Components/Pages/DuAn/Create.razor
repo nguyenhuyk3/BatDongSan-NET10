@@ -1,0 +1,161 @@
+﻿@page "/duan/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.DuAn
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject DuAnService DuAnService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<PageTitle>Thêm mới dự án</PageTitle>
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Dự án</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    @*    <ul class="tab-element">
+                    <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                    <div class="line-bot-nav"></div>
+                    </ul> *@
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-8 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã dự án <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MaDuAn" id="MaDuAn" />
+                                    <span class="error-validation">Vui lòng nhập mã  dự án</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên dự án <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenDuAn" />
+                                    <span class="error-validation">Vui lòng nhập tên dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Địa chỉ <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.DiaChi" />
+                                    <span class="error-validation">Vui lòng nhập địa chỉ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tỉnh thành</span>
+                                    <InputText class="form-control" @bind-Value="Record.TinhThanh" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Xã phường</span>
+                                    <InputText class="form-control" @bind-Value="Record.XaPhuong" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trạng thái</span>
+                                    <select id="TrangThai" class="form-control" @bind="Record.TrangThai">
+                                        <option value="">-- Chọn trạng thái --</option>
+                                        <option value="1">Đang mở bán</option>
+                                        <option value="2">Sắp mở bán</option>
+                                        <option value="3">Đóng dự án</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input p-2" cols="20" @bind="Record.GhiChu" rows="5" tabindex="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="contatiner-upload-files">
+                            <FileUploader AllowExtensions="allowedExtensions"
+                                          MaxFileSize="10485760"
+                                          AllowMultiple="true"
+                                          OnFilesChanged="HandleFiles" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private DuAnModel? Record = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+
+    private string TrangThai { get; set; } = "0";
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("DMDuAn", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "TrangThai", "Chọn trạng thái", true);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaDuAn");
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await DuAnService.SaveDuAnAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/duan/edit/{Record.MaDuAn}");
+        }
+    }
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/duan");
+
+    }
+}

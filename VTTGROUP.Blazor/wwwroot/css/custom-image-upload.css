@@ -1,0 +1,126 @@
+﻿/* Layout: preview trái + upload box phải */
+.tang-image-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+/* Khung preview chung */
+.tang-image-preview {
+    width: 80px;
+    height: 60px;
+    border-radius: 6px;
+    border: 1px solid #e0e3ec;
+    background: #f8f9fb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative; /* để đặt nút X + download overlay */
+}
+
+    /* Khi KHÔNG có hình: ẩn khung nhưng vẫn giữ độ rộng cột */
+    .tang-image-preview.no-image {
+        visibility: hidden;
+        border: none;
+        background: transparent;
+    }
+
+/* Ảnh hiển thị */
+.tang-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+/* Ẩn 2 nút mặc định, chỉ hiện khi hover */
+.img-btn-close,
+.img-btn-download {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}
+
+.tang-image-preview:hover .img-btn-close,
+.tang-image-preview:hover .img-btn-download {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Xóa hình – nhỏ xíu */
+.img-btn-close {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff4b4b;
+    cursor: pointer;
+}
+
+    .img-btn-close i {
+        font-size: 16px; /* icon nhỏ lại */
+        line-height: 1;
+    }
+
+/* Nút tải về – vòng tròn vàng nhỏ xíu */
+.img-btn-download {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: #f4b000;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+    .img-btn-download i {
+        font-size: 12px; /* icon nhỏ */
+        line-height: 1;
+    }
+
+/* Ô upload bên phải */
+.tang-upload-box {
+    flex: 1;
+    min-height: 46px;
+    border-radius: 6px;
+    border: 1px dashed #d3d7e3;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #5d6473;
+    padding: 6px 10px;
+    text-align: center;
+    transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.tang-upload-icon {
+    font-size: 18px;
+    color: #f4b000;
+}
+
+.tang-upload-box:hover {
+    background: #fff7e3;
+    border-color: #f4b000;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}

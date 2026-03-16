@@ -1,0 +1,296 @@
+﻿@page "/view"
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.View
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Blazor.Components.CompChilds
+@inject ViewService ViewService
+@inject BlockService BlockService
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Danh sách view mặt khối</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-office-building-outline"
+                      Placeholder="Chọn dự án"
+                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                      @bind-Value="selectedMaDuAn"
+                      OnChange="OnDuAnChanged" />
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="View" OnClick="Insert" />
+                <button style="
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #EDAD0F;
+        padding: 0 12px;
+        border-radius: 8px;
+        height: 40px;
+        background-color: #FDF7E7;
+        color: #EDAD0F;
+        font-weight: 600;
+        font-size: 16px;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+    "
+                        title="Import"
+                        @onclick="Import">
+                    <i class="mdi mdi-cloud-upload"
+                       style="
+           color: #EDAD0F;
+           font-size: 16px;
+       ">
+                    </i>
+                    <span style="
+           color: #EDAD0F;
+           font-weight: 600;
+           font-size: 16px;
+           font-family: 'Inter', sans-serif;
+       ">
+                        Import
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+    </div>
+    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center">
+                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                        </th>
+                        <th style="width: 140px" class="text-center">Mã view</th>
+                        <th style="width: 200px" class="text-center">Tên view</th>
+                        <th style="width: 200px" class="text-center">Tên dự án</th>
+                     @*    <th style="width: 140px" class="text-center">Hệ số</th> *@
+                        <th style="width: 40px">&nbsp;</th>
+                    </tr>
+                </thead>
+
+                <tbody class="content-table">
+                    @if (ChiTietView != null && ChiTietView.Any())
+                    {
+                        foreach (var item in ChiTietView)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@item.IsSelected"
+                                           @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                </td>
+                                <td>
+                                    <span>
+                                        @item.MaView
+                                    </span>
+                                </td>
+                                <td>
+                                    <span>@item.TenView</span>
+                                </td>
+                                <td>
+                                    <span>@item.TenDuAn</span>
+                                </td>
+                                <td style="text-align:right;display:none">
+                                    @string.Format("{0:#,#0.####}", item.HeSoView ?? 0)
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center flex-column">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => OnEditRecord(item.MaView!)">
+                                                <span><i class="mdi mdi-pencil"></i></span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaView!)">
+                                                <span><i class="mdi mdi-delete"></i></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            @if (ChiTietView == null || !ChiTietView.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa view <strong>@selectedMaCongViec</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+    <ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa view này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+    <ImportFileModal DuAnOptions="@ListDA" @ref="importFileModalRef" OnUploaded="HandleFileUpload" />
+</div>
+
+
+@code {
+    private List<ViewModel> ChiTietView = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string? selectedMaCongViec;
+    private string? selectedMaDuAn;
+    int SelectedCount => ChiTietView?.Count(x => x.IsSelected) ?? 0;
+    private bool IsSelectAll = false;
+    private bool isLoading = false;
+    private ImportFileModal? importFileModalRef;
+    string? search;
+    protected override async Task OnInitializedAsync()
+    {
+        await BaseService.CheckPermissionAsync("DieuChuyenCanHo", VuViec.Xem.GetDescription());
+        ListDA = await BlockService.GetByDuAnAsync();
+        await LoadData();
+    }
+
+    private async Task ShowConfirmDelete(string maView)
+    {
+        selectedMaCongViec = maView;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (string.IsNullOrEmpty(selectedMaCongViec)) return;
+
+        var result = await ViewService.DeleteViewAsync(selectedMaCongViec);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+
+        selectedMaCongViec = string.Empty;
+        await LoadData();        
+        StateHasChanged();
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in ChiTietView)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        Loading.Show();
+        try
+        {
+            var selected = ChiTietView.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0) return;
+            var result = await ViewService.DeleteListAsync(selected);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+            await LoadData();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in ChiTietView)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(ViewModel item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = ChiTietView.All(x => x.IsSelected);
+    }
+
+    private async Task OnDuAnChanged(string? maDuAn)
+    {
+        if (isLoading) return;
+
+        selectedMaDuAn = string.IsNullOrWhiteSpace(maDuAn) ? null : maDuAn;
+        await LoadData();
+    }
+
+    private async Task Import()
+    {
+        await importFileModalRef?.ShowFileModal(selectedMaDuAn);
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        await LoadData();
+    }
+
+    private async Task HandleFileUpload()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            ChiTietView = await ViewService.GetViewAsync(selectedMaDuAn, search);
+        }
+        finally
+        {
+        }
+    }
+
+
+    private void OnEditRecord(string maView)
+        => Nav.NavigateTo($"/view/edit/{maView}");
+
+    private void Insert()
+        => Nav.NavigateTo("/view/create");
+}

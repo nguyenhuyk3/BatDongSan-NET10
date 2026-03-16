@@ -1,0 +1,154 @@
+﻿@page "/user/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Domain.Model.User
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject UserService UserService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Người sử dụng</h1>
+<EditForm id="formDuAn" EditContext="@editContext">
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nhân viên <i class="point-validate">*</i></span>
+                                    <div class="input-wraper-choose">
+                                        <input class="input-form input-validation" id="TenNhanVien" readonly="readonly" type="text" value="@Record.TenNhanVien">
+                                        <div class="icon-choose" @onclick="ShowPopupNhanVien"><i class="bi bi-person-add"></i></div>
+                                        <InputText type="hidden" class="form-control" id="MaNhanVien" @bind-Value="Record.MaNhanVien" />
+                                        <span class="error-validation">Vui lòng chọn nhân viên</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại user</span>
+                                    <input class="input-form input-validation" id="TenLoaiUser" readonly="readonly" type="text" value="@Record.TenLoaiUser">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên đăng nhập <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenDangNhap" />
+                                    <span class="error-validation">Vui lòng nhập tên đăng nhập</span>
+                                </div>
+                            </div>
+                        </div>
+                        @* <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mật khẩu <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MatKhau" />
+                                    <span class="error-validation">Vui lòng nhập mật khẩu</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Xác nhận mật khẩu <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.XacNhanMatKhau" />
+                                    <span class="error-validation">Vui lòng nhập xác nhận mật khẩu</span>
+                                </div>
+                            </div>
+                        </div> *@
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Email</span>
+                                    <InputText class="form-control" id="Email" @bind-Value="Record.Email" readonly="readonly" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số điện thoại</span>
+                                    <InputText class="form-control" id="SoDienThoai" @bind-Value="Record.SoDienThoai" readonly="readonly" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+<PopupNhanVien OnSelected="SelectedNhanVien" />
+@code {
+    private EditContext editContext;
+    private UserModel? Record = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("NguoiSuDung", VuViec.Them.GetDescription());
+        }
+    }
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "formDuAn", dotNetRef);
+    }
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var fullDomain = $"{Nav.BaseUri}login";
+        var result = await UserService.SaveUserAsync(Record, fullDomain);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/user/edit/{result.Id}");
+        }
+    }
+    private async Task ShowPopupNhanVien()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChonNhanVien");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+    private async Task SelectedNhanVien(NhanVienPagingDto? item)
+    {
+        Record.TenDangNhap = item.Email;
+        Record.SoDienThoai = item.SoDienThoai;
+        Record.Email = item.Email;
+        Record.MaNhanVien = item.MaNhanVien;
+        Record.TenNhanVien = item.HoVaTen;
+        Record.LoaiUser = item.LoaiUser;
+        Record.TenLoaiUser = item.LoaiUser == "NV" ? "Nhân viên" : "Sàn giao dịch";
+        // //set vô mã khách hàng
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/user");
+    }
+}

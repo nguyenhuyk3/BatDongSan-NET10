@@ -1,0 +1,152 @@
+﻿@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using System.Globalization
+@inject IJSRuntime JS
+@typeparam T
+@inherits InputBase<T?>
+
+<input value="@_displayValue"
+	   class="@CssClass @(Readonly ? "readonly-mode" : "")"
+	   style="@Style"
+	   id="@Id"
+	   @oninput="HandleInput"
+	   readonly="@Readonly"
+	   maxlength="@Maxlength"/>
+
+@code {
+	[Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+	[Parameter] public string CssClass { get; set; } = "";
+	[Parameter] public string Style { get; set; } = "text-align:right";
+	[Parameter] public string Format { get; set; } = "#,##0.####"; // default 4 số thập phân
+	[Parameter] public bool Readonly { get; set; } = false;
+	[Parameter] public int? Maxlength { get; set; } = 18;
+	[Parameter] public int? MaxDecimals { get; set; } = 4;
+	[Parameter] public bool? AllowNegative { get; set; } = false;
+
+	public int CommitDelayMs { get; set; } = 150;
+	private string _displayValue = "";
+	private T? _pendingValue;
+	private bool _hasPending;
+	private CancellationTokenSource? _commitCts;
+	private static readonly CultureInfo DisplayCulture = CultureInfo.GetCultureInfo("en-US");
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+		_displayValue = FormatDisplay(CurrentValue);
+	}
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await JS.InvokeVoidAsync("InputUtils.selectAllOnClickByClass", "select-on-click");
+		}
+	}
+
+	protected override bool TryParseValueFromString(string? value, out T? result, out string validationErrorMessage)
+	{
+		value ??= "";
+		try
+		{
+			if (typeof(T) == typeof(int))
+			{
+				result = (T?)(object)int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+			}
+			else if (typeof(T) == typeof(double))
+			{
+				result = (T?)(object)double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture);
+			}
+			else if (typeof(T) == typeof(decimal))
+			{
+				result = (T?)(object)decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture);
+			}
+			else
+			{
+				throw new InvalidOperationException($"Unsupported type {typeof(T)}");
+			}
+
+			validationErrorMessage = null!;
+			return true;
+		}
+		catch
+		{
+			result = default;
+			validationErrorMessage = "Giá trị không hợp lệ.";
+			return false;
+		}
+	}
+
+	private async Task HandleInput(ChangeEventArgs e)
+	{
+		if (Readonly)
+			return;
+		var input = e.Value?.ToString()?.Trim() ?? "";
+		var cleaned = input.Replace(",", "");
+
+		if (string.IsNullOrWhiteSpace(cleaned))
+		{
+			_pendingValue = default;
+			_hasPending = false;
+			return;
+		}
+
+		// Nếu parse được thì cập nhật giá trị
+		if (TryParseValueFromString(cleaned, out var parsed, out _))
+		{
+			_pendingValue = parsed;
+			_hasPending = true;
+			_displayValue = FormatDisplay(_pendingValue);
+		}
+		else
+		{
+			_pendingValue = default;
+			_hasPending = false;
+			_displayValue = "";
+			return;
+		}
+
+		_commitCts?.Cancel();
+		_commitCts = new CancellationTokenSource();
+		var token = _commitCts.Token;
+
+		if (CommitDelayMs <= 0)
+		{
+			CommitPending();
+			return;
+		}
+
+		try
+		{
+			await Task.Delay(CommitDelayMs, token);
+			if (!token.IsCancellationRequested) CommitPending();
+		}
+		catch (TaskCanceledException) { }
+	}
+
+	private void CommitPending()
+	{
+		if (_hasPending)
+			CurrentValue = _pendingValue; // lúc này mới trigger ValueChanged + bắt đầu tính
+		else
+			CurrentValue = default;
+	}
+
+	private string FormatDisplay(object? value)
+	{
+		if (value == null) return "";
+
+		try
+		{
+			if (value is int i) return i.ToString(Format, DisplayCulture);
+			if (value is double d) return d.ToString(Format, DisplayCulture);
+			if (value is decimal m) return m.ToString(Format, DisplayCulture);
+
+			if (decimal.TryParse(value.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var dm))
+				return dm.ToString(Format, DisplayCulture);
+		}
+		catch { }
+
+		return value.ToString() ?? "";
+	}
+}

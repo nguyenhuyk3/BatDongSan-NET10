@@ -1,0 +1,166 @@
+﻿@page "/block/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.Block
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject ICurrentUserService CurrentUser
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Block</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <div class="form-error-inline">
+                                        <span class="icon"><i class="mdi mdi-alert"></i></span>
+                                        <div class="wapper-mess-error" id="mess-error"></div>
+                                        <span class="close-mess-error"><i class="mdi mdi-close"></i></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án</span>
+                                    <DisableTextBox Value="@Record.TenDuAn" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã block</span>
+                                    <DisableTextBox Value="@Record.MaBlock" />
+                                    <InputText hidden @bind-Value="Record.MaBlock" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên block <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenBlock" id="TenBlock" />
+                                    <span class="error-validation">Vui lòng nhập tên block</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private BlockModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+    private FileUploader uploaderRef;
+    private bool _isRendered = false;
+    // Các giá trị lấy từ Record
+    private List<Select2Config> _select2Configs = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+
+        var result = await BlockService.GetByIdAsync(id ?? string.Empty);
+        ListDA = await BlockService.GetByDuAnAsync();
+        if (result.Status)
+        {
+            Record = (BlockModel?)result.Data;
+            if (Record == null)
+            {
+                Record = new BlockModel();
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("Block", VuViec.CapNhat.GetDescription());
+            _isRendered = true;
+            // _select2Configs = new()
+            // {
+            //     new("MaDuAn", "Chọn dự án", Record.MaDuAn?.ToString())
+            // };
+            // // Delay nhẹ để đảm bảo select đã render
+            // await Task.Delay(150);
+            // await JS.InvokeVoidAsync("select2Helper.initMany", _select2Configs);
+            // if (Record.Files.Any())
+            // {
+            //     await uploaderRef.RenderInitialFiles(Record.Files);
+            // }
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await BlockService.UpdateByIdAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/block");
+    }
+
+    public class Select2Config
+    {
+        public string id { get; set; }
+        public string placeholder { get; set; }
+        public string? value { get; set; }
+        public bool allowClear { get; set; } = true;
+
+        public Select2Config(string id, string placeholder, string? value)
+        {
+            this.id = id;
+            this.placeholder = placeholder;
+            this.value = value;
+        }
+    }
+}

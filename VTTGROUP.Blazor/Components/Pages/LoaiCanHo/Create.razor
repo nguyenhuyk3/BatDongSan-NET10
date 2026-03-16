@@ -1,0 +1,238 @@
+﻿@page "/loaicanho/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.LoaiCanHo
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using System.Globalization
+@inject LoadingService Loading
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject LoaiCanHoService LoaiCanHoService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Loại căn hộ</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" name="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                        <option value="">-- Chọn dự án --</option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Thiết kế <i class="point-validate">*</i></span>
+                                    <select id="MaLoaiThietKe" @bind="Record.MaLoaiThietKe" class="form-control">
+                                        <option value="">-- Chọn thiết kế --</option>
+                                        @foreach (var item in ListDMLTK)
+                                        {
+                                            <option value="@(item.MaLoaiThietKe)">@item.TenLoaiThietKe</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn thiết kế</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã loại<i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MaLoaiCanHo" id="MaLoaiCanHo" />
+                                    <span class="error-validation">Vui lòng nhập mã loại căn</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên loại<i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenLoaiCanHo" id="TenLoaiCanHo" />
+                                    <span class="error-validation">Vui lòng nhập tên loại căn</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích<i class="point-validate">*</i></span>
+                                    <input id="DienTich" name="DienTich" class="form-control input-form text-right currency-input" type="text" @bind-value="Record.DienTich">
+                                    <span class="error-validation">Vui lòng nhập diện tích</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích lọt lòng<i class="point-validate">*</i></span>
+                                    <input id="DienTichLotLong" name="DienTichLotLong" class="form-control input-form text-right currency-input" type="text" @bind-value="Record.DienTichLotLong">
+                                    <span class="error-validation">Vui lòng nhập diện tích lọt lòng</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích sân vườn<i class="point-validate">*</i></span>
+                                    <input id="DienTichSanVuon" name="DienTichSanVuon" class="form-control input-form text-right currency-input" type="text" @bind-value="Record.DienTichSanVuon">
+                                    <span class="error-validation">Vui lòng nhập diện tích sân vườn</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số phòng ngủ <i class="point-validate">*</i></span>
+                                    <InputCurrency T="int" Id="SoPhongNgu" Format="#,##0" CssClass="input-form currency-input" @bind-Value="Record.SoPhongNgu" />
+                                    <span class="error-validation">Vui lòng nhập số phòng ngủ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="HeSoDienTich" Format="#,##0.0000" CssClass="input-form currency-input" @bind-Value="Record.HeSoDienTich" />
+                                    <span class="error-validation">Vui lòng nhập hệ số diện tích</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" name="MoTa" id="MoTa" rows="3" tabindex="2" @bind="@Record.MoTa"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hình Ảnh</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="false"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+
+            <VTTGROUP.Blazor.Components.CompChilds.UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private LoaiCanHoModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<DaDanhMucLoaiThietKe> ListDMLTK = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        ListDA = await BlockService.GetByDuAnAsync();
+        // ListDMLTK = await LoaiCanHoService.GetByLTKTheoDuAnAsync(string.Empty);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("LoaiCanHo", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            //  await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaLoaiThietKe", "Chọn thiết kế", true);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaLoaiCanHo");
+            await ReapplyCurrencyFormat();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await LoaiCanHoService.SaveCanHoAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/loaicanho/edit/{Record.MaLoaiCanHo}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/loaicanho");
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        //ListDMLTK = await LoaiCanHoService.GetByLTKTheoDuAnAsync(Record.MaDuAn);
+    }
+
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 2);
+    }
+}

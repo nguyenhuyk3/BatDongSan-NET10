@@ -1,0 +1,250 @@
+﻿@* ============================================
+   UiSelect.razor
+   - Drop-in thay thế component hiện tại
+   - Tìm kiếm nội bộ (không gọi API), bỏ dấu khi so khớp
+   - Giữ API cũ: Value/@bind-Value, Items, OnChange, Placeholder, Icon, Width...
+   - Fix: text dài không vỡ UI (ellipsis), nút × căn giữa, không tự đóng khi click mở
+   ============================================ *@
+
+<div class="ui-select @(Disabled ? "ui-select--disabled" : null) @(open ? "ui-select--open" : null)"
+     style="width:@Width"
+     role="combobox"
+     aria-expanded="@open"
+     aria-haspopup="listbox"
+     tabindex="0"
+     @onkeydown="HandleKeyDown"
+     @onfocusout="HandleFocusOut"
+     @onmousedown="()=> _keepOpenOnBlur = true">
+
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <i style="padding-left:8px" class="@Icon ui-select__icon" aria-hidden="true"></i>
+    }
+
+    <!-- Nhãn hiển thị (1 dòng + ellipsis) -->
+    <button type="button"
+            class="ui-select__display"
+            disabled="@Disabled"
+            @onclick="Open"
+            aria-label="@AriaLabel">
+        <span class="truncate">
+            @if (!string.IsNullOrEmpty(SelectedLabel))
+            {
+                @SelectedLabel
+            }
+            else
+            {
+                <span class="ui-select__placeholder">@Placeholder</span>
+            }
+        </span>
+    </button>
+
+    @if (!string.IsNullOrEmpty(Value))
+    {
+        <button type="button"
+                class="ui-select__clear"
+                @onclick="ClearValue"
+                aria-label="Xóa chọn">
+            ×
+        </button>
+    }
+
+    <!-- Caret (vẽ bằng ::after trong CSS) -->
+    <!-- Panel dropdown -->
+    @if (open)
+    {
+        <div class="ui-select__panel" role="listbox" @onmousedown="()=> _keepOpenOnBlur = true">
+            @if (EnableSearch)
+            {
+                <div class="ui-select__search-wrap">
+                    <input class="ui-select__search"
+                           placeholder="@SearchPlaceholder"
+                           @bind="query"
+                           @bind:event="oninput"
+                           @onkeydown="HandleSearchKeyDown"
+                           autofocus />
+                </div>
+            }
+
+            <div class="ui-select__options">
+                @if (ViewItems.Any())
+                {
+                    var i = 0;
+                    foreach (var it in ViewItems)
+                    {
+                        var isActive = i == activeIndex;
+                        var isSelected = it.Value == Value;
+
+                        <div class="ui-select__option @(isActive ? "is-active" : null) @(isSelected ? "is-selected" : null)"
+                             role="option"
+                             aria-selected="@isSelected"
+                             @onclick="@(()=>Select(it))"
+                             @onmouseover="@(()=>activeIndex = i)">
+                            @if (EnableSearch && !string.IsNullOrEmpty(query))
+                            {
+                                @((MarkupString)Highlight(it.Label, query))
+                            }
+                            else
+                            {
+                                @it.Label
+                            }
+                        </div>
+
+                        i++;
+                    }
+                }
+                else
+                {
+                    <div class="ui-select__empty">Không tìm thấy kết quả</div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Input ẩn giúp tham gia form submit -->
+    <input type="hidden" value="@Value" />
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public EventCallback<string?> OnChange { get; set; }
+
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string Width { get; set; } = "280px";
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public IEnumerable<SelectItem>? Items { get; set; }
+
+    // Tuỳ chọn search UI
+    [Parameter] public bool EnableSearch { get; set; } = true;
+    [Parameter] public string SearchPlaceholder { get; set; } = "Tìm nhanh...";
+
+    // State
+    private bool open;
+    private bool _keepOpenOnBlur;     // ngăn đóng panel khi blur do click bên trong
+    private string? query;
+    private int activeIndex = -1;
+
+    private string? SelectedLabel => Items?.FirstOrDefault(x => x.Value == Value)?.Label;
+
+    private IEnumerable<SelectItem> ViewItems =>
+        string.IsNullOrWhiteSpace(query)
+            ? (Items ?? Enumerable.Empty<SelectItem>())
+            : (Items ?? Enumerable.Empty<SelectItem>())
+                .Where(it => ContainsUnsign(it.Label, query!));
+
+    private void Open()
+    {
+        if (Disabled) return;
+        open = true;              // luôn mở (không toggle) để tránh vừa mở vừa blur
+        activeIndex = -1;
+    }
+
+    private async Task Select(SelectItem it)
+    {
+        open = false;
+        query = null;
+        activeIndex = -1;
+
+        Value = it.Value;
+        await ValueChanged.InvokeAsync(Value);
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(Value);
+    }
+
+    private async Task ClearValue()
+    {
+        Value = null;
+        await ValueChanged.InvokeAsync(Value);
+        if (OnChange.HasDelegate) await OnChange.InvokeAsync(Value);
+    }
+
+    private void HandleFocusOut(FocusEventArgs _)
+    {
+        // Nếu blur do click/focus bên trong component => không đóng
+        if (_keepOpenOnBlur)
+        {
+            _keepOpenOnBlur = false;
+            return;
+        }
+        open = false;
+        query = null;
+        activeIndex = -1;
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (!open && (e.Key is "ArrowDown" or "Enter" or " "))
+        {
+            Open();
+            return;
+        }
+        if (!open) return;
+
+        var count = ViewItems.Count();
+        if (count == 0) return;
+
+        if (e.Key == "ArrowDown")
+        {
+            activeIndex = (activeIndex + 1 + count) % count;
+        }
+        else if (e.Key == "ArrowUp")
+        {
+            activeIndex = (activeIndex - 1 + count) % count;
+        }
+        else if (e.Key == "Enter")
+        {
+            var idx = Math.Max(activeIndex, 0);
+            var chosen = ViewItems.ElementAtOrDefault(idx);
+            if (chosen != null) _ = Select(chosen);
+        }
+        else if (e.Key == "Escape")
+        {
+            open = false;
+            query = null;
+            activeIndex = -1;
+        }
+    }
+
+    private void HandleSearchKeyDown(KeyboardEventArgs e) => HandleKeyDown(e);
+
+    // So khớp loại bỏ dấu tiếng Việt
+    private static bool ContainsUnsign(string src, string term)
+    {
+        var a = RemoveDiacritics(src).ToLowerInvariant();
+        var b = RemoveDiacritics(term).ToLowerInvariant();
+        return a.Contains(b);
+    }
+
+    private static string RemoveDiacritics(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var norm = text.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in norm)
+        {
+            var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+            if (cat != System.Globalization.UnicodeCategory.NonSpacingMark) sb.Append(c);
+        }
+        return sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
+    }
+
+    // Highlight phần khớp khi có query
+    private static string Highlight(string label, string term)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return System.Net.WebUtility.HtmlEncode(label);
+        var raw = RemoveDiacritics(label);
+        var t = RemoveDiacritics(term);
+        var idx = raw.IndexOf(t, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return System.Net.WebUtility.HtmlEncode(label);
+
+        var before = System.Net.WebUtility.HtmlEncode(label.Substring(0, idx));
+        var match = System.Net.WebUtility.HtmlEncode(label.Substring(idx, Math.Min(term.Length, label.Length - idx)));
+        var after = System.Net.WebUtility.HtmlEncode(label[(idx + match.Length)..]);
+        return $"{before}<mark class=\"ui-select__mark\">{match}</mark>{after}";
+    }
+
+    public record SelectItem(string Value, string Label);
+}

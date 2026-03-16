@@ -1,0 +1,132 @@
+﻿@page "/loaigoc/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.LoaiGoc
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject BlockService BlockService
+@inject LoaiGocService LoaiGocService
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Loại góc</h1>
+<div class="container-form">
+    <div class="container-tabs">
+        <div class="row">
+            <div class="col-md-12">
+            </div>
+        </div>
+        <MessageErrorForm />
+        <div class="wapper-content-tab">
+            <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                <div class="col-lg-10 mx-auto row">
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                <select id="MaDuAn" name="MaDuAn" class="form-control input-validation">
+                                    <option value="">-- Chọn dự án --</option>
+                                    @foreach (var item in ListDA)
+                                    {
+                                        <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                    }
+                                </select>
+                                <span class="error-validation">Vui lòng chọn dự án</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Mã góc <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="MaLoaiGoc" name="MaLoaiGoc" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập mã góc</span>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Tên góc <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="TenLoaiGoc" name="TenLoaiGoc" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập tên góc</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="HeSoGoc" name="HeSoGoc" style="width:40px;text-align:right" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập hệ số góc</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-button">
+    <div class="actions-left">
+        <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+    </div>
+    <div class="actions-right">
+        <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+    </div>
+</div>
+@code {
+    private LoaiGocModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    protected override async Task OnInitializedAsync()
+    {
+        ListDA = await BlockService.GetByDuAnAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("KhuVuc", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "HeSoGoc", 18, 4);
+            await JS.InvokeVoidAsync("select2Helper.initWithPlaceholder", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaDuAn");
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "tab1", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm(Dictionary<string, JsonElement> data)
+    {
+        var model = new LoaiGocModel
+        {
+            MaDuAn = data.GetValueOrDefault("MaDuAn").GetString(),
+            MaLoaiGoc = data.GetValueOrDefault("MaLoaiGoc").GetString(),
+            TenLoaiGoc = data.GetValueOrDefault("TenLoaiGoc").GetString(),
+            HeSoGoc = Convert.ToDecimal(data.GetValueOrDefault("HeSoGoc").GetString())
+        };
+
+        var result = await LoaiGocService.SaveLoaiGocAsync(model);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/loaigoc/edit/{model.MaLoaiGoc}");
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/loaigoc");
+
+    }
+}

@@ -1,0 +1,255 @@
+﻿@page "/sanpham/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model.SanPham
+@using VTTGROUP.Domain.Model.ViewMatKhoi
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject LoadingService Loading
+@inject ViewTrucService ViewTrucService
+@inject BlockService BlockService
+@inject SanPhamService SanPhamService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Sản phẩm</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên sản phẩm <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="TenSanPham" name="TenSanPham" type="text" @bind="@Record.TenSanPham">
+                                    <span class="error-validation">Vui lòng nhập tên sản phẩm</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại sản phẩm </span>
+                                    <DisableTextBox Value="@Record.TenLoaiSP" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Block</span>
+                                    <DisableTextBox Value="@Record.TenBlock" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tầng</span>
+                                    <DisableTextBox Value="@Record.TenTang" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trục</span>
+                                    <DisableTextBox Value="@Record.TenTruc" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại căn hộ</span>
+                                    <DisableTextBox Value="@Record.TenLoaiCan" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại diện tích</span>
+                                    <DisableTextBox Value="@Record.TenLoaiDT" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại layout</span>
+                                    <DisableTextBox Value="@Record.TenLoaiThietKe" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích tim tường <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="DienTichTimTuong" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.DienTichTimTuong" />
+                                    <span class="error-validation">Vui lòng nhập diện tích tim tường</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích thông thủy <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="DienTichThongThuy" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.DienTichThongThuy" />
+                                    <span class="error-validation">Vui lòng nhập diện tích thông thủy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích sân vườn</span>
+                                    <InputCurrency T="decimal" Id="DienTichSanVuon" Format="#,##0.0000" CssClass="input-form currency-input" @bind-Value="Record.DienTichSanVuon" />
+                                    <span class="error-validation">Vui lòng nhập diện tích sân vườn</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số view phụ</span>
+                                    <InputCurrency T="decimal" Id="HeSoCanHo" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.HeSoCanHo" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private SanPhamModel? Record = new();
+    private bool _isRendered = false;
+    // Các giá trị lấy từ Record
+    private List<InfoItem> InfoItems = new();
+    private EditContext editContext;
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("SanPham", VuViec.CapNhat.GetDescription());
+            var result = await SanPhamService.GetByIdAsync(id ?? string.Empty);
+            if (result.Status)
+            {
+                Record = (SanPhamModel?)result.Data;
+                if (Record == null)
+                {
+                    Record = new SanPhamModel();
+                }
+                InfoItems = new()
+                {
+                    new() { Text="Mã sản phẩm", Value=Record.MaSanPham},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            }
+            _isRendered = true;
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DienTichTimTuong", 18, 4);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DienTichThongThuy", 18, 4);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DienTichSanVuon", 18, 4);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "HeSoCanHo", 18, 4);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await SanPhamService.UpdateByIdAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/sanpham/edit/{Record.MaSanPham}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/sanpham");
+
+    }
+
+    public class Select2Config
+    {
+        public string id { get; set; }
+        public string placeholder { get; set; }
+        public string? value { get; set; }
+        public bool allowClear { get; set; } = true;
+
+        public Select2Config(string id, string placeholder, string? value)
+        {
+            this.id = id;
+            this.placeholder = placeholder;
+            this.value = value;
+        }
+    }
+
+    // private async Task OnDuAnChanged(ChangeEventArgs e)
+    // {
+    //     Record.MaDuAn = e.Value?.ToString();
+    //     Record.MaBlock = null;
+    //     ListBlock = await SanPhamService.GetByBlockTheoDuAnAsync(Record.MaDuAn);
+    //     Record.MaTang = null;
+    //     ListTang = await SanPhamService.GetByTangTheoBlockAsync(Record.MaBlock);
+    // }
+
+    // private async Task OnBlockChanged(ChangeEventArgs e)
+    // {
+    //     Record.MaBlock = e.Value?.ToString();
+    //     Record.MaTang = null;
+    //     ListTang = await SanPhamService.GetByTangTheoBlockAsync(Record.MaBlock);
+    // }
+}

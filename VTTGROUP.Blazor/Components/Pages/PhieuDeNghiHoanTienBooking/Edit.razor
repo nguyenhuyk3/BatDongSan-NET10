@@ -1,0 +1,363 @@
+﻿@page "/denghihoantienbooking/edit/{id}"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.PhieuDeNghiHoanTienBooking
+@using VTTGROUP.Domain.Model.PhieuGiuCho
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject PhieuDeNghiHoanTienBookingService DeNghiHoanTienBookingService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Phiếu đề nghị hoàn tiền booking</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2" @onclick="ClickTab2">Danh sách booking</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab @(Record.FlagTong == true ? "" : "wraper-duyet")">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Sàn giao dịch</span>
+                                    <DisableTextBox Value="@Record.TenSanGiaoDich" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nội dung <i class="point-validate">*</i></span>
+                                    <textarea class="textarea-input input-validation" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3"></textarea>
+                                    <span class="error-validation">Vui lòng nhập nội dung</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-id="2" class="tab-content-item" id="tab2">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                    </div>
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            @if (Record.FlagTong)
+                            {
+                                <div class="button-action-title" style="margin-left: 0;">
+                                    <div class="icon-button" @onclick="AddPhieuBooking">
+                                        <i class="mdi mdi-playlist-plus"></i>
+                                    </div>
+                                    <span>Booking</span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; align-items: center;">
+                                </div>
+                            }
+                        </div>
+                        <div class="overflow-auto" id="container-table-fixed">
+                            <table class="tbl table table-hover table-form table-detail" id="table-data">
+                                <thead>
+                                    <tr class="cls_custome_back">
+                                        <th style="width:50px" rowspan="2" class="text-center">
+                                            STT
+                                        </th>
+                                        <th style="width:120px" rowspan="2" class="text-center">
+                                            Mã booking
+                                        </th>
+                                        <th style="width:120px" rowspan="2" class="text-center">
+                                            Mã phiếu thu
+                                        </th>
+                                        <th colspan="4" style="text-align:center">
+                                            Khách hàng
+                                        </th>
+                                        <th style="width:120px" rowspan="2" class="text-center">
+                                            Số tiền
+                                        </th>
+                                        <th style="width:150px" rowspan="2" class="text-center">
+                                            Ghi chú
+                                        </th>
+                                        <th style="width:50px" rowspan="2">
+                                        </th>
+                                    </tr>
+                                    <tr class="cls_custome_back">
+                                        <th style="width:120px;text-align:center">
+                                            Đối tượng KH
+                                        </th>
+                                        <th style="width:180px;text-align:center">
+                                            Tên khách hàng
+                                        </th>
+                                        <th style="width:120px;text-align:center">
+                                            Loại Id Card
+                                        </th>
+                                        <th style="width:140px;text-align:center">
+                                            Id Card
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (Record.ListCT != null && Record.ListCT.Any() == true)
+                                    {
+                                        <Virtualize ItemsProvider="LoadCanHoProvider" Context="x" ItemSize="40" @ref="virtualizeRef">
+                                            <tr>
+                                                <td class="text-center">@((x.index + 1))</td>
+                                                <td>
+                                                    <div class="item-phieu" @onclick="() => OnEditRecord(x.item.MaBooking)">@x.item.MaBooking</div>
+                                                </td>
+                                                <td>
+                                                    <div class="item-phieu" @onclick="() => OnEditTHRecord(x.item.MaPhieuTHThu)">@x.item.MaPhieuTHThu</div>
+                                                </td>
+                                                <td>@x.item.TenDoiTuongKH</td>
+                                                <td>@x.item.TenKhachHang</td>
+                                                <td>@x.item.TenLoaiIDCard</td>
+                                                <td>@x.item.IDCard</td>
+                                                <td class="text-right">@($"{x.item.SoTien:#,##0.##}")</td>
+                                                <td>@x.item.GhiChu</td>
+                                                <td class="text-center">
+                                                    @if (Record.FlagTong)
+                                                    {
+                                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                                            <a href="javascript:void(0)" @onclick="() => DeleteRow(x.item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                        </div>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </Virtualize>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            @if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+            {
+                <AppButton Label="Gửi duyệt"
+                           Class="button button-action"
+                           IconClass="mdi mdi-telegram"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+            else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+            {
+                <AppButton Label="Duyệt"
+                           Class="button button-action"
+                           IconClass="mdi mdi-check-circle"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,1)" />
+                <AppButton Label="Trả lại"
+                           Class="button button-action"
+                           IconClass="mdi mdi-replay"
+                           OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,2)" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            }
+        </div>
+    </div>
+    @* <div class="container-button">
+    <div class="row">
+    <div class="col-md-12">
+    @if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+    {
+    <button type="button" class="button button-action button-luu-phieu" @onclick="SubmitFormJs">
+    Lưu
+    </button>
+    <button type="button" class="button button-action button-gui-duyet" @onclick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)">
+    Gửi duyệt
+    </button>
+    }
+    else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+    {
+    <button type="button" class="button button-action button-luu-phieu" @onclick="SubmitFormJs">
+    Lưu
+    </button>
+    <button type="button" class="button button-action button-duyet-phieu" @onclick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, Record.MaQuiTrinhDuyet, 1)">
+    Duyệt
+    </button>
+    <button type="button" class="button button-action button-tra-lai" @onclick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, Record.MaQuiTrinhDuyet, 2)">
+    Trả lại
+    </button>
+    }
+    <button type="button" class="button button-action button-tro-ve" @onclick="BackUrl">
+    Trở về
+    </button>
+    </div>
+    </div>
+    </div> *@
+</EditForm>
+<PopupBooking @ref="phieuBookingModalRef" OnSelected="SelectedPhieuBooking" />
+<PopupGuiDuyet @ref="guiDuyetModalRef" OnReloadGuiDuyet="ReloadForm" />
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private EditContext editContext;
+    private PhieuDeNghiHoanTienBookingModel? Record = new();
+    private bool loadingTab2;
+    private Virtualize<(PhieuDeNghiHoanTienBookingCTModel item, int index)>? virtualizeRef;
+    private PopupBooking? phieuBookingModalRef;
+    private PopupGuiDuyet? guiDuyetModalRef;
+    private string? maNhanVienHT;
+    private string MaCongViec = "PDNHT";
+    private List<InfoItem> InfoItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+
+            var result = await DeNghiHoanTienBookingService.FindGetByPhieuAsync(id);
+            if (result.Status)
+            {
+                Record = (PhieuDeNghiHoanTienBookingModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+            }
+            maNhanVienHT = await BaseService.MaNhanVienHienTai();
+            StateHasChanged();
+        }
+        if (loadingTab2)
+        {
+            loadingTab2 = false;
+            await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 50);
+        }
+    }
+
+    private async ValueTask<ItemsProviderResult<(PhieuDeNghiHoanTienBookingCTModel item, int index)>> LoadCanHoProvider(ItemsProviderRequest request)
+    {
+        var items = Record.ListCT
+            .Skip(request.StartIndex)
+            .Take(request.Count)
+            .Select((item, i) => (item, request.StartIndex + i))
+            .ToList();
+
+        return new ItemsProviderResult<(PhieuDeNghiHoanTienBookingCTModel item, int index)>(items, Record.ListCT.Count);
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        Record.ListCT = new();
+    }
+
+    private async Task OnSanGiaoDichChanged(ChangeEventArgs e)
+    {
+        Record.MaSanGiaoDich = e.Value?.ToString();
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await DeNghiHoanTienBookingService.UpdatePhieuAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/denghihoantienbooking/edit/{result.Id}");
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddPhieuBooking()
+    {
+        await phieuBookingModalRef?.Show(Record.MaDuAn, Record.MaSanGiaoDich);
+    }
+
+    private async Task SelectedPhieuBooking(List<PhieuDeNghiHoanTienTongHopBookingModel?> listCH)
+    {
+        foreach (var item in listCH)
+        {
+            if (item == null) continue; // ✅ Bỏ qua dòng null
+            bool isExist = Record.ListCT.Any(x => x.MaBooking == item.MaPhieuBooking);
+            if (!isExist)
+            {
+                Record.ListCT.Add(new PhieuDeNghiHoanTienBookingCTModel
+                {
+                    MaPhieuTHThu = item.MaPhieuTH,
+                    MaBooking = item.MaPhieuBooking,
+                    TenDoiTuongKH = item.TenDoiTuongKhachHang,
+                    TenKhachHang = item.TenKhachHang,
+                    TenLoaiIDCard = item.TenLoaiIdCard,
+                    IDCard = item.IdCard,
+                    SoTien = item.SoTien,
+                    GhiChu = item.NoiDung
+                });
+            }
+        }
+        //  listKey = Guid.NewGuid(); // ✅ đặt ở ngoài foreach, sau khi Add xong
+        if (virtualizeRef != null)
+        {
+            await virtualizeRef.RefreshDataAsync();
+        }
+        // StateHasChanged();
+    }
+
+    private async Task DeleteRow(PhieuDeNghiHoanTienBookingCTModel? item)
+    {
+        Record.ListCT.Remove(item);
+        await virtualizeRef?.RefreshDataAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnEditRecord(string maPhieuGC)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieugiucho/edit/" + maPhieuGC);
+    }
+
+    private async Task OnEditTHRecord(string maPhieu)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/tonghopbooking/edit/" + maPhieu);
+    }
+
+    private async Task GuiDuyetPhieu(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        await guiDuyetModalRef?.ShowQTD(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh, flag);
+    }
+
+    private async Task ReloadForm()
+    {
+        await JS.InvokeVoidAsync("location.reload");
+    }
+
+    private async Task ClickTab2()
+    {
+        loadingTab2 = true;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/denghihoantienbooking");
+    }
+}

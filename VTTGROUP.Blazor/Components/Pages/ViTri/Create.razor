@@ -1,0 +1,129 @@
+﻿@page "/vitri/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.ViTri
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject ViTriService ViTriService
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Vị trí</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án</span>
+                                    <select id="MaDuAn" class="form-control input-validation" @bind="Record.MaDuAn">
+                                        <option value="">-- Chọn dự án --</option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã vị trí <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.MaViTri" id="MaViTri" />
+                                    <span class="error-validation">Vui lòng nhập mã vị trí</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên vị trí <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenViTri" />
+                                    <span class="error-validation">Vui lòng nhập tên vị trí</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="HeSoViTri" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.HeSoViTri" />
+                                    <span class="error-validation">Vui lòng nhập hệ số</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private ViTriModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+
+    private string TrangThai { get; set; } = "0";
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        ListDA = await BlockService.GetByDuAnAsync();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("TienDoTCDA", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaViTri");
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "HeSoViTri", 18, 4);
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await ViTriService.SaveViTriAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/vitri/edit/{Record.MaViTri}");
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/vitri");
+
+    }
+}

@@ -1,0 +1,804 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.CanHo
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Domain.Model.View
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject DMKhachHangService DMKhachHangService
+@inject ViewService ViewService
+@inject SanPhamService SanPhamService
+@inject KeHoachBanHangService KeHoachBanHangService
+@inject IJSRuntime JS
+<div class="modal fade full" id="PopupSoDoCHModal" tabindex="-1" aria-hidden="true" @onclick="() => showButton = false">
+	<div class="modal-dialog modal-fullscreen modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Danh sách căn hộ <span class="ms-1">@TenDotMoBan</span></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng" @onclick="ClosePopupCH"></button>
+			</div>
+			<div class="modal-body modal-wraper" id="modal-body">
+				<div class="container-search-home">
+					<div class="search-row" style="margin-bottom: 15px;">
+						<div class="col-search wapper-congtrinh container-form">
+							<div class="result-label-icon">
+								<i class="mdi mdi-file-document"></i>
+								<select name="MaBlock" id="MaBlock" multiple class="form-control" @ref="refBlock">
+									@foreach (var item in ListBlock)
+									{
+										<option value="@(item.MaBlock)" selected="@SelectedBlocks.Contains(item.MaBlock)">
+											@item.TenBlock
+										</option>
+									}
+								</select>
+							</div>
+						</div>
+						<ZoomSlider Min="10" Max="200" ZoomValue="@zoom" OnZoomChanged="HandleZoomChange" />
+						@* <div class="col-search wapper-congtrinh container-form">
+							<div class="result-label-icon">
+								<i class="mdi mdi-file-document"></i>
+								<select name="MaTang" id="MaTang" multiple class="form-control" @ref="refTang">
+									@foreach (var item in ListTang)
+									{
+										<option value="@(item.MaTang)" selected="@SelectedTangs.Contains(item.MaTang)">
+											[@item.MaTang]-@item.TenTang
+										</option>
+									}
+								</select>
+							</div>
+						</div>
+						<div class="col-search wapper-congtrinh container-form">
+							<div class="result-label-icon">
+								<i class="mdi mdi-file-document"></i>
+								<select name="MaTruc" id="MaTruc" multiple class="form-control" @ref="refTruc">
+									@foreach (var item in ListTruc)
+									{
+										<option value="@(item.MaTruc)" selected="@SelectedTrucs.Contains(item.MaTruc)">
+											[@item.MaTruc]-@item.TenTruc
+										</option>
+									}
+								</select>
+							</div>
+						</div> *@
+					</div>
+				</div>
+				<div class="container-table-detail">
+					<div class="view-canho view-canho-popup" id="container-view-canho">
+						@if (DanhSachCanHo != null && DanhSachCanHo.Any())
+						{
+							bool coCanHoThuc = DanhSachCanHo.Any(x => !string.IsNullOrWhiteSpace(x.TenTang) && !string.IsNullOrWhiteSpace(x.TenSanPham) && !string.IsNullOrWhiteSpace(x.TenTruc));
+							if (coCanHoThuc)
+							{
+								<table class="floor-table">
+									<thead>
+										<tr>
+											<th class="floor-label-header">Tầng</th>
+											@for (int i = 0; i < blocks.Count; i++)
+											{
+												var block = blocks[i];
+												var fullMat = IsFullMat(block);
+												var isLastBlock = i == blocks.Count - 1;
+												var totalCol = MatCanHo.Sum(mat => GetTrucs(block, mat.MaView).Count) + (MatCanHo.Count - 1) - (!fullMat ? 1 : 0);
+												<th colspan="@totalCol" class="border text-center font-bold uppercase p-2 block-label" @onclick="() => OnSeLectedBlock(block)">Block @block</th>
+
+												if (!isLastBlock)
+												{
+													<th class="bg-white space-block"></th>
+												}
+											}
+										</tr>
+									</thead>
+
+									<tbody>
+										@foreach (var tang in TangList)
+										{
+											<tr>
+												<td class="floor-label -tang-@tang" @onclick="() => OnSeLectedTang(tang)">
+													@tang
+												</td>
+												@for (int i = 0; i < blocks.Count; i++)
+												{
+													var block = blocks[i];
+													var isLastBlock = i == blocks.Count - 1;
+													var fullMat = IsFullMat(block);
+													foreach (var mat in MatCanHo)
+													{
+														var trucList = GetTrucs(block, mat.MaView);
+														foreach (var truc in trucList)
+														{
+															var canHo = GetCanHo(block, tang, truc.TenTruc, mat.MaView);
+															<td class="border text-center">
+																@if (canHo != null)
+																{
+																	<div class="apartment default" @onclick="() => OnSeLectedCanHo(canHo)" style="background:@(canHo.MaMauDot)!important" id-block="" id-truc="truc-@(canHo.MaTruc)" id-tang="tang-@(canHo.TenTang)">
+																		@canHo.TenSanPham
+																		@if (canHo.IsKhongChonLai == true)
+																		{
+																			<div class="icon-not-choose">
+																				<i class="bi bi-lock-fill"></i>
+																			</div>
+																		}
+																	</div>
+																}
+																else
+																{
+																	<div class="no-default"></div>
+																}
+															</td>
+														}
+
+														if (mat != MatCanHo.Last() && fullMat)
+														{
+															<td class="bg-white space-truc"></td>
+														}
+													}
+
+													if (!isLastBlock)
+													{
+														<td class="bg-white space-block"></td>
+													}
+												}
+											</tr>
+										}
+									</tbody>
+
+									<!-- 4. Footer: TRỤC LẦN NỮA -->
+									<tfoot>
+										<tr>
+											<td class="floor-label-footer"></td>
+											@for (int i = 0; i < blocks.Count; i++)
+											{
+												var block = blocks[i];
+												var isLastBlock = i == blocks.Count - 1;
+												var fullMat = IsFullMat(block);
+												foreach (var mat in MatCanHo)
+												{
+													var trucList = GetTrucs(block, mat.MaView);
+													foreach (var truc in trucList)
+													{
+														<td class="bg-yellow-400 border text-center text-sm font-semibold text-gray-700 p-2 label-truc -truc-@(truc.MaTruc)"
+															@onclick="() => OnSeLectedTruc(block, truc, mat.MaView)">
+															@truc.TenTruc
+														</td>
+													}
+
+													if (mat != MatCanHo.Last() && fullMat)
+													{
+														<td class="bg-white space-truc"></td>
+													}
+												}
+
+												if (!isLastBlock)
+												{
+													<td class="bg-white space-block"></td>
+												}
+											}
+										</tr>
+										<tr>
+											<td class="floor-label-footer"></td>
+											@for (int i = 0; i < blocks.Count; i++)
+											{
+												var block = blocks[i];
+												var isLastBlock = i == blocks.Count - 1;
+
+												var fullMat = IsFullMat(block);
+												foreach (var mat in MatCanHo)
+												{
+													var trucList = GetTrucs(block, mat.MaView);
+													if (trucList.Any())
+													{
+														<td colspan="@trucList.Count" class="p-2 bg-white text-center border font-semibold label-truc"
+															@onclick="() => OnSeLectedMat(block, mat.MaView)">
+															@mat.TenView
+														</td>
+													}
+													if (mat != MatCanHo.Last() && fullMat)
+													{
+														<td class=" bg-white space-truc"></td>
+													}
+												}
+
+												if (!isLastBlock)
+												{
+													<td class="bg-white space-block"></td>
+												}
+											}
+										</tr>
+									</tfoot>
+								</table>
+							}
+							else
+							{
+								<div class="flex justify-center items-center relative wraper-no-apartment">
+									<img src="assets/images/no-department.png" alt="Chưa có sơ đồ căn hộ"
+										 class="max-w-full max-h-full object-contain" />
+								</div>
+							}
+						}
+						else
+						{
+							<div class="flex justify-center items-center relative wraper-no-apartment">
+								<img src="assets/images/no-department.png" alt="Chưa có sơ đồ căn hộ"
+									 class="max-w-full max-h-full object-contain" />
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<div id="scrollWrapper" class="wraper-list-dot">
+					@if (ListDot != null && ListDot.Any())
+					{
+						<ul>
+							@foreach (var d in ListDot)
+							{
+								<li><span style="background-color:@d.MaMau"></span>@d.TenDotMoBan</li>
+							}
+						</ul>
+					}
+				</div>
+				@* <button type="button" class="button button-action button-luu-phieu" @onclick="SubmitSelectedCanHo">
+					Lưu
+				</button> *@
+				<button type="button" class="button button-action button-huy" @onclick="ClosePopupCH" data-bs-dismiss="modal">Đóng</button>
+			</div>
+		</div>
+	</div>
+</div>
+@if (showButton)
+{
+	<button class="btn context-menu"
+			style="position:fixed; top:@menuYpx; left:@menuXpx;"
+			@onclick="OnActionClick">
+		Bỏ chọn
+	</button>
+}
+@code {
+	[Parameter]
+	public EventCallback<SanPhamPopupPaginModel?> OnSelected { get; set; }
+	[Parameter]
+	public string? MaPhieuKH { get; set; }
+	public string? MaDotMoBan { get; set; }
+	public string? TenDotMoBan { get; set; }
+	public string? MaDuAn { get; set; }
+	[Parameter] public EventCallback OnReloadCanHo { get; set; }
+	private string? SelectedBlock;
+	public List<string> SelectedBlocks { get; set; } = new();
+	private string? SelectedTang;
+	public List<string> SelectedTangs { get; set; } = new();
+	private string? SelectedTruc;
+	public List<string> SelectedTrucs { get; set; } = new();
+	private bool isLoading = false;
+	private List<DaDanhMucBlock> ListBlock = new();
+	private List<DaDanhMucTang> ListTang = new();
+	private List<DaDanhMucViewTruc> ListTruc = new();
+	private List<DaDanhMucDotMoBan> ListDot = new();
+
+	private List<SoDoCanHoModel> DanhSachCanHo = new();
+	private List<ViewModel> MatCanHo = new();
+	private Dictionary<string, List<SoDoCanHoModel>> GroupByBlock = new();
+	private List<string> TangList = new();
+	private List<string> blocks = new();
+
+	private ElementReference refBlock;
+	private ElementReference refTang;
+	private ElementReference refTruc;
+
+	List<SanPhamPopupPaginModel> SanPhamPopups = new();
+	private bool _shouldScaleAfterRender;
+
+	private bool showButton = false;
+	private double menuX, menuY;
+	private string menuXpx => $"{menuX}px";
+	private string menuYpx => $"{menuY}px";
+	private string actionType = "";
+	private object? actionData;
+
+	private int zoom = 100;
+
+	private bool hasChangeData = false;
+
+
+	@* @oncontextmenu:preventDefault="true"
+	@oncontextmenu="@( (MouseEventArgs e) => ShowContextMenu(e, "Truc", (block, truc, mat)))" *@
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			//await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "MaBlock", "Chọn block", true, DotNetObjectReference.Create(this));
+			await JS.InvokeVoidAsync("enableHorizontalScrollDrag", "scrollWrapper");
+			//await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "MaTang", "Chọn tầng", true, DotNetObjectReference.Create(this));
+			//await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "MaTruc", "Chọn trục", true, DotNetObjectReference.Create(this));
+		}
+		if (_shouldScaleAfterRender)
+		{
+			_shouldScaleAfterRender = false;
+			await JS.InvokeVoidAsync("autoScaleSoDoCanHo");
+			await JS.InvokeVoidAsync("select2Helper.resetAndInit", "MaBlock", "Chọn block", true, DotNetObjectReference.Create(this));
+			await JS.InvokeVoidAsync("soDoCanHo.init", "#container-view-canho");
+		}
+	}
+
+	private async Task LoadDanhSachCanHoData()
+	{
+		DanhSachCanHo = await KeHoachBanHangService.GetSoDoCanHoAsync(MaDuAn, SelectedBlock, SelectedTang, SelectedTruc, MaPhieuKH);
+		GroupByBlock = DanhSachCanHo
+		.GroupBy(x => x.TenBlock)
+		.ToDictionary(g => g.Key, g => g.OrderBy(x => x.ThuTuTruc).ToList());
+
+		blocks = GroupByBlock.Keys.ToList();
+
+		TangList = DanhSachCanHo
+		.Select(x => x.TenTang)
+		.Distinct()
+		.OrderByDescending(x => int.TryParse(x, out var t) ? t : 0)
+		.ToList();
+
+		StateHasChanged();
+	}
+
+	private List<TrucSoDoModel> GetTrucs(string block, string matCanHo)
+	{
+		if (!GroupByBlock.ContainsKey(block)) return new();
+
+		return GroupByBlock[block]
+		.Where(x => x.MaView?.Trim() == matCanHo?.Trim())
+		.OrderBy(x => x.ThuTuTruc)
+		.Select(x => new TrucSoDoModel
+			{
+				MaTruc = x.MaTruc,
+				TenTruc = x.TenTruc
+			})
+		.DistinctBy(x => x.MaTruc)
+		.ToList();
+	}
+
+	private bool IsFullMat(string block)
+	{
+		var countMat = 0;
+		foreach (var mat in MatCanHo)
+		{
+			var trucList = GetTrucs(block, mat.MaView);
+			if (trucList.Any())
+			{
+				countMat = countMat + 1;
+			}
+		}
+		return countMat == 2;
+	}
+
+	private SoDoCanHoModel? GetCanHo(string block, string tang, string truc, string mat)
+	{
+		return GroupByBlock[block].FirstOrDefault(x =>
+		x.TenTang?.Trim() == tang?.Trim() &&
+		x.TenTruc?.Trim() == truc?.Trim() &&
+		x.MaView?.Trim() == mat?.Trim()
+		);
+	}
+
+	public async Task Show(DotMoBanCanHoTheoDuAn dot, string maDuAn, string maPhieuKH)
+	{
+		SelectedBlocks = new();
+		SelectedBlock = string.Empty;
+		MaDotMoBan = dot.MaDot;
+		TenDotMoBan = dot.TenDot;
+		MaDuAn = maDuAn;
+		MaPhieuKH = maPhieuKH;
+		ListBlock = await SanPhamService.GetByBlockTheoDuAnAsync(MaDuAn);
+		ListDot = await SanPhamService.GetListDotMoBanAsync(MaDuAn);
+		MatCanHo = await ViewService.GetByDuAnAsync(MaDuAn);
+		SanPhamPopups = new();
+		await LoadDanhSachCanHoData();
+		await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupSoDoCHModal");
+
+		_shouldScaleAfterRender = true;
+		hasChangeData = false;
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public async Task OnSelectMultiChanged(string id, string[] selecteds)
+	{
+		if (id == "MaBlock")
+		{
+			SelectedBlocks = selecteds.ToList();
+			SelectedBlock = string.Join(',', SelectedBlocks.ToArray());
+			//SelectedTang = string.Empty;
+			//SelectedTangs = new();
+			//SelectedTruc = string.Empty;
+			//SelectedTrucs = new();
+			//ListTang = await SanPhamService.GetByTangTheoBlockAsync(SelectedBlock, MaDuAn);
+			//ListTruc = await SanPhamService.GetByTrucTheoDuAnAsync(MaDuAn, SelectedBlock);
+			StateHasChanged();
+		}
+		else if (id == "MaTang")
+		{
+			SelectedTangs = selecteds.ToList();
+			SelectedTang = string.Join(',', SelectedTangs.ToArray());
+		}
+		else if (id == "MaTruc")
+		{
+			SelectedTrucs = selecteds.ToList();
+			SelectedTruc = string.Join(',', SelectedTrucs.ToArray());
+		}
+
+		await LoadDanhSachCanHoData();
+
+	}
+	private async Task OnSeLectedBlock(string? block)
+	{
+		var listMaCanHo = new List<SanPhamPopupPaginModel>();
+		var canHos = DanhSachCanHo.Where(x => x.TenBlock?.Trim() == block.Trim() && string.IsNullOrEmpty(x.MaDotMoBan)).ToList();
+		if (canHos.Any())
+		{
+			foreach (var ch in canHos)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+				var result = await KeHoachBanHangService.ThemCanHoVaoKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo, true);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+		else
+		{
+			var canHoRemoves = DanhSachCanHo.Where(x => x.TenBlock?.Trim() == block.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+			foreach (var ch in canHoRemoves)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+				var result = await KeHoachBanHangService.RemoveCanHoCuaKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+	}
+	private async Task OnSeLectedTang(string? tang)
+	{
+		var listMaCanHo = new List<SanPhamPopupPaginModel>();
+		var canHos = DanhSachCanHo.Where(x => x.TenTang?.Trim() == tang.Trim() && string.IsNullOrEmpty(x.MaDotMoBan)).ToList();
+		if (canHos.Any())
+		{
+			foreach (var ch in canHos)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+				var result = await KeHoachBanHangService.ThemCanHoVaoKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo, true);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+		else
+		{
+			var canHoRemoves = DanhSachCanHo.Where(x => x.TenTang?.Trim() == tang.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+			foreach (var ch in canHoRemoves)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+				var result = await KeHoachBanHangService.RemoveCanHoCuaKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+	}
+	private async Task OnSeLectedTruc(string block, TrucSoDoModel truc, string mat)
+	{
+		var listMaCanHo = new List<SanPhamPopupPaginModel>();
+		var canHoAdds = GroupByBlock[block].Where(x => x.MaTruc?.Trim() == truc?.MaTruc.Trim() &&
+		x.MaView?.Trim() == mat?.Trim() && string.IsNullOrEmpty(x.MaDotMoBan)).ToList();
+
+		if (canHoAdds.Any())
+		{
+			foreach (var ch in canHoAdds)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+
+				var result = await KeHoachBanHangService.ThemCanHoVaoKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo, true);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+		else
+		{
+			var canHoRemoves = GroupByBlock[block].Where(x => x.MaTruc?.Trim() == truc?.MaTruc.Trim() &&
+			x.MaView?.Trim() == mat?.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+
+			foreach (var ch in canHoRemoves)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+
+				var result = await KeHoachBanHangService.RemoveCanHoCuaKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+	}
+	private async Task OnSeLectedMat(string block, string mat)
+	{
+		var listMaCanHo = new List<SanPhamPopupPaginModel>();
+		var canHos = GroupByBlock[block].Where(x => x.MaView?.Trim() == mat?.Trim() && string.IsNullOrEmpty(x.MaDotMoBan)).ToList();
+		if (canHos.Any())
+		{
+			foreach (var ch in canHos)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+
+				var result = await KeHoachBanHangService.ThemCanHoVaoKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo, true);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+		else
+		{
+			var canHoRemoves = GroupByBlock[block].Where(x => x.MaView?.Trim() == mat?.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+			foreach (var ch in canHoRemoves)
+			{
+				if (ch.IsKhongChonLai == false)
+				{
+					var newSanPham = new SanPhamPopupPaginModel
+						{
+							MaSanPham = ch.MaSanPham,
+							HeSoTuTinh = ch.HeSoTuTinh,
+							DienTichTimTuong = ch.DienTichCanHo
+						};
+					listMaCanHo.Add(newSanPham);
+				}
+			}
+			if (listMaCanHo.Any())
+			{
+				hasChangeData = true;
+
+				var result = await KeHoachBanHangService.RemoveCanHoCuaKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo);
+				if (result.Status)
+				{
+					await LoadDanhSachCanHoData();
+					//await OnReloadCanHo.InvokeAsync();
+				}
+				StateHasChanged();
+			}
+		}
+	}
+
+
+	private async Task OnSeLectedCanHo(SoDoCanHoModel? sanPham)
+	{
+		if (sanPham.IsKhongChonLai == false && (sanPham.MaDotMoBan == string.Empty || sanPham.MaDotMoBan == MaDotMoBan))
+		{
+			var listMaCanHo = new List<SanPhamPopupPaginModel>();
+			var newSanPham = new SanPhamPopupPaginModel
+				{
+					MaSanPham = sanPham.MaSanPham,
+					HeSoTuTinh = sanPham.HeSoTuTinh,
+					DienTichTimTuong = sanPham.DienTichCanHo
+				};
+			listMaCanHo.Add(newSanPham);
+			hasChangeData = true;
+
+			var result = await KeHoachBanHangService.ThemCanHoVaoKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo, false);
+			if (result.Status)
+			{
+				await LoadDanhSachCanHoData();
+				//await OnReloadCanHo.InvokeAsync();
+			}
+			StateHasChanged();
+		}
+	}
+
+	// private async Task SubmitSelectedCanHo()
+	// {
+	// 	var listMaCanHo = SanPhamPopups
+	// 	.Where(x => x.IsSelected)
+	// 	.ToList();
+	// 	if (listMaCanHo.Any())
+	// 	{
+	// 		var result = await KeHoachBanHangService.ThemCanHoVaoKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo, false);
+	// 		if (result.Status)
+	// 		{
+	// 			await OnReloadCanHo.InvokeAsync();
+	// 		}
+	// 	}
+	// 	SanPhamPopups = new();
+	// }
+
+	private void ShowContextMenu(MouseEventArgs e, string type, object data)
+	{
+		menuX = e.ClientX;
+		menuY = e.ClientY;
+		actionType = type;
+		showButton = true;
+		actionData = data;
+	}
+	private void OnActionClick()
+	{
+		showButton = false;
+		switch (actionType)
+		{
+			case "Tang":
+				var tang = (string)actionData!;
+				var canHos = DanhSachCanHo.Where(x => x.TenTang?.Trim() == tang.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+				RemoveUncheck(canHos);
+				break;
+
+			case "Truc":
+				var (block, truc, mat) = ((string, TrucSoDoModel, string))actionData!;
+				var canHoTrucs = GroupByBlock[block].Where(x => x.MaTruc?.Trim() == truc?.MaTruc.Trim() &&
+				x.MaView?.Trim() == mat?.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+				RemoveUncheck(canHoTrucs);
+				break;
+
+			case "ViewMat":
+				var (b, m) = ((string, string))actionData!;
+				var canHoMats = GroupByBlock[b].Where(x => x.MaView?.Trim() == m?.Trim() && x.MaDotMoBan == MaDotMoBan).ToList();
+				RemoveUncheck(canHoMats);
+				break;
+		}
+	}
+
+	private async Task RemoveUncheck(List<SoDoCanHoModel> canHos)
+	{
+		var listMaCanHo = new List<SanPhamPopupPaginModel>();
+		foreach (var ch in canHos)
+		{
+			if (ch.IsKhongChonLai == false && (ch.MaDotMoBan == MaDotMoBan))
+			{
+				var sanPham = new SanPhamPopupPaginModel
+					{
+						MaSanPham = ch.MaSanPham,
+						HeSoTuTinh = ch.HeSoTuTinh,
+						DienTichTimTuong = ch.DienTichCanHo
+					};
+				listMaCanHo.Add(sanPham);
+			}
+		}
+
+		if (listMaCanHo.Any())
+		{
+			var result = await KeHoachBanHangService.RemoveCanHoCuaKeHoach(MaPhieuKH, MaDotMoBan, listMaCanHo);
+			if (result.Status)
+			{
+				await LoadDanhSachCanHoData();
+				//await OnReloadCanHo.InvokeAsync();
+			}
+			StateHasChanged();
+		}
+
+	}
+
+	private void HandleZoomChange(int value)
+	{
+		zoom = value;
+		StateHasChanged();
+	}
+
+	private async Task ClosePopupCH()
+	{
+		await OnReloadCanHo.InvokeAsync();
+	}
+
+	private async Task OnHoverCanHo(string maTruc, string tenTang)
+	{
+		await JS.InvokeVoidAsync("soDoCanHo.highlight", maTruc, tenTang);
+	}
+
+	private async Task OnLeaveCanHo()
+	{
+		await JS.InvokeVoidAsync("soDoCanHo.clearHighlight");
+	}
+}

@@ -1,0 +1,148 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using VTTGROUP.Infrastructure.Services
+@inject BlockService BlockService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment _env
+<div class="modal fade" tabindex="-1" id="ImportSanPhamModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import block</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <button type="button" class="btn btn-success" @onclick="OnTaiFileMau" disabled="@IsLoadingDownload">
+                    @if (IsLoadingDownload)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Đang tải...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-download me-1"></i>
+                        <span>Tải file mẫu</span>
+                    }
+                </button>
+                <div class="wraper-select-file">
+                    <div class="mb-3 mt-3">
+                        <label for="formFile" class="form-label">Chọn file để import dữ liệu</label>
+                        <InputFile OnChange="OnFileSelected" class="form-control" accept=".xlsx,.csv" id="formFile" />
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" @onclick="Close">Đóng</button>
+                <button class="btn btn-success" @onclick="Upload" disabled="@(IsLoadingUpload || !CanUpload)">
+                    @if (IsLoadingUpload)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Đang xử lý...</span>
+                    }
+                    else
+                    {
+                        <i class="mdi mdi-cloud-upload me-1"></i>
+                        <span>Tải lên</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter] public EventCallback<Task> OnUploaded { get; set; }
+    private IBrowserFile? SelectedFile;
+    private string? SelectedFileName;
+    private bool IsLoadingUpload = false;
+    private bool IsLoadingDownload = false;
+    private string MaDuAn = string.Empty;
+    private async Task Close()
+    {
+        SelectedFile = null;
+        SelectedFileName = null;
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportSanPhamModal");
+        StateHasChanged();
+    }
+
+    private bool CanUpload => SelectedFile != null;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        SelectedFileName = e.File.Name;
+    }
+    // private async Task OnTaiFileMau()
+    // {
+    //     IsLoadingDownload = true;
+    //     try
+    //     {
+    //         var fullPath = Path.Combine(_env.WebRootPath, "templates", "FileMauBlock.xlsx");
+    //         var fileBytes = await BlockService.GenerateTemplateWithDataAsync(fullPath);
+    //         var base64 = Convert.ToBase64String(fileBytes);
+
+    //         await JS.InvokeVoidAsync("downloadFileFromBytes", "FileMauBlock.xlsx", base64);
+    //     }
+    //     finally
+    //     {
+    //         IsLoadingDownload = false;
+    //     }
+    // }
+
+    private async Task OnTaiFileMau()
+    {
+        IsLoadingDownload = true;
+        await InvokeAsync(StateHasChanged); // đẩy render để spinner hiển thị
+
+        try
+        {
+            // Nhường 1 tick cho pipeline UI để đảm bảo spinner được vẽ
+            await Task.Yield();
+
+            var fullPath = Path.Combine(_env.WebRootPath, "templates", "FileMauBlock.xlsx");
+            var fileBytes = await BlockService.GenerateTemplateWithDataAsync(fullPath);
+
+            var base64 = Convert.ToBase64String(fileBytes);
+            await JS.InvokeVoidAsync("downloadFileFromBytes", "FileMauBlock.xlsx", base64);
+        }
+        catch (Exception ex)
+        {
+            // Tuỳ bạn: hiện toast lỗi
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            IsLoadingDownload = false;
+            await InvokeAsync(StateHasChanged); // render lại để tắt spinner
+        }
+    }
+
+    private async Task Upload()
+    {
+        if (SelectedFile != null)
+        {
+            IsLoadingUpload = true;
+            try
+            {
+                var result = await BlockService.ImportFromExcelAsync(SelectedFile, MaDuAn);
+                await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+                if (result.Status)
+                {
+                    await OnUploaded.InvokeAsync();
+                    await JS.InvokeVoidAsync("bootstrapModal.hide", "#ImportSanPhamModal");
+                }
+            }
+            finally
+            {
+                IsLoadingUpload = false;
+            }
+
+        }
+    }
+
+    public async Task ShowFileModal(string maDuAn)
+    {
+        MaDuAn = maDuAn;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#ImportSanPhamModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+}

@@ -1,0 +1,230 @@
+﻿@* @using VTTGROUP.Domain.Model
+<div class="col-lg-12">
+    <div class="general-info">
+        @if (Items != null && Items.Any())
+        {
+            foreach (var it in Items)
+            {
+                <div class="wapper-input @(it.LargeWidth == true ? "large-width-value" : "")">
+                    <div class="row">
+                        <div class="form-group-input">
+                            <span class="title-field">@it.Text</span>
+
+                            @if (it.IsClickable && OnItemClick.HasDelegate)
+                            {
+                                <button type="button"
+                                        class="input-value info-click @(it.Key == "DON_GIA_TB" ? "info-click-primary" : "")"
+                                        title="@it.Tooltip"
+                                        @onclick="() => HandleClick(it)">
+                                    @it.Value
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="input-value">@it.Value</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<InfoItem>? Items { get; set; }
+    [Parameter] public EventCallback<InfoItem> OnItemClick { get; set; }
+
+    private async Task HandleClick(InfoItem it)
+    {
+        if (it.IsClickable && OnItemClick.HasDelegate)
+            await OnItemClick.InvokeAsync(it);
+    }
+}
+
+<style>
+    .general-info .input-value.info-click {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        margin: 0;
+        font: inherit;
+        line-height: inherit;
+        color: inherit;
+        cursor: pointer;
+        text-align: right;
+    }
+
+        .general-info .input-value.info-click.info-click-primary {
+            color: #0F766E !important;
+            font-weight: 700;
+        }
+
+            .general-info .input-value.info-click.info-click-primary:hover {
+                color: #115E59 !important;
+                text-decoration: underline;
+            }
+
+</style> *@
+
+@using VTTGROUP.Domain.Model
+
+<div class="col-lg-12">
+	<div class="general-info">
+		@if (Items != null && Items.Any())
+		{
+			foreach (var it in Items)
+			{
+				<div class="wapper-input @(it.LargeWidth == true ? "large-width-value" : "")">
+					<div class="row">
+						<div class="form-group-input">
+							<span class="title-field">@it.Text</span>
+
+							<div class="value-wrap">
+								@if (it.IsClickable && OnItemClick.HasDelegate)
+								{
+									<button type="button"
+											class="input-value info-click @(it.Key == "DON_GIA_TB" ? "info-click-primary" : "")"
+											title="@it.Tooltip"
+											@onclick="() => HandleClick(it)">
+										@it.Value
+									</button>
+								}
+								else
+								{
+									<span class="input-value">@it.Value</span>
+								}
+
+								@* NÚT CẬP NHẬT: chỉ hiện cho Đơn giá TB *@
+								@if (it.Key == "DON_GIA_TB" && OnItemUpdate.HasDelegate)
+								{
+									<button type="button"
+											class="info-action-btn"
+											title="Cập nhật đơn giá TB"
+											@onclick="() => HandleUpdate(it)">
+										<i class="mdi mdi-pencil"></i>
+									</button>
+								}
+							</div>
+						</div>
+					</div>
+				</div>
+			}
+		}
+	</div>
+</div>
+
+@code {
+	[Parameter] public IEnumerable<InfoItem>? Items { get; set; }
+
+	// click vào value (xem lịch sử)
+	[Parameter] public EventCallback<InfoItem> OnItemClick { get; set; }
+
+	// click nút update (cập nhật đơn giá TB)
+	[Parameter] public EventCallback<InfoItem> OnItemUpdate { get; set; }
+
+	private async Task HandleClick(InfoItem it)
+	{
+		if (it.IsClickable && OnItemClick.HasDelegate)
+			await OnItemClick.InvokeAsync(it);
+	}
+
+	private async Task HandleUpdate(InfoItem it)
+	{
+		if (OnItemUpdate.HasDelegate)
+			await OnItemUpdate.InvokeAsync(it);
+	}
+}
+
+<style>
+	/* ===== layout value + action ===== */
+	.general-info .value-wrap {
+		display: inline-flex;
+		justify-content: flex-end;
+		gap: 8px;
+		/* FIX LỆCH: đừng canh center theo nút bút (cao), canh theo chữ */
+		align-items: baseline;
+	}
+
+	/* (optional) đảm bảo value nào cũng cùng line-height để không lệch */
+	.general-info .input-value,
+	.general-info .input-value.info-click {
+		line-height: 1.2;
+	}
+
+		/* ===== reset button về giống text (tránh lệch dòng) ===== */
+		.general-info .input-value.info-click {
+			background: transparent;
+			border: 0;
+			padding: 0;
+			margin: 0;
+			font: inherit;
+			color: inherit; /* mặc định giống các value khác */
+			cursor: pointer;
+			text-align: right;
+		}
+
+			/* ===== CHỈ item Đơn giá TB mới xanh ===== */
+			.general-info .input-value.info-click.info-click-primary {
+				color: #0F766E !important; /* xanh teal premium */
+				font-weight: 700;
+				margin-top: 3px;
+			}
+
+				/* hover nhẹ */
+				.general-info .input-value.info-click.info-click-primary:hover {
+					color: #115E59 !important;
+					text-decoration: underline;
+				}
+
+	/* ===== nút action cập nhật ===== */
+	/* FIX LỆCH: giảm size + nút tự canh giữa, không ảnh hưởng baseline chữ */
+	.general-info .info-action-btn {
+		width: 26px;
+		min-width:26px;
+		height: 26px;
+		border-radius: 50%;
+		border: 1px solid rgba(15,118,110,.22);
+		background: rgba(15,118,110,.06);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		padding: 0;
+		line-height: 1;
+		/* chỉ riêng nút canh giữa, không kéo chữ lệch */
+		align-self: center;
+		box-shadow: 0 1px 2px rgba(16,24,40,.06);
+		transition: background-color .15s ease, border-color .15s ease, transform .05s ease, box-shadow .15s ease;
+	}
+
+		.general-info .info-action-btn i {
+			font-size: 16px;
+			color: #0F766E;
+		}
+
+		/* hover nổi bật hơn */
+		.general-info .info-action-btn:hover {
+			background: rgba(15,118,110,.12);
+			border-color: rgba(15,118,110,.38);
+			box-shadow: 0 6px 14px rgba(15,118,110,.12);
+		}
+
+		/* click */
+		.general-info .info-action-btn:active {
+			transform: translateY(1px);
+			box-shadow: 0 2px 6px rgba(15,118,110,.10);
+		}
+
+		/* focus keyboard */
+		.general-info .info-action-btn:focus-visible {
+			outline: 2px solid rgba(15,118,110,.35);
+			outline-offset: 2px;
+		}
+
+	/* nếu vẫn còn lệch 1 xíu do font hệ thống thì bật dòng này */
+	.general-info .info-action-btn {
+		transform: translateY(-1px);
+	}
+
+</style>

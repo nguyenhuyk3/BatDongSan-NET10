@@ -1,0 +1,180 @@
+﻿@page "/usersgd/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Domain.Model.User
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject UserService UserService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1 class="legend-title">Người sử dụng</h1>
+<EditForm id="formDuAn" EditContext="@editContext">
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">                     
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nhân viên</span>
+                                    <span class="input-value">[<span class="item-phieu" @onclick="() => OnEditRecord(Record.IdNhanVien.ToString())">@Record.MaNhanVien</span>] @Record.TenNhanVien</span>
+                                    <InputText type="hidden" @bind-Value="Record.MaNhanVien" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <div class="form-group-input-flex">
+                                        <span class="title-field">Trạng thái sử dụng</span>
+                                        <input class="form-check-input" @bind="@Record.TrangThai" type="checkbox" value="true">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên đăng nhập</span>
+                                    <DisableTextBox Value="@Record.TenDangNhap" />
+                                    <InputText type="hidden" @bind-Value="Record.TenDangNhap" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Email</span>
+                                    <DisableTextBox Value="@Record.Email" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số điện thoại</span>
+                                    <DisableTextBox Value="@Record.SoDienThoai" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nhóm người dùng <i class="point-validate">*</i></span>
+                                    <select id="NhomUser" class="form-control input-validation" multiple @ref="selectNhomRef">
+                                        @foreach (var nhom in NhomUser)
+                                        {
+                                            <option value="@(nhom.MaNhomUser)" selected="@SelectedNhomUserList.Contains(nhom.MaNhomUser)">@nhom.TenNhomUser</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn nhóm người dùng</span>
+                                </div>
+                            </div>
+                        </div>
+                     
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <AppButton Label="Đặt lại mật khẩu"
+                       Class="button button-action"
+                       IconClass="mdi mdi-lock-reset"
+                       OnClick="() => ResetPassword()" />
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private UserModel? Record = new();
+    private List<NhomUserModel> NhomUser = new();
+    private DotNetObjectReference<Edit>? _selfRef;
+    private ElementReference selectNhomRef;
+    public List<string> SelectedNhomUserList { get; set; } = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            await BaseService.CheckPermissionAsync("NguoiSuDungSGD", VuViec.CapNhat.GetDescription());
+            NhomUser = await UserService.GetNhomUserBySanGDAsync();
+            await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "NhomUser", "Chọn nhóm người dùng", true, _selfRef);
+            var result = await UserService.FindUserAsync(id);
+            if (result.Status)
+            {
+                Record = (UserModel)result.Data;
+                SelectedNhomUserList = (Record.NhomUsers ?? "")
+                                                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                                .Select(x => x.Trim())
+                                                                .ToList();
+                StateHasChanged();
+            }
+        }
+    }
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "formDuAn", dotNetRef);
+    }
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await UserService.UpdateUserSanGDAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        StateHasChanged();
+    }
+    private async Task ResetPassword()
+    {
+        var fullDomain = $"{Nav.BaseUri}login";
+        var result = await UserService.ResetPasswordUserAsync(Record, fullDomain);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+
+    }
+    [JSInvokable]
+    public async Task OnSelectMultiChanged(string id, string[] selectedBlocks)
+    {
+        SelectedNhomUserList = selectedBlocks.ToList();
+        Record.NhomUsers = string.Join(',', SelectedNhomUserList.ToArray());
+    }
+    private async Task OnEditRecord(string? id)
+    {
+        if (!string.IsNullOrEmpty(id))
+        {
+            var url = $"/nhanviensgd/edit/{id}";
+            await JS.InvokeVoidAsync("openInNewTab", url);
+        }
+        //Nav.NavigateTo($"/nhanvien/edit/{id}");
+    }
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/usersgd");
+    }
+}

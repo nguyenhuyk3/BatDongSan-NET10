@@ -1,0 +1,701 @@
+﻿@page "/sanpham/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Model.SanPham
+@using VTTGROUP.Domain.Model.ViewMatKhoi
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@implements IDisposable
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject ViewTrucService ViewTrucService
+@inject SanPhamService SanPhamService
+@inject BlockService BlockService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Sản phẩm</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" name="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                        <option value="">-- Chọn dự án --</option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@item.MaDuAn">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại sản phẩm <i class="point-validate">*</i></span>
+                                    <select id="MaLoaiSP" class="form-control input-validation" name="MaLoaiSP" @onchange="OnLoaiSPChanged">
+                                        <option value="">Chọn loại sản phẩm</option>
+                                        @foreach (var item in ListLSP)
+                                        {
+                                            <option value="@item.MaLoaiSanPham">@item.TenLoaiSanPham</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn loại sản phẩm</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã sản phẩm<i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="MaSanPham" name="MaSanPham" type="text" @bind="@Record.MaSanPham">
+                                    <span class="error-validation">Vui lòng nhập mã sản phẩm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên sản phẩm <i class="point-validate">*</i></span>
+                                    <input class="input-form input-validation" id="TenSanPham" name="TenSanPham" type="text" @bind="@Record.TenSanPham">
+                                    <span class="error-validation">Vui lòng nhập tên sản phẩm</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Block <i class="point-validate">*</i></span>
+                                    <select id="MaBlock" name="MaBlock" class="form-control input-validation" @onchange="OnBlockChanged">
+                                        <option value="">-- Chọn block --</option>
+                                        @foreach (var item in ListBlock)
+                                        {
+                                            <option value="@item.MaBlock">@item.TenBlock</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn block</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tầng <i class="point-validate">*</i></span>
+                                    <select id="MaTang" class="form-control input-validation" name="MaTang" @onchange="OnTangChanged">
+                                        <option value="">Chọn tầng</option>
+                                        @foreach (var item in ListTang)
+                                        {
+                                            <option value="@item.MaTang">@item.TenTang</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn tầng</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Trục <i class="point-validate">*</i></span>
+                                    <select id="MaTruc" class="form-control input-validation" name="MaTruc" @onchange="OnTrucChanged">
+                                        <option value="">Chọn trục</option>
+                                        @foreach (var item in ListTruc)
+                                        {
+                                            <option value="@item.MaTruc">@item.TenTruc</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn trục</span>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số tầng</span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoTang))" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại căn hộ</span>
+                                    <select id="MaLoaiCan" class="form-control" name="MaLoaiCan" @onchange="OnLoaiCanChanged">
+                                        <option value="">Chọn loại căn hộ</option>
+                                        @foreach (var item in ListLCH)
+                                        {
+                                            <option value="@item.MaLoaiCanHo">@item.TenLoaiCanHo</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại diện tích</span>
+                                    <select id="MaLoaiDt" class="form-control" name="MaLoaiDt" @onchange="OnLoaiDTChanged">
+                                        <option value="">Chọn loại diện tích</option>
+                                        @foreach (var item in ListLDT)
+                                        {
+                                            <option value="@item.MaLoaiDt">@item.TenLoaiDt</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại layout</span>
+                                    <select id="MaLoaiThietKe" class="form-control" name="MaLoaiThietKe" @onchange="OnLoaiTKChanged">
+                                        <option value="">Chọn loại layout</option>
+                                        @foreach (var item in ListLoaiLayout)
+                                        {
+                                            <option value="@item.MaLoaiThietKe">@item.TenLoaiThietKe</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số thiết kế <i class="point-validate">*</i></span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoDienTich))" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số trục</span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoTruc))" readonly>
+                                    <input type="hidden" value="@Record.MaLoaiGoc" id="MaLoaiGoc">
+                                    <input type="hidden" value="@Record.MaViTri" id="MaViTri">
+                                    <input type="hidden" value="@Record.MaView" id="MaView">
+                                    <input type="hidden" value="@Record.MaMatKhoi" id="MaMatKhoi">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Vị trí</span>
+                                    <input class="input-form" type="text" value="@Record.TenViTri" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số vị trí</span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoViTri))" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">View</span>
+                                    <input class="input-form" type="text" value="@Record.TenView" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số view</span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoView))" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại góc</span>
+                                    <input class="input-form" type="text" value="@Record.TenLoaiGoc" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số góc</span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoGoc))" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mặt khối</span>
+                                    <input class="input-form" type="text" value="@Record.TenMatKhoi" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số mặt khối</span>
+                                    <input class="input-form text-right" type="text" value="@(string.Format("{0:#,##0.##}", Record.HeSoMatKhoi))" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích tim tường <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="DienTichTimTuong" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.DienTichTimTuong" />
+                                    <span class="error-validation">Vui lòng nhập diện tích tim tường</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích thông thủy <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="DienTichThongThuy" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.DienTichThongThuy" />
+                                    <span class="error-validation">Vui lòng nhập diện tích thông thủy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích sân vườn</span>
+                                    <InputCurrency T="decimal" Id="DienTichSanVuon" Format="#,##0.0000" CssClass="input-form currency-input" @bind-Value="Record.DienTichSanVuon" />
+                                    <span class="error-validation">Vui lòng nhập diện tích sân vườn</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số view phụ</span>
+                                    <InputCurrency T="decimal" Id="HeSoCanHo" Format="#,##0.0000" CssClass="input-form input-validation currency-input" @bind-Value="Record.HeSoCanHo" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private SanPhamModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<DaDanhMucLoaiSanPham> ListLSP = new();
+    private List<DaDanhMucBlock> ListBlock = new();
+    private List<DaDanhMucTang> ListTang = new();
+    private List<DaDanhMucLoaiCanHo> ListLCH = new();
+    private List<DaLoaiDienTich> ListLDT = new();
+    private List<DaDanhMucLoaiThietKe> ListLoaiLayout = new();
+    private List<DaDanhMucLoaiGoc> ListGoc = new();
+    private List<DaDanhMucViTri> ListVT = new();
+    private List<DaDanhMucView> ListView = new();
+    private List<DaDanhMucViewTruc> ListTruc = new();
+    private List<DaDanhMucViewMatKhoi> ListMMK = new();
+    private List<InfoItem> InfoItems = new();
+    private CancellationTokenSource? _duAnCts;
+    private CancellationTokenSource? _blockCts;
+    private bool _disposed;
+    // Thêm field nếu chưa có
+    private bool _isAuthorized = false;
+    public void Dispose()
+    {
+        _disposed = true;
+        _duAnCts?.Cancel();
+        _duAnCts?.Dispose();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        ListDA = await BlockService.GetByDuAnAsync();
+        ListLSP = await SanPhamService.GetByLoaiSanPhamAsync();
+        StateHasChanged();
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("SanPham", VuViec.Them.GetDescription());
+            var result = await SanPhamService.GetByIdAsync(string.Empty);
+            if (result.Status)
+            {
+                Record = (SanPhamModel?)result.Data;
+                if (Record == null)
+                {
+                    Record = new SanPhamModel();
+                }
+                InfoItems = new()
+                {
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+            }
+
+            await JS.InvokeVoidAsync("eval", @"
+            setTimeout(function() {
+                select2Helper.initSelectChange('MaDuAn', 'Chọn dự án', true);
+                select2Helper.initSelectChange('MaBlock', 'Chọn block', true);
+                select2Helper.initSelectChange('MaTang', 'Chọn tầng', true);
+                select2Helper.initSelectChange('MaLoaiCan', 'Chọn loại căn hộ', true);
+                select2Helper.initSelectChange('MaLoaiDt', 'Chọn loại diện tích', true);
+                select2Helper.initSelectChange('MaLoaiThietKe', 'Chọn loại diện tích', true);
+                select2Helper.initSelectChange('MaTruc', 'Chọn trục', true);
+                select2Helper.initSelectChange('MaLoaiSP', 'Chọn loại sản phẩm', true);
+            }, 300);");
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaSanPham");
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DienTichTimTuong", 18, 4);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DienTichThongThuy", 18, 4);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "DienTichSanVuon", 18, 4);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "HeSoCanHo", 18, 4);
+            //StateHasChanged();
+        }
+    }
+
+    // private async Task SubmitFormJs()
+    // {
+    //     var dotNetRef = DotNetObjectReference.Create(this);
+    //     await JS.InvokeVoidAsync("validateForm", "formDuAn", dotNetRef);
+    // }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    // [JSInvokable]
+    // public async Task SubmitForm(Dictionary<string, JsonElement> data)
+    // {
+    //     var model = new SanPhamModel();
+    //     model.MaDuAn = data.GetValueOrDefault("MaDuAn").GetString() ?? string.Empty;
+    //     model.MaLoaiSP = data.GetValueOrDefault("MaLoaiSP").GetString() ?? string.Empty;
+    //     model.MaSanPham = data.GetValueOrDefault("MaSanPham").GetString() ?? string.Empty;
+    //     model.TenSanPham = data.GetValueOrDefault("TenSanPham").GetString() ?? string.Empty;
+    //     model.MaBlock = data.GetValueOrDefault("MaBlock").GetString() ?? string.Empty;
+    //     model.MaTang = data.GetValueOrDefault("MaTang").GetString() ?? string.Empty;
+    //     model.MaTruc = data.GetValueOrDefault("MaTruc").GetString() ?? string.Empty;
+    //     model.MaLoaiCan = (data.GetValueOrDefault("MaLoaiCan").GetString()) ?? string.Empty;
+    //     model.MaLoaiDT = data.GetValueOrDefault("MaLoaiDt").GetString() ?? string.Empty;
+    //     model.MaLoaiThietKe = data.GetValueOrDefault("MaLoaiThietKe").GetString() ?? string.Empty;
+    //     var result = await SanPhamService.SaveViewSanPhamAsync(model);
+    //     await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    //     if (result.Status)
+    //     {
+    //         Nav.NavigateTo($"/sanpham/edit/{model.MaSanPham}");
+    //         StateHasChanged();
+    //     }
+    // }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await SanPhamService.SaveViewSanPhamAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            if (result.Status)
+            {
+                Nav.NavigateTo($"/sanpham/edit/{Record.MaSanPham}");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        // Hủy thao tác trước (nếu user đổi Dự án quá nhanh)
+        _duAnCts?.Cancel();
+        _duAnCts = new CancellationTokenSource();
+        var ct = _duAnCts.Token;
+
+        try
+        {
+            Record.MaDuAn = e.Value?.ToString();
+
+            // 1) Clear model & list phụ thuộc (trước khi load)
+            Record.MaBlock = null;
+            Record.MaTang = null; Record.HeSoTang = 1; ListTang = new();
+            Record.MaLoaiCan = null;
+
+            Record.MaTruc = null; Record.HeSoTruc = 1; ListTruc = new();
+            Record.MaViTri = null; Record.TenViTri = null; Record.HeSoViTri = 1;
+            Record.MaView = null; Record.TenView = null; Record.HeSoView = 1;
+            Record.MaLoaiGoc = null; Record.TenLoaiGoc = null; Record.HeSoGoc = 1;
+            Record.MaMatKhoi = null; Record.TenMatKhoi = null; Record.HeSoMatKhoi = 1;
+
+            // 2) Destroy select2 cũ TRƯỚC khi DOM đổi data
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaBlock");
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaTang");
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaLoaiCan");
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaLoaiDt");
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaLoaiThietKe");
+
+            // 3) Load dữ liệu theo Dự án mới
+            await LoadBlock();   // fill ListBlock theo Record.MaDuAn
+            await LoadLCH();     // fill ListLoaiCanHo...
+            await LoadLoaiDienTich(); //fill ListLoaiDienTich
+            await LoadLoaiLayout(); //fill ListLoaiLayout
+            // 4) Re-render để options mới xuất hiện trên DOM
+            await InvokeAsync(StateHasChanged);
+
+            // 5) Đợi 1 tick cho DOM “ổn định”, rồi re-init + clear
+            await Task.Yield();
+            if (_disposed || ct.IsCancellationRequested) return;
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaBlock", "Chọn mã block", true);
+            await JS.InvokeVoidAsync("select2Helper.clear", "MaBlock"); // đảm bảo không dính value cũ
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaTang", "Chọn tầng", true);
+            await JS.InvokeVoidAsync("select2Helper.clear", "MaTang"); // đảm bảo không dính value cũ
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaLoaiCan", "Chọn loại thiết kế", true);
+            await JS.InvokeVoidAsync("select2Helper.clear", "MaLoaiCan"); // đảm bảo không dính value cũ
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaLoaiDt", "Chọn loại diện tích", true);
+            await JS.InvokeVoidAsync("select2Helper.clear", "MaLoaiDt"); // đảm bảo không dính value cũ
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaLoaiThietKe", "Chọn loại layout", true);
+            await JS.InvokeVoidAsync("select2Helper.clear", "MaLoaiThietKe"); // đảm bảo không dính value cũ
+
+            //  CapNhatHeSo();
+        }
+        catch (OperationCanceledException)
+        {
+            // bị hủy do user đổi dự án nhanh → bỏ qua
+        }
+    }
+
+    private async Task OnBlockChanged(ChangeEventArgs e)
+    {
+        // Hủy phiên trước (user đổi nhanh)
+        _blockCts?.Cancel();
+        _blockCts = new CancellationTokenSource();
+        var ct = _blockCts.Token;
+
+        Record.MaBlock = e.Value?.ToString();
+
+        // Nếu bỏ chọn Block → clear hết, destroy select2, rồi thoát
+        if (string.IsNullOrWhiteSpace(Record.MaBlock))
+        {
+            // reset model/list phụ thuộc
+            Record.MaTang = null; Record.HeSoTang = 1; ListTang = new();
+            Record.MaTruc = null; Record.HeSoTruc = 1; ListTruc = new();
+
+            Record.MaViTri = null; Record.TenViTri = null; Record.HeSoViTri = 1;
+            Record.MaView = null; Record.TenView = null; Record.HeSoView = 1;
+            Record.MaLoaiGoc = null; Record.TenLoaiGoc = null; Record.HeSoGoc = 1;
+            Record.MaMatKhoi = null; Record.TenMatKhoi = null; Record.HeSoMatKhoi = 1;
+
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaTang");
+            await JS.InvokeVoidAsync("select2Helper.destroy", "#MaTruc");
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // 1) Destroy select2 cũ TRƯỚC khi đổi data
+        await JS.InvokeVoidAsync("select2Helper.destroy", "#MaTang");
+        await JS.InvokeVoidAsync("select2Helper.destroy", "#MaTruc");
+
+
+        // 2) Reset model phụ thuộc ngay lập tức (tránh hiển thị giá trị cũ)
+        Record.MaTang = null; Record.HeSoTang = 1; ListTang = new();
+        Record.MaTruc = null; Record.HeSoTruc = 1; ListTruc = new();
+
+        Record.MaViTri = null; Record.TenViTri = null; Record.HeSoViTri = 1;
+        Record.MaView = null; Record.TenView = null; Record.HeSoView = 1;
+        Record.MaLoaiGoc = null; Record.TenLoaiGoc = null; Record.HeSoGoc = 1;
+        Record.MaMatKhoi = null; Record.TenMatKhoi = null; Record.HeSoMatKhoi = 1;
+
+        // 3) Load dữ liệu theo Block mới (song song để nhanh hơn)
+        var loadTangTask = LoadTang();
+        var loadTrucTask = LoadTruc();
+        await Task.WhenAll(loadTangTask, loadTrucTask);
+
+        // 4) Re-render để DOM có option mới
+        await InvokeAsync(StateHasChanged);
+
+        // 5) Đợi 1 tick cho DOM ổn định rồi re-init
+        await Task.Yield();
+        if (_disposed || ct.IsCancellationRequested) return;
+
+        await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaTang", "Chọn tầng", true);
+        await JS.InvokeVoidAsync("select2Helper.clear", "MaTang"); // đảm bảo không dính value cũ
+
+        await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaTruc", "Chọn trục", true);
+        await JS.InvokeVoidAsync("select2Helper.clear", "MaTruc"); // đảm bảo không dính value cũ
+
+        // (tuỳ thích) focus vào MaTang cho thao tác nhanh
+        // await JS.InvokeVoidAsync("select2Helper.focus", "#MaTang");
+
+        CapNhatHeSo();
+    }
+
+    private async Task LoadBlock()
+    {
+        Record.MaBlock = null;
+        ListBlock = await SanPhamService.GetByBlockTheoDuAnAsync(Record.MaDuAn);
+    }
+
+    private async Task LoadLCH()
+    {
+        Record.MaLoaiCan = null;
+        Record.HeSoDienTich = 1;
+        ListLCH = await SanPhamService.GetByLoaiCanHoTheoDuAnAsync(Record.MaDuAn);
+    }
+
+    private async Task LoadLoaiDienTich()
+    {
+        Record.MaLoaiDT = null;
+        ListLDT = await SanPhamService.GetByLoaiDTTheoDuAnAsync(Record.MaDuAn);
+    }
+
+    private async Task LoadLoaiLayout()
+    {
+        Record.MaLoaiThietKe = null;
+        ListLoaiLayout = await SanPhamService.GetByLoaiThietKeTheoDuAnAsync(Record.MaDuAn);
+    }
+
+    private async Task LoadTang()
+    {
+        Record.MaTang = null;
+        Record.HeSoTang = 1;
+        ListTang = await SanPhamService.GetByTangTheoBlockAsync(Record.MaBlock, Record.MaDuAn);
+    }
+
+    private async Task LoadTruc()
+    {
+        Record.MaTruc = null;
+        Record.HeSoTruc = 1;
+        ListTruc = await SanPhamService.GetByTrucTheoDuAnAsync(Record.MaDuAn, Record.MaBlock);
+    }
+
+    private async Task OnTangChanged(ChangeEventArgs e)
+    {
+        Record.MaTang = e.Value?.ToString();
+        // Record.HeSoTang = await SanPhamService.GetHeSoTangAsync(Record.MaTang);
+        // CapNhatHeSo();
+    }
+
+    private async Task OnLoaiSPChanged(ChangeEventArgs e)
+    {
+        Record.MaLoaiSP = e.Value?.ToString();
+    }
+
+    private async Task OnLoaiCanChanged(ChangeEventArgs e)
+    {
+        Record.MaLoaiCan = e.Value?.ToString();
+        // Record.HeSoDienTich = await SanPhamService.GetHeSoLoaiCanAsync(Record.MaLoaiCan);
+        // CapNhatHeSo();
+    }
+
+    private async Task OnLoaiTKChanged(ChangeEventArgs e)
+    {
+        Record.MaLoaiThietKe = e.Value?.ToString();
+    }
+
+    private async Task OnLoaiDTChanged(ChangeEventArgs e)
+    {
+        Record.MaLoaiDT = e.Value?.ToString();
+    }
+
+
+
+    private async Task OnTrucChanged(ChangeEventArgs e)
+    {
+        Record.MaTruc = e.Value?.ToString();
+        var thongTinTruc = await SanPhamService.GetThongTinByMaTrucAsync(Record.MaTruc);
+        Record.HeSoTruc = thongTinTruc.HeSoTruc;
+
+        Record.MaViTri = thongTinTruc.MaViTri;
+        Record.TenViTri = thongTinTruc.TenViTri;
+        Record.HeSoViTri = thongTinTruc.HeSoViTri;
+
+        Record.MaView = thongTinTruc.MaView;
+        Record.TenView = thongTinTruc.TenView;
+        Record.HeSoView = thongTinTruc.HeSoView;
+
+        Record.MaLoaiGoc = thongTinTruc.MaLoaiGoc;
+        Record.TenLoaiGoc = thongTinTruc.TenLoaiGoc;
+        Record.HeSoGoc = thongTinTruc.HeSoGoc;
+
+        Record.MaMatKhoi = thongTinTruc.MaMatKhoi;
+        Record.TenMatKhoi = thongTinTruc.TenMatKhoi;
+        // Record.HeSoMatKhoi = thongTinTruc.HeSoMatKhoi;
+
+        // CapNhatHeSo();
+    }
+
+    private void CapNhatHeSo()
+    {
+        // Record.HeSoCanHo = (Record.HeSoTang ?? 1) *
+        //                             (Record.HeSoDienTich ?? 1) *
+        //                             (Record.HeSoGoc ?? 1) *
+        //                             (Record.HeSoViTri ?? 1) *
+        //                             (Record.HeSoView ?? 1) *
+        //                             (Record.HeSoTruc ?? 1) *
+        //                             (Record.HeSoMatKhoi ?? 1);
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/sanpham");
+    }
+}

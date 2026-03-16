@@ -1,0 +1,253 @@
+﻿@page "/loaicanho/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.LoaiCanHo
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject LoadingService Loading
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject LoaiCanHoService LoaiCanHoService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Loại căn hộ</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án </span>
+                                    <DisableTextBox Value="@Record.TenDuAn" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Thiết kế </span>
+                                    <DisableTextBox Value="@Record.TenLoaiThietKe" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã loại</span>
+                                    <DisableTextBox Value="@Record.MaLoaiCanHo" />
+                                    <InputText hidden @bind-Value="Record.MaLoaiCanHo" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên loại <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenLoaiCanHo" id="TenLoaiCanHo" />
+                                    <span class="error-validation">Vui lòng nhập tên căn hộ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích<i class="point-validate">*</i></span>
+                                    <input id="DienTich" name="DienTich" class="form-control input-form text-right currency-input" type="text" @bind-value="Record.DienTich">
+                                    <span class="error-validation">Vui lòng nhập diện tích</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích lọt lòng<i class="point-validate">*</i></span>
+                                    <input id="DienTichLotLong" name="DienTichLotLong" class="form-control input-form text-right currency-input" type="text" @bind-value="Record.DienTichLotLong">
+                                    <span class="error-validation">Vui lòng nhập diện tích lọt lòng</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Diện tích sân vườn<i class="point-validate">*</i></span>
+                                    <input id="DienTichSanVuon" name="DienTichSanVuon" class="form-control input-form text-right currency-input" type="text" @bind-value="Record.DienTichSanVuon">
+                                    <span class="error-validation">Vui lòng nhập diện tích sân vườn</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số phòng ngủ <i class="point-validate">*</i></span>
+                                    <InputCurrency T="int" Id="SoPhongNgu" Format="#,##0" CssClass="input-form currency-input" @bind-Value="Record.SoPhongNgu" />
+                                    <span class="error-validation">Vui lòng nhập số phòng ngủ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                    <InputCurrency T="decimal" Id="HeSoDienTich" Format="#,##0.0000" CssClass="input-form currency-input" @bind-Value="Record.HeSoDienTich" />
+                                    <span class="error-validation">Vui lòng nhập hệ số diện tích</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" name="MoTa" id="MoTa" rows="3" tabindex="2" @bind="@Record.MoTa"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12" style="display:none">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Hình Ảnh</span>
+                                    <div class="contatiner-upload-files">
+                                        <FileUploader @ref="uploaderRef" AllowExtensions="allowedExtensions"
+                                                      MaxFileSize="10485760"
+                                                      AllowMultiple="false"
+                                                      OnFilesChanged="HandleFiles" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private LoaiCanHoModel? Record = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+    private FileUploader uploaderRef;
+    private bool _isRendered = false;
+    // Các giá trị lấy từ Record
+    private List<Select2Config> _select2Configs = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+        var result = await LoaiCanHoService.GetByIdAsync(id ?? string.Empty);
+        if (result.Status)
+        {
+            Record = (LoaiCanHoModel?)result.Data;
+            if (Record == null)
+            {
+                Record = new LoaiCanHoModel();
+            }
+            if (Record.Files.Any())
+            {
+                await uploaderRef.RenderInitialFiles(Record.Files);
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+        StateHasChanged(); // ép render lại sau khi có dữ liệu
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isRendered)
+        {
+            await BaseService.CheckPermissionAsync("LoaiCanHo", VuViec.CapNhat.GetDescription());
+            _isRendered = true;
+            _select2Configs = new()
+            {
+                new("MaDuAn", "Chọn dự án", Record.MaDuAn?.ToString())
+            };
+            await ReapplyCurrencyFormat();
+            // Delay nhẹ để đảm bảo select đã render
+            await Task.Delay(150);
+            await JS.InvokeVoidAsync("select2Helper.initMany", _select2Configs);
+            if (Record.Files.Any())
+            {
+                await uploaderRef.RenderInitialFiles(Record.Files);
+            }
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await LoaiCanHoService.UpdateByIdAsync(Record, _env.WebRootPath);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    public void HandleFiles(List<UploadedFileModel> files)
+    {
+        Record.Files = files;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/loaicanho");
+    }
+
+    public class Select2Config
+    {
+        public string id { get; set; }
+        public string placeholder { get; set; }
+        public string? value { get; set; }
+        public bool allowClear { get; set; } = true;
+
+        public Select2Config(string id, string placeholder, string? value)
+        {
+            this.id = id;
+            this.placeholder = placeholder;
+            this.value = value;
+        }
+    }
+
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 2);
+    }
+}

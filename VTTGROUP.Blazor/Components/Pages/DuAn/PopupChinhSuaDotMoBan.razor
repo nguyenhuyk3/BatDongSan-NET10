@@ -1,0 +1,158 @@
+﻿@using System.Globalization
+
+@using VTTGROUP.Domain.Model.DMDotMoBan
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Blazor.Components.CompChilds
+
+@inject DMDotMoBanCanHoService DMDotMoBanCanHoService
+
+@inject IJSRuntime JS
+
+<div class="modal fade" id="PopupChinhSuaDotMoBanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chỉnh sửa đợt mở bán</h5>
+                @* <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button> *@
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body-chinh-sua-dot">
+                <EditForm id="formChinhSuaDot" EditContext="@editContext">
+                    <div class="col-lg-12 mx-auto row">
+                        <div class="wapper-input col-lg-6 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã đợt <i class="point-validate">*</i></span>
+                                    <InputText class="form-control" @bind-Value="Record.MaDotMoBan" id="EditMaDotMoBan" disabled />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Tên đợt <i class="point-validate">*</i></span>
+                                    <InputText class="form-control input-validation" @bind-Value="Record.TenDotMoBan" id="EditTenDotMoBan" />
+                                    <span class="error-validation" style="display:none">Vui lòng nhập tên đợt</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Thứ tự hiển thị <i class="point-validate">*</i></span>
+                                    <InputCurrency T="int" Id="EditThuTuHienThi" Format="#,##0" CssClass="input-form input-validation" @bind-Value="Record.ThuTuHienThi" />
+                                    <span class="error-validation" style="display:none">Vui lòng nhập số thứ tự hiển thị</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6 mb-3">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Mã màu</span>
+                                    <input type="color"
+                                           id="EditMaMau"
+                                           class="form-control form-control-color"
+                                           @bind="Record.MaMau"
+                                           style="width: 100px;" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày bắt đầu <i class="point-validate">*</i></span>
+                                    <FlatpickrInput Id="EditNgayBatDau" Name="EditNgayBatDau" @bind-Value="Record.NgayBatDau"
+                                                    Placeholder=""
+                                                    CssClass="form-control input-validation datetime-picker"
+                                                    Options="dateOptions" />
+                                    <span class="error-validation" style="display:none">Vui lòng chọn ngày bắt đầu</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ngày kết thúc <i class="point-validate">*</i></span>
+                                    <FlatpickrInput Id="EditNgayKetThuc" Name="EditNgayKetThuc" @bind-Value="Record.NgayKetThuc"
+                                                    Placeholder=""
+                                                    CssClass="form-control input-validation datetime-picker"
+                                                    Options="dateOptions" />
+                                    <span class="error-validation" style="display:none">Vui lòng chọn ngày kết thúc</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="SubmitFormJs">
+                    Lưu
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnUpdated { get; set; }
+
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+
+    private EditContext editContext = default!;
+    private DotMoBanModel Record = new();
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    public async Task ShowAsync(string maDotMoBan)
+    {
+        var result = await DMDotMoBanCanHoService.GetByIdAsync(maDotMoBan);
+        if (result.Status && result.Data is DotMoBanModel model)
+        {
+            Record = model;
+        }
+        else
+        {
+            Record = new DotMoBanModel { MaDotMoBan = maDotMoBan };
+        }
+
+        // Đảm bảo MaMau luôn có giá trị hex hợp lệ cho input type="color"
+        if (string.IsNullOrWhiteSpace(Record.MaMau))
+            Record.MaMau = "#000000";
+
+        editContext = new EditContext(Record);
+        StateHasChanged();
+
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChinhSuaDotMoBanModal");
+
+        // Reset trạng thái validation sau khi modal đã render
+        await JS.InvokeVoidAsync("clearValidationState", "modal-body-chinh-sua-dot");
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "modal-body-chinh-sua-dot", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await DMDotMoBanCanHoService.UpdateByIdAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+
+        if (result.Status)
+        {
+            await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupChinhSuaDotMoBanModal");
+            await OnUpdated.InvokeAsync();
+        }
+    }
+}

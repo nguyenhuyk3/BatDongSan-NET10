@@ -1,0 +1,248 @@
+﻿@page "/nhanviensgd"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject NhanVienService NhanVienService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Nhân viên</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Nhân viên" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px">
+                        </th>
+                        <th style="width: 180px">
+                            Họ và tên
+                        </th>
+                        <th style="width: 170px">
+                            Email
+                        </th>
+                        <th style="width: 170px">
+                            Số điện thoại
+                        </th>
+                        <th style="width: 90px">
+                            &nbsp;
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (nhanViens != null && nhanViens.Count > 0)
+                    {
+                        @foreach (var item in nhanViens)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(item.UrlDaiDien))
+                                    {
+                                        <img src="@item.UrlDaiDien" class="avatar-index" />
+                                    }
+                                    else
+                                    {
+                                        <div class="icon-avatar-index"><i class="bi bi-person-fill"></i></div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="item-phieu" @onclick="() => OnEditRecord(item.ID.ToString())">@item.MaNhanVien</div>
+                                    <span><i class="bi bi-person-fill me-1"></i>@item.HoVaTen</span>
+                                </td>
+                                <td>
+                                    <div class="mb-1 d-flex wraper-1"><span class="icon-index me-1"><i class="bi bi-envelope"></i></span>@item.Email</div>
+                                </td>
+                                <td><div class="d-flex wraper-2"><span class="icon-index me-1"><i class="bi bi-telephone"></i></span>@item.SoDienThoai</div></td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        @if (item.UserId == null)
+                                        {
+                                            <div class="icon-button" data-title="Tạo người dùng" data-position="left">
+                                                <a href="javascript:void()" @onclick="() => OnCreateUserRecord(item)">
+                                                    <span>
+                                                        <i class="mdi mdi-account-plus">
+                                                        </i>
+                                                    </span>
+                                                </a>
+                                            </div>
+                                        }
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void()" @onclick="() => OnEditRecord(item.ID.ToString())">
+                                                <span>
+                                                    <i class="mdi mdi-pencil">
+                                                    </i>
+                                                </span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (nhanViens == null || !nhanViens.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa nhân viên này <strong>@selectedTenNhanVien</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</div>
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private string? selectedMaNhanVien;
+    private string? selectedTenNhanVien;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    private string? search;
+    List<NhanVienPagingDto> nhanViens = new();
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+      
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("NhanVienSGD", VuViec.Xem.GetDescription());
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await LoadData();
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            // buộc render lại vì ta vừa đổi dữ liệu sau render
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            var (data, total) = await NhanVienService.GetPagingBySanGDAsync(_page, _pageSize, search);
+            nhanViens = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ShowConfirmDelete(NhanVienPagingDto maNV)
+    {
+        await BaseService.CheckPermissionAsync("NhanVienSGD", VuViec.Xoa.GetDescription());
+        selectedMaNhanVien = maNV.MaNhanVien;
+        selectedTenNhanVien = maNV.HoVaTen;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaNhanVien == null || string.IsNullOrEmpty(selectedMaNhanVien))
+        {
+            return;
+        }
+        var result = await NhanVienService.DeleteNhanVienAsync(selectedMaNhanVien, _env.WebRootPath);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadData();
+        selectedMaNhanVien = string.Empty;
+        StateHasChanged();
+    }
+
+
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData();
+    }
+    private async Task OnCreateUserRecord(NhanVienPagingDto maNV)
+    {
+        var result = await NhanVienService.CheckIsCreatedUserAsync(maNV.MaNhanVien);
+        if (result != 0)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Nhân viên này đã tạo user", false);
+            maNV.UserId = result;
+            StateHasChanged();
+        }
+        else
+        {
+            Nav.NavigateTo($"/usersgd/createuser/{maNV.ID}");
+        }
+    }
+
+    private async Task OnEditRecord(string? id)
+    {
+        Nav.NavigateTo($"/nhanviensgd/edit/{id}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo("/nhanviensgd/create");
+        return;
+    }
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+}

@@ -1,0 +1,408 @@
+﻿@page "/khachhangtam"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.CongTrinh
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject LoadingService Loading
+@inject IBaseService BaseService
+@inject KhachHangTamService KhachHangTamService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Danh sách khách hàng tạm</h1>
+
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex items-center">
+                <div class="result-label-icon">
+                    <i class="mdi mdi-calendar-today"></i>
+                    <DateRangePicker OnDateRangeChanged="OnDateRangeChanged" @ref="dateRangeRef" />
+                </div>
+            </div>
+
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn loại khách hàng"
+                      Items="ListDTKH.Select(x => new UiSelect.SelectItem(x.MaDoiTuongKhachHang!, x.TenDoiTuongKhachHang!))"
+                      @bind-Value="selectedLoaiKhachHang"
+                      OnChange="OnDTKHChanged" />
+
+            <div class="ml-auto flex items-center gap-2">
+                @*  <MoreFilterPopup OnTrangThaiChanged="OnTTDChanged" OnSanGiaoDichChanged="OnSanGGChanged"
+                OnReset="ResetAllParam" @ref="morePopupRef" /> *@
+                <AddButton Text="Khách hàng" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center" rowspan="2">
+                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                        </th>
+                        <th style="width: 40px" class="text-center">
+                            STT
+                        </th>
+                        <th style="width: 130px" class="text-center">Hệ thống</th>
+                        <th style="width: 185px" class="text-center">Dự án</th>
+                        <th style="width: 185px" class="text-center">Sàn giao dịch</th>
+                        <th style="width: 150px" class="text-center">Số ĐT/Email</th>
+                        <th style="width: 150px" class="text-center">Khách hàng</th>
+                        <th style="width: 150px" class="text-center">Địa chỉ</th>
+                        <th style="width: 90px">&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (khachHangTams != null && khachHangTams.Count > 0)
+                    {
+                        @foreach (var item in khachHangTams)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    @if (item.FlagDelete == 0)
+                                    {
+                                        <input type="checkbox" class="form-check-input"
+                                               checked="@item.IsSelected"
+                                               @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                    }
+                                </td>
+                                <td style="text-align:center">
+                                    <span>@item.STT</span>
+                                </td>
+                                <td>
+                                    <div><i class="bi bi-calendar4-event me-1"></i> @string.Format("{0:dd/MM/yyyy}", item.NgayLap)</div>
+                                    <span><i class="bi bi-person-fill me-1"></i> @item.HoVaTen</span>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrEmpty(CongTrinhSan?.MaCongTrinh))
+                                    {
+                                        <span>@item.TenDuAn</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@CongTrinhSan.TenCongTrinh</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span>@item.TenSanGiaoDich</span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.SoDienThoai))
+                                    {
+                                        <div class="d-flex wraper-2"><span class="icon-index me-1"><i class="bi bi-telephone"></i></span>@item.SoDienThoai</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.Email))
+                                    {
+                                        <div class="mt-1 d-flex wraper-1"><span class="icon-index me-1"><i class="bi bi-envelope"></i></span>@item.Email</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="item-phieu" @onclick="() => OnEditRecord(item.MaKhachHangTam)">@item.MaKhachHangTam</div>
+                                    <span><i class="bi bi-person-fill me-1"></i>@item.TenKhachHang</span>
+                                </td>
+
+                                <td>
+                                    <span>@item.DiaChiHienNay</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center flex-column">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void()" @onclick="() => OnEditRecord(item.MaKhachHangTam!)">
+                                                <span><i class="mdi mdi-pencil"></i></span>
+                                            </a>
+                                        </div>
+                                        @if (item.FlagDelete == 0)
+                                        {
+                                            <div class="icon-button" data-title="Xóa" data-position="left">
+                                                <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaKhachHangTam!)">
+                                                    <span><i class="mdi mdi-delete"></i></span>
+                                                </a>
+                                            </div>
+                                        }
+                                    </div>
+
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            @if (khachHangTams == null || !khachHangTams.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+    <VTTGROUP.Blazor.Components.CompChilds.ConfirmDeleteModal ModalId="confirmDeleteModal"
+                                                              Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn khách hàng tạm này <strong>@selectedMaKH</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </VTTGROUP.Blazor.Components.CompChilds.ConfirmDeleteModal>
+    <VTTGROUP.Blazor.Components.CompChilds.ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                                                              Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa danh sách khách hàng tạm này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </VTTGROUP.Blazor.Components.CompChilds.ConfirmDeleteModal>
+</div>
+
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private List<KhDmdoiTuongKhachHang> ListDTKH = new();
+    DateRangePicker dateRangeRef;
+    private string? selectedLoaiKhachHang;
+    private string? selectedMaKH;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    private string? tuNgay { get; set; } = DateTime.Now.AddMonths(-1).ToString("dd/MM/yyyy");
+    private string? denNgay { get; set; } = DateTime.Now.ToString("dd/MM/yyyy");
+    List<KhachHangTamPagingDto> khachHangTams = new();
+    private CancellationTokenSource _cts = new();
+    private string MaCongViec = "KhachHangTam";
+    private string maNhanVienHT;
+    private CongTrinhSettingsModal CongTrinhSan;
+    int SelectedCount => khachHangTams?.Count(x => x.IsSelected) ?? 0;
+    private bool IsSelectAll = false;
+
+    // Chặn re-init JS
+    private bool _jsInited;
+
+    /* --------- 1) LOAD DỮ LIỆU Ở ĐÂY --------- */
+    protected override async Task OnInitializedAsync()
+    {
+        await BaseService.CheckPermissionAsync(MaCongViec, VuViec.Xem.GetDescription());
+
+        // Lấy cấu hình công trình/sàn
+        CongTrinhSan = await BaseService.ThongTinCongTrinhSan();
+        ListDTKH = await KhachHangTamService.GetByLoaiKhachHangAsync();
+        maNhanVienHT = await BaseService.MaNhanVienHienTai();
+
+        await LoadKhachHangTamData(); // Blazor tự render lại sau khi hàm này xong → không cần StateHasChanged()
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // if (firstRender)
+        // {
+        //     await BaseService.CheckPermissionAsync(MaCongViec, VuViec.Xem.GetDescription());
+        //     CongTrinhSan = await BaseService.ThongTinCongTrinhSan();
+        //     _dotNetRef = DotNetObjectReference.Create(this);
+        //     ListDTKH = await KhachHangTamService.GetByLoaiKhachHangAsync();
+        //     await JS.InvokeVoidAsync("select2Helper.initSelectChange", "LoaiKH", "Chọn loại khách hàng", true);
+        //     maNhanVienHT = await BaseService.MaNhanVienHienTai();
+        //     await LoadKhachHangTamData();
+        //     StateHasChanged();
+        // }
+
+        if (firstRender && !_jsInited)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "LoaiKH", "Chọn loại khách hàng", true);
+            _jsInited = true;
+        }
+    }
+
+    private async Task ShowConfirmDelete(string maKhachHang)
+    {
+        var coQuyen = await BaseService.KiemTraQuyenVuViec(MaCongViec, VuViec.Xoa.GetDescription());
+        if (coQuyen == false)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn không có quyền xóa. Xin vui lòng liên hệ quản trị", false);
+            return;
+        }
+        selectedMaKH = maKhachHang;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaKH == null || string.IsNullOrEmpty(selectedMaKH))
+        {
+            return;
+        }
+        var result = await KhachHangTamService.DeleteKHTamAsync(selectedMaKH, _env.WebRootPath);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadKhachHangTamData();
+        selectedMaKH = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        Loading.Show();
+        try
+        {
+            var selected = khachHangTams.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0) return;
+
+            var result = await KhachHangTamService.DeleteListAsync(selected, _env.WebRootPath);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+            await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+            await LoadKhachHangTamData();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private async Task OnDTKHChanged(string? maKH)
+    {
+
+        if (isLoading) return;
+
+        selectedLoaiKhachHang = string.IsNullOrWhiteSpace(maKH) ? null : maKH;
+        _page = 1;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task LoadKhachHangTamData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await KhachHangTamService.GetPagingAsync(selectedLoaiKhachHang, _page, _pageSize, search, tuNgay, denNgay);
+            khachHangTams = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadKhachHangTamData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task OnEditRecord(string maKhachHangTam)
+    {
+        Nav.NavigateTo($"/khachhangtam/edit/{maKhachHangTam}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo("/khachhangtam/create");
+        return;
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task ResetAllParam()
+    {
+        _page = 1;
+        _pageSize = 10;
+        search = null;
+        selectedLoaiKhachHang = null;
+        tuNgay = null;
+        denNgay = null;
+        await LoadKhachHangTamData();
+        await dateRangeRef.ResetAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnDateRangeChanged((string? Start, string? End) range)
+    {
+        tuNgay = range.Start;
+        denNgay = range.End;
+        await LoadKhachHangTamData();
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in khachHangTams)
+            item.IsSelected = false;
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in khachHangTams)
+        {
+            if (item.FlagDelete == 0)
+                item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(KhachHangTamPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = khachHangTams.All(x => x.IsSelected || !(x.FlagDelete == 0));
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+}

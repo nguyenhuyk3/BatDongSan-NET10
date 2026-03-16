@@ -1,0 +1,232 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.GioHang
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Domain.Model.TongHopBooking
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject DMKhachHangService DMKhachHangService
+@inject SanPhamService SanPhamService
+@inject TongHopBookingService TongHopBookingService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách phiếu giữ chỗ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                @*  <div class="container-search-home">
+                <div class="search-row" style="margin-bottom: 15px;">
+                <div class="wapper-congtrinh container-form">
+                <div class="result-label-icon">
+                <InputSearch @bind-Value="search" OnSearch="Search" />
+                </div>
+                </div>
+                </div>
+                </div> *@
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-[360px] md:w-[480px]">
+                        <InputSearch @bind-Value="search" OnSearch="Search" />
+                    </div>
+                    <div class="ml-auto h-11 flex items-center">
+                        <Pagination Page="@_page"
+                                    TotalPages="@totalPage"
+                                    TotalItems="@totalCount"
+                                    OnPageChanged="HandlePageChanged"
+                                    OnPageSizeChanged="HandlePageSizeChanged" />
+                    </div>
+                </div>
+                <div class="container-table-detail">
+                    <div class="container-table-fixed has-paging">
+                        <table class="tbl table-form table-detail treeTable" id="table-data">
+                            <thead>
+                                <tr class="cls_custome_back">
+                                    <th style="width: 50px" class="text-center">
+                                        STT
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Hệ thống
+                                    </th>
+                                    <th style="width: 130px" class="text-center">
+                                        Khách hàng
+                                    </th>
+                                    <th style="width: 150px" class="text-center">
+                                        Số tiền giữ chỗ
+                                    </th>
+                                    <th style="width: 250px" class="text-center">
+                                        Nội dung
+                                    </th>
+                                    <th style="width: 50px" class="text-center">
+                                        <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                               @onchange="(e) => OnCheckboxAllChanged(e)" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="content-table">
+                                @if (PhieuGiuChoPopups != null && PhieuGiuChoPopups.Count > 0)
+                                {
+                                    @foreach (var item in PhieuGiuChoPopups)
+                                    {
+                                        <tr class="initialized">
+                                            <td style="text-align:center">
+                                                <span>@item.STT</span>
+                                            </td>
+                                            <td class="line-height-20">
+                                                <div class="item-phieu" @onclick="() => OnEditRecord(item.MaPhieu.ToString())">@item.MaPhieu</div>
+                                                <span class="created-label">@item.HoVaTen</span>
+                                                <div class="created-date-label">@string.Format("{0:dd/MM/yyyy}", item.NgayLap)</div>
+                                            </td>
+                                            <td>
+                                                <span>@item.TenKhachHang</span>
+                                            </td>
+                                            <td style="text-align:right">
+                                                @string.Format("{0:N0}", item.SoTienGiuCho)
+                                            </td>
+                                            <td>
+                                                <span>@item.NoiDung</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@item.IsSelected"
+                                                       @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        @if (PhieuGiuChoPopups == null || !PhieuGiuChoPopups.Any())
+                        {
+                            <div class="p-2">Không có dữ liệu</div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-action button-luu-phieu" @onclick="TriggerChoose">
+                    Chọn
+                </button>
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal" @onclick="OnClosePupop">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<List<TongHopBookingPhieuGiuChoModel>?> OnSelected { get; set; }
+    [Parameter]
+    public string? MaSanGD { get; set; }
+    public string? MaDuAn { get; set; }
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<TongHopBookingPhieuGiuChoModel> PhieuGiuChoPopups = new();
+    private bool IsSelectAll = false;
+    List<TongHopBookingPhieuGiuChoModel> listSelecteds = new();
+
+    private async Task TriggerChoose()
+    {
+        var listPGC = PhieuGiuChoPopups
+           .Where(x => x.IsSelected)
+           .ToList();
+        if (listPGC.Any())
+        {
+            listSelecteds = listPGC;
+            await OnSelected.InvokeAsync(listSelecteds);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Chọn phiếu giữ chỗ thành công", true);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Không có phiếu giữ chỗ nào được chọn", false);
+        }
+    }
+
+    private async Task LoadDanhSachPhieuGiuChoData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await TongHopBookingService.GetPagingPGCPopupAsync(MaDuAn, MaSanGD, _page, _pageSize, search);
+            PhieuGiuChoPopups = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadDanhSachPhieuGiuChoData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadDanhSachPhieuGiuChoData(); // Gọi lại API với PageSize mới
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadDanhSachPhieuGiuChoData();
+    }
+
+    public async Task Show(string maDuAn, string maSanGiaoDich)
+    {
+        MaDuAn = maDuAn;
+        MaSanGD = maSanGiaoDich;
+        // 👉 Reset dữ liệu filter cũ
+        search = string.Empty;
+        PhieuGiuChoPopups = new List<TongHopBookingPhieuGiuChoModel>();
+
+        await LoadDanhSachPhieuGiuChoData();
+
+        // 👉 Show popup
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupBookingModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+        StateHasChanged();
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in PhieuGiuChoPopups)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(TongHopBookingPhieuGiuChoModel item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = PhieuGiuChoPopups.All(x => x.IsSelected);
+    }
+
+    public async Task OnClosePupop()
+    {
+        IsSelectAll = false;
+        foreach (var item in PhieuGiuChoPopups)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+        // 👉 Reset dữ liệu filter cũ
+        search = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task OnEditRecord(string maPhieuGC)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/phieugiucho/edit/" + maPhieuGC);
+    }
+}

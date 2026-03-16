@@ -1,0 +1,38 @@
+﻿@typeparam T
+
+<div class="radio-group">
+    @if (Items != null)
+    {
+        @foreach (var item in Items)
+        {
+            var id = $"{GroupName}_{item.Key?.ToString()}";
+            var isChecked = EqualityComparer<T>.Default.Equals(Value, item.Key);
+
+            <div class="form-check form-check-inline">
+                <input type="radio"
+                       class="form-check-input"
+                       name="@GroupName"
+                       id="@id"
+                       value="@item.Key?.ToString()"
+                       checked="@isChecked"
+                       @onchange="() => OnSelectChanged(item.Key)" />
+                <label class="form-check-label" for="@id">@item.Value</label>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public Dictionary<T, string> Items { get; set; } = new();
+    [Parameter] public string GroupName { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public T Value { get; set; }
+    [Parameter] public EventCallback<T> ValueChanged { get; set; }
+    [Parameter] public EventCallback<T> OnChanged { get; set; }
+
+    private async Task OnSelectChanged(T selected)
+    {
+        Value = selected;
+        await ValueChanged.InvokeAsync(selected);
+        await OnChanged.InvokeAsync(selected);
+    }
+}

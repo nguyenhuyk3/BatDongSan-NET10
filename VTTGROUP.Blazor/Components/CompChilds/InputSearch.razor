@@ -1,0 +1,126 @@
+﻿<div class="search-bar">
+    <div class="search-input-wrap @(string.IsNullOrWhiteSpace(Value) ? "" : "has-value")">
+        <i class="mdi mdi-magnify search-input-icon"></i>
+        <input id="searchText" name="TuKhoa" type="text" autocomplete="off"
+               class="search-input"
+               placeholder="Tìm kiếm"
+               @bind="Value" @bind:event="oninput"
+               @onkeydown="HandleKeyDown" />
+        <button type="button" class="x-mini" title="Xoá" @onclick="ClearValue" aria-label="Xoá"></button>
+    </div>
+    <button type="button" class="btn-search" @onclick="TriggerSearch">Tìm kiếm</button>
+
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public EventCallback<string?> OnSearch { get; set; }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    { if (e.Key == "Enter") await OnSearch.InvokeAsync(Value); }
+
+    private async Task TriggerSearch() => await OnSearch.InvokeAsync(Value);
+
+    private async Task ClearValue()
+    {
+        Value = string.Empty;
+        await ValueChanged.InvokeAsync(Value);
+        // Nếu muốn tự bắn tìm kiếm ngay sau khi xoá:
+        await OnSearch.InvokeAsync(Value);
+    }
+}
+
+<style>
+    .search-input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+        min-width: 280px;
+    }
+
+    /* Icon kính lúp trái */
+    .search-input-icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        opacity: .65;
+        pointer-events: none;
+    }
+
+    /* Input: chừa chỗ cho kính lúp và X bên phải */
+    .search-input {
+        width: 100%;
+        height: 40px;
+        padding: 0 40px 0 38px; /* right=40 cho X, left=38 cho kính lúp */
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+        outline: none;
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+        .search-input:focus {
+            border-color: #a3c3ff;
+            box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+        }
+
+    /* ===== X mảnh đỏ giống DateTime ===== */
+    .x-mini {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 11px;
+        height: 11px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        color: var(--clear-color-main);
+        display: inline-flex;
+    }
+        /* vẽ X bằng 2 nét */
+        .x-mini::before, .x-mini::after {
+            content: "";
+            position: absolute;
+            left: 1px;
+            right: 1px;
+            top: 50%;
+            height: 1px;
+            background: currentColor;
+            transform-origin: center;
+        }
+
+        .x-mini::before {
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .x-mini::after {
+            transform: translateY(-50%) rotate(-45deg);
+        }
+
+        .x-mini:hover {
+            color: #c81e1e;
+        }
+        /* hover đậm nhẹ */
+        .x-mini:active {
+            transform: translateY(-50%) scale(.96);
+        }
+
+    /* Ẩn X khi không có nội dung, giống behavior DateTime clear */
+    .search-input-wrap:not(.has-value) .x-mini {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    /* Mobile */
+    @@media (max-width:640px) {
+        .search-input-wrap {
+            min-width: unset;
+            flex: 1;
+        }
+    }
+</style>

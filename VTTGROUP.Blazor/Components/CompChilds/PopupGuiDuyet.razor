@@ -1,0 +1,196 @@
+﻿@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.CanHo
+@using VTTGROUP.Domain.Model.KeHoachBanHang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject KeHoachBanHangService KeHoachBanHangService
+@inject IJSRuntime JS
+<div class="modal fade" id="PopupGuiDuyetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Danh sách quy trình duyệt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body modal-wraper" id="modal-body">
+                <div class="container-form-duyet">
+                    <div class="wapper-check">
+                        <div class="item-check">
+                            <input class="form-check-input"  type="checkbox" id="chkSendMail1" />
+                            <label for="chkSendMail1">
+                                Gửi mail
+                            </label>
+                        </div>
+                        <div class="item-check">
+                            <input class="form-check-input" type="checkbox" id="chkSendSMS1" />
+                            <label for="chkSendSMS1">
+                                Gửi SMS
+                            </label>
+                        </div>
+                    </div>
+                    <div class="wapper-quytrinh table-form">
+                        @if (ListQTDTD != null && ListQTDTD.Count > 0)
+                        {
+                            int votuanthin = 1;
+                            @foreach (var item in ListQTDTD)
+                            {
+                                <label for="id-qt@(item.IdQuyTrinh)" class="wraper-label">
+                                    <div class="item-quytrinh-duyet">
+
+                                        @if (Flag == 0)
+                                        {
+                                            <div class="check-quytrinh">
+                                                <input type="radio" class="custom-radio" id="id-qt@(item.IdQuyTrinh)" name="quiTrinhDuyet" value="@item.IdQuyTrinh" />
+                                            </div>
+                                        }
+
+                                        <div class="desc-quytrinh-duyet">
+                                            <h2 class="name-quytrinh-duyet">
+                                                @item.TenQuyTrinh
+                                            </h2>
+                                            <div class="buocduyet-quytrinh-duyet">
+                                                <p>@((MarkupString)item.QuyTrinhDuyetText)</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                                votuanthin++;
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="content-duyet-quytrinh">
+                    <span class="title-field">Nội dung</span>
+                    <textarea class="textarea-input input-validation" cols="20" name="NoiDungDuyetEdit" id="NoiDungDuyetEdit" rows="3" tabindex="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                @if (Flag == 2)//Trả lại phiếu
+                {
+                    <button type="button" class="button button-action button-duyet-phieu" @onclick="TraLaiPhieu">
+                        Xác nhận
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="button button-action button-duyet-phieu" @onclick="DuyetPhieu">
+                        Duyệt
+                    </button>
+                }
+                <button type="button" class="button button-action button-huy" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<SanPhamPopupPaginModel?> OnSelected { get; set; }
+    [Parameter]
+    public string MaCongViec { get; set; }
+    public string MaPhieu { get; set; }
+    public string MaCongTrinh { get; set; }
+    public string MaNhanVien { get; set; }
+    public int? IdQuyTrinh { get; set; }
+    public int Flag { get; set; }
+    [Parameter] public EventCallback OnReloadGuiDuyet { get; set; }
+
+    public int? IDQuyTrinhChon { get; set; }
+    private List<QuiTrinhDuyetDto> ListQTDTD = new();
+    private DotNetObjectReference<PopupGuiDuyet>? dotnetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotnetRef = DotNetObjectReference.Create(this);
+
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+
+
+    public async Task ShowQTD(string maCongViec, string maPhieu, string maCongTrinh, string maNhanVien, int? idQuyTrinh, int flag)
+    {
+        MaCongViec = maCongViec ?? string.Empty;
+        MaPhieu = maPhieu ?? string.Empty;
+        MaNhanVien = maNhanVien ?? string.Empty;
+        MaCongTrinh = maCongTrinh ?? string.Empty;
+        IdQuyTrinh = idQuyTrinh ?? null;
+        Flag = flag;
+        await LoadData();
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupGuiDuyetModal");
+        await JS.InvokeVoidAsync("modalHelper.makeAllDraggable");
+    }
+
+    private async Task LoadData()
+    {
+        IdQuyTrinh = IdQuyTrinh == 0 ? null : IdQuyTrinh;
+        ListQTDTD = await BaseService.GetQuyTrinhDuyetAsyn(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh);
+        StateHasChanged();
+    }
+
+    private async Task DuyetPhieu()
+    {
+        // 1. Lấy ID quy trình đang chọn từ radio
+        var idStr = await JS.InvokeAsync<string>("eval", "document.querySelector('input[name=\"quiTrinhDuyet\"]:checked')?.value");
+        if (!int.TryParse(idStr, out int idQuyTrinhChon) && (IdQuyTrinh ?? 0) == 0)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Vui lòng chọn một quy trình duyệt.", false);
+            return;
+        }
+
+        // 2. Lấy nội dung duyệt từ textarea
+        var noiDung = await JS.InvokeAsync<string>("eval", "document.getElementById('NoiDungDuyetEdit')?.value");
+        // 3. Gọi API duyệt
+        var result = await BaseService.DuyetPhieuTheoQuiTrinhDong(MaCongViec, MaPhieu, Flag == 0 ? Convert.ToInt32(idStr) : IdQuyTrinh, string.Empty, noiDung, Flag);
+
+        // 4. Đóng modal & load lại
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupGuiDuyetModal");
+        await OnReloadGuiDuyet.InvokeAsync();
+    }
+
+    private async Task TraLaiPhieu()
+    {
+        // 2. Lấy nội dung duyệt từ textarea
+        var noiDung = await JS.InvokeAsync<string>("eval", "document.getElementById('NoiDungDuyetEdit')?.value");
+        if (noiDung == "")
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Vui lòng nhập nội dung trả lại.", false);
+            return;
+        }
+        // 3. Gọi API trả lại phiếu
+        var result = await BaseService.TraLaiPhieu(MaCongViec, MaPhieu, noiDung);
+
+        // 4. Đóng modal & load lại
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#PopupGuiDuyetModal");
+        await OnReloadGuiDuyet.InvokeAsync();
+    }
+}
+
+
+<style>
+    .done {
+        color: green;
+        font-weight: bold;
+    }
+
+    .active {
+        color: #007bff;
+        font-weight: bold;
+        text-decoration: underline;
+        animation: pulse 1s infinite alternate;
+    }
+
+    .pending {
+        color: #999;
+        font-style: italic;
+    }
+</style>

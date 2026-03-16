@@ -1,0 +1,77 @@
+﻿@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<textarea id="@ElementId">@_initialValue</textarea>
+
+@code {
+    [Parameter] public string? Id { get; set; }  // optional: tự truyền id nếu cần
+    [Parameter] public string? Value { get; set; }  // bound value
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    //[Parameter] public Dictionary<string, object>? Options { get; set; } // cấu hình TinyMCE thêm
+    [Parameter] public int Height { get; set; } = 500;
+    [Parameter] public bool Disabled { get; set; } = false;
+
+    private string ElementId => Id ?? _autoId;
+    private readonly string _autoId = $"tinymce_{Guid.NewGuid():N}";
+    private string? _initialValue;
+    private DotNetObjectReference<TinyMCE>? _selfRef;
+    private bool _initialized;
+
+    protected override void OnParametersSet()
+    {
+        // Lưu giá trị ban đầu để set vào <textarea> trước khi init
+        if (!_initialized)
+            _initialValue = Value;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            _selfRef = DotNetObjectReference.Create(this);
+
+            var opts = new Dictionary<string, object?> {
+                ["height"] = Height,
+                ["readonly"] = Disabled ? 1 : 0
+            };
+
+            // if (Options != null)
+            // {
+            //     foreach (var kv in Options)
+            //         opts[kv.Key] = kv.Value;
+            // }
+
+            await JS.InvokeVoidAsync("tinymceBlazor.init", ElementId, opts);
+
+            // Đẩy lại giá trị ban đầu (nếu có)
+            if (!string.IsNullOrEmpty(Value))
+                await JS.InvokeVoidAsync("tinymceBlazor.setContent", ElementId, Value);
+
+            _initialized = true;
+        }
+    }
+
+    public async Task<string?> GetHtmlAsync()
+        => await JS.InvokeAsync<string>("tinymceBlazor.getContent", ElementId);
+
+    public async Task SetHtmlAsync(string? html)
+        => await JS.InvokeVoidAsync("tinymceBlazor.setContent", ElementId, html ?? "");
+
+    // Đồng bộ về @bind-Value khi cha cần đọc:
+    public async Task SyncToValueAsync()
+    {
+        var html = await GetHtmlAsync();
+        await ValueChanged.InvokeAsync(html);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("tinymceBlazor.destroy", ElementId);
+        }
+        catch { /* no-op */ }
+        _selfRef?.Dispose();
+    }
+}

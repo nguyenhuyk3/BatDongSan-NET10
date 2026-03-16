@@ -1,0 +1,318 @@
+﻿@page "/block"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.Block
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject BlockService BlockService
+@inject IBaseService BaseService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<h1 class="legend-title">DANH SÁCH BLOCK</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn dự án"
+                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                      @bind-Value="selectedDuAn"
+                      OnChange="OnDTKHChanged" />
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Block" OnClick="Insert" />
+                <button style="
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #EDAD0F;
+        padding: 0 12px;
+        border-radius: 8px;
+        height: 40px;
+        background-color: #FDF7E7;
+        color: #EDAD0F;
+        font-weight: 600;
+        font-size: 16px;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+    "
+                        title="Import"
+                        @onclick="Import">
+                    <i class="mdi mdi-cloud-upload"
+                       style="
+           color: #EDAD0F;
+           font-size: 16px;
+       ">
+                    </i>
+                    <span style="
+           color: #EDAD0F;
+           font-weight: 600;
+           font-size: 16px;
+           font-family: 'Inter', sans-serif;
+       ">
+                        Import
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+    </div>
+    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center" rowspan="2">
+                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                        </th>
+                        <th style="width: 40px" class="text-center">
+                            STT
+                        </th>
+                        <th style="width:160px" class="text-center">Mã block</th>
+                        <th style="width:220px" class="text-center">Tên block</th>
+                        <th style="width:240px" class="text-center">Tên dự án</th>
+                        <th style="width:90px">&nbsp;</th>
+                    </tr>
+                </thead>
+
+                <tbody class="content-table">
+                    @if (ChiTietBlock != null && ChiTietBlock.Any())
+                    {
+                        int i = 1;
+                        foreach (var item in ChiTietBlock)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@item.IsSelected"
+                                           @onchange="(e) => OnCheckboxChanged(item, e)" />
+
+                                </td>
+                                <td style="text-align:center">
+                                    <span>@i</span>
+                                </td>
+                                <td>
+                                    <span>@item.MaBlock</span>
+                                </td>
+                                <td>
+                                    <span>@item.TenBlock</span>
+                                </td>
+                                <td>
+                                    <span>@item.TenDuAn</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center flex-column">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => OnEditRecord(item.MaBlock!)">
+                                                <span><i class="mdi mdi-pencil"></i></span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item.MaBlock!)">
+                                                <span><i class="mdi mdi-delete"></i></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            i++;
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (ChiTietBlock == null || !ChiTietBlock.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa block này <strong>@selectedMaCongViec</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+
+    <ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa danh sách Block này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+    <ImportFileModal @ref="importFileModalRef" OnUploaded="HandleFileUpload" />
+</div>
+
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<BlockModel> ChiTietBlock = new();
+    private string? selectedMaCongViec;
+    private string? selectedDuAn;
+    private ImportFileModal? importFileModalRef;
+    private bool isLoading = false;
+    int SelectedCount => ChiTietBlock?.Count(x => x.IsSelected) ?? 0;
+    private bool IsSelectAll = false;
+    string? search;
+    // Chặn re-init JS
+    private bool _jsInited;
+    protected override async Task OnInitializedAsync()
+    {
+        await BaseService.CheckPermissionAsync("Block", VuViec.Xem.GetDescription());
+        ListDA = await BlockService.GetByDuAnAsync();
+        await LoadBlock();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_jsInited)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            _jsInited = true;
+        }
+    }
+
+    private async Task ShowConfirmDelete(string maBlock)
+    {
+        var coQuyen = await BaseService.KiemTraQuyenVuViec("Block", VuViec.Xoa.GetDescription());
+        if (coQuyen == false)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn không có quyền xóa. Xin vui lòng liên hệ quản trị", false);
+            return;
+        }
+        else
+        {
+            selectedMaCongViec = maBlock;
+            await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaCongViec == null || string.IsNullOrEmpty(selectedMaCongViec))
+        {
+            return;
+        }
+        var result = await BlockService.DeleteBlockAsync(selectedMaCongViec);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadBlock();
+        selectedMaCongViec = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        var selected = ChiTietBlock.Where(d => d.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        var result = await BlockService.DeleteListAsync(selected);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+        await LoadBlock();
+        StateHasChanged();
+    }
+
+    private async Task OnEditRecord(string maBlock)
+    {
+        Nav.NavigateTo($"/block/edit/{maBlock}");
+    }
+
+    private void Insert()
+    {
+        Nav.NavigateTo("/block/create");
+        return;
+    }
+
+    private async Task OnDTKHChanged(string? duAn)
+    {
+        selectedDuAn = duAn;
+        await LoadBlock();
+    }
+
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        await LoadBlock();
+    }
+
+    private async Task LoadBlock()
+    {
+        isLoading = true;
+        try
+        {
+            ChiTietBlock = await BlockService.GetBlockAsync(selectedDuAn, search);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Import()
+    {
+        if (string.IsNullOrEmpty(selectedDuAn))
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn vui lòng chọn dự án để Import", false);
+        }
+        else
+        {
+            await importFileModalRef?.ShowFileModal(selectedDuAn);
+        }
+    }
+
+    private async Task HandleFileUpload()
+    {
+        await LoadBlock();
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in ChiTietBlock)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(BlockModel item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = ChiTietBlock.All(x => x.IsSelected);
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in ChiTietBlock)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+}

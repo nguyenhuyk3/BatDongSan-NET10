@@ -1,0 +1,380 @@
+﻿@page "/phieugiucho/edit/{id}"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.KhachHang
+@using VTTGROUP.Domain.Model.KhachHangTam
+@using VTTGROUP.Domain.Model.PhieuGiuCho
+@using VTTGROUP.Domain.Model.SanPham
+@using VTTGROUP.Domain.Model.ViewMatKhoi
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject PhieuGiuChoService PhieuGiuChoService
+@inject LoadingService Loading
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Phiếu booking giữ chỗ</h1>
+    <div class="container-form">
+
+        <div class="container-tabs">
+            <div class="row">
+                <div class="col-md-12">
+                </div>
+            </div>
+            <MessageErrorForm />
+            <div class="wapper-content-tab @(Record.ISXacNhan == false ? "" : "wraper-duyet")" id="formDuAn">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Đợt mở bán</span>
+                                    <DisableTextBox Value="@Record.TenDotMoBan" />
+                                    <input class="input-form input-validation" id="MaPhieu" name="MaPhieu" type="hidden" value="@Record.MaPhieu">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Số tiền giữ chỗ</span>
+                                    <DisableTextBox Class="is-right" Value="@string.Format("{0:N0}", Record.SoTienGiuCho)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Khách hàng</span>
+                                    <div class="item-phieu"><span class="input-value" @onclick="() => OnViewKH(Record.MaKhachHang)">[@Record.MaKhachHang]_[@Record.TenKhachHang]</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Sàn giao dịch</span>
+                                    <DisableTextBox Value="@Record.TenSanGiaoDich" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nhân viên môi giới</span>
+                                    <InputText class="form-control" @bind-Value="Record.TenNhanVienMoiGioi" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Loại căn hộ</span>
+                                    <select id="MaLoaiThietKe" name="MaLoaiThietKe" class="form-control" multiple @ref="selectLCHTKRef">
+                                        <option value=""> Chọn loại căn hộ </option>
+                                        @foreach (var item in ListLCHTK)
+                                        {
+                                            <option value="@(item.MaLoaiCanHo)" selected="@SelectedCHTKList.Contains(item.MaLoaiCanHo)">
+                                                @item.TenLoaiCanHo
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">View mặt khối</span>
+                                    <select id="MaMatKhoi" name="MaMatKhoi" class="form-control" multiple @ref="selectVMKRef">
+                                        <option value=""> Chọn view mặt khối </option>
+                                        @foreach (var item in ListViewMK)
+                                        {
+                                            <option value="@(item.MaMatKhoi)" selected="@SelectedViewMKList.Contains(item.MaMatKhoi)">
+                                                @item.TenMatKhoi
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Ghi chú</span>
+                                    <textarea class="textarea-input" cols="20" name="NoiDung" id="NoiDung" rows="3" tabindex="2" @bind="Record.NoiDung"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            @* @if (Record.ISXacNhan == false && Record.NguoiLap?.MaNhanVien == maNhanVienHT && string.IsNullOrEmpty(Record.MaPhieuTH))
+            {
+                <AppButton Label="Xác nhận"
+                           Class="button button-action"
+                           IconClass="mdi mdi-telegram"
+                           OnClick="() => XacNhanPhieuGiuCho()" />
+                <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+            } *@
+            @if (string.IsNullOrEmpty(Record.MaPhieuTH))
+            {
+                @if (Record.TrangThaiDuyet == 0 && Record.NguoiLap != null && Record.NguoiLap.MaNhanVien == maNhanVienHT)
+                {
+                    if (Record.NguoiLap.LoaiUser == "SGG")
+                    {
+                        <AppButton Label="Gửi duyệt"
+                                   Class="button button-action"
+                                   IconClass="mdi mdi-telegram"
+                                   OnClick="() => GuiDuyetPhieuSGG(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                    }
+                    else
+                    {
+                        <AppButton Label="Gửi duyệt"
+                                   Class="button button-action"
+                                   IconClass="mdi mdi-telegram"
+                                   OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn, Record.NguoiLap?.MaNhanVien, 0, 0)" />
+                    }
+                    <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+                }
+                else if (Record.MaNhanVienDP == maNhanVienHT && Record.TrangThaiDuyet != Record.TrangThaiDuyetCuoi)
+                {
+                    <AppButton Label="Duyệt"
+                               Class="button button-action"
+                               IconClass="mdi mdi-check-circle"
+                               OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,1)" />
+                    <AppButton Label="Trả lại"
+                               Class="button button-action"
+                               IconClass="mdi mdi-replay"
+                               OnClick="() => GuiDuyetPhieu(MaCongViec, Record.MaPhieu, Record.MaDuAn,Record.NguoiLap?.MaNhanVien,Record.MaQuiTrinhDuyet,2)" />
+                    <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+                }
+            }
+        </div>
+    </div>
+</EditForm>
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Xác nhận phiếu booking giữ chỗ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc chắn xác nhận phiếu booking giữ chỗ <strong>@Record.MaPhieu</strong> không?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmPGC">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+<PopupGuiDuyet @ref="guiDuyetModalRef" OnReloadGuiDuyet="ReloadForm" />
+<PopupKhachHang OnSelected="SelectedKhachHang" />
+@code {
+    [Parameter]
+    public string? id { get; set; }
+    private EditContext editContext;
+    private PhieuGiuChoModel? Record = new();
+    private ElementReference selectLCHTKRef;
+    private ElementReference selectVMKRef;
+    private string? selectedCHTK;
+    public List<string> SelectedCHTKList { get; set; } = new();
+    private string? selectedVMK;
+    public List<string> SelectedViewMKList { get; set; } = new();
+    private List<DaDanhMucLoaiCanHo> ListLCHTK = new();
+    private List<DaDanhMucViewMatKhoi> ListViewMK = new();
+    private string maNhanVienHT;
+    private List<InfoItem> InfoItems = new();
+    private PopupGuiDuyet? guiDuyetModalRef;
+    private string MaCongViec = "PhieuGiuCho";
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.CapNhat.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            // await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "SoTienGiuCho", 18, 0);
+            await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "MaLoaiThietKe", "Chọn loại thiết kế", true, DotNetObjectReference.Create(this));
+            await JS.InvokeVoidAsync("select2Helper.initSelectMultipleChange", "MaMatKhoi", "Chọn view mặt khối", true, DotNetObjectReference.Create(this));
+            var result = await PhieuGiuChoService.GetByIdAsync(id ?? string.Empty);
+            if (result.Status)
+            {
+                Record = (PhieuGiuChoModel)result.Data;
+                SelectedCHTKList = (Record.MaLoaiThietKe ?? "")
+                                                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                                .Select(x => x.Trim())
+                                                                .ToList();
+                selectedCHTK = Record.MaLoaiThietKe;
+                SelectedViewMKList = (Record.MaMatKhoi ?? "")
+                                                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                                .Select(x => x.Trim())
+                                                                .ToList();
+                selectedVMK = Record.MaMatKhoi;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                    new() { Text="Dự án", Value=Record.TenDuAn, LargeWidth = true},
+                };
+            }
+            ListLCHTK = PhieuGiuChoService.GetByLoaiThietKeTheoDuAnAsync(Record.MaDuAn);
+            ListViewMK = PhieuGiuChoService.GetBViewMatKhoiTheoDuAnAsync(Record.MaDuAn);
+            maNhanVienHT = await BaseService.MaNhanVienHienTai();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateFormBlazor", "formDuAn", dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        Loading.Show();
+        try
+        {
+            var result = await PhieuGiuChoService.UpdateByIdAsync(Record);
+            await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/phieugiucho");
+    }
+
+
+    private async Task ShowPopupKhachHang()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#PopupChonKHModalTam");
+    }
+
+    private async Task SelectedKhachHang(KhachHangPagingDto? item)
+    {
+        Record.MaKhachHang = item.MaKhachHangTam;
+        Record.TenKhachHang = item.TenKhachHang;
+    }
+
+    private async Task XacNhanPhieuGiuCho()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmPGC()
+    {
+        var result = await PhieuGiuChoService.XacNhanPhieuGiuCho(Record.MaPhieu);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await ReloadForm();
+    }
+
+    private async Task GuiDuyetPhieu(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        await guiDuyetModalRef?.ShowQTD(MaCongViec, MaPhieu, MaCongTrinh, MaNhanVien, IdQuyTrinh, flag);
+    }
+
+    private async Task GuiDuyetPhieuSGG(string MaCongViec, string MaPhieu, string MaCongTrinh, string MaNhanVien, int? IdQuyTrinh, int flag)
+    {
+        string flagDPSGG = await BaseService.DuyetTheoQuiTrinhSGGBatKy(MaCongViec, MaPhieu, MaNhanVien);
+        if (flagDPSGG == "ChuaTonTai")
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Vui lòng liện hệ admin để set qui trình duyệt", false);
+        }
+        else if (string.IsNullOrEmpty(flagDPSGG))
+        {
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Đã xảy ra lỗi. Xin vui lòng liên hệ admin", false);
+        }
+    }
+
+    private async Task ReloadForm()
+    {
+        await JS.InvokeVoidAsync("location.reload");
+    }
+
+    [JSInvokable]
+    public async Task OnSelectMultiChanged(string id, string[] selectedBlocks)
+    {
+        if (id == "MaLoaiThietKe")
+        {
+            SelectedCHTKList = selectedBlocks.ToList();
+            selectedCHTK = string.Join(',', SelectedCHTKList.ToArray());
+            Record.MaLoaiThietKe = selectedCHTK;
+        }
+        else if (id == "MaMatKhoi")
+        {
+            SelectedViewMKList = selectedBlocks.ToList();
+            selectedVMK = string.Join(',', SelectedViewMKList.ToArray());
+            Record.MaMatKhoi = selectedVMK;
+        }
+    }
+
+    private async Task OnViewKH(string maKH)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", "/khachhangtam/edit/" + maKH);
+    }
+}
+
+<style>
+    .input-wraper-choose {
+        position: relative;
+    }
+
+        .input-wraper-choose .input-form {
+            padding-left: 2.2rem;
+            padding-right: 2.2rem;
+        }
+
+        .input-wraper-choose .icon-choose {
+            font-size: 0.95rem;
+            border-radius: 50%;
+            color: var(--theme-color);
+            cursor: pointer;
+            transition: all 300ms ease-in-out;
+            position: absolute;
+            top: 3px;
+            z-index: 2;
+        }
+
+            .input-wraper-choose .icon-choose.left {
+                left: 0px;
+            }
+
+            .input-wraper-choose .icon-choose.right {
+                right: 5px;
+            }
+</style>

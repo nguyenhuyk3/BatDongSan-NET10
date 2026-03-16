@@ -1,0 +1,322 @@
+﻿@page "/congviec"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Helpers
+@inject IBaseService BaseService
+@inject CongViecService CongViecService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Danh sách công việc</PageTitle>
+
+<h1 class="legend-title">Danh sách Công việc</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+	<div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">            
+			<div class="col-search wapper-congtrinh container-form droplist-tree-index">
+				<div class="result-label-icon">
+					<i class="mdi mdi-file-document"></i>
+					<TreeSelect Items="@DanhSach" OnSelected="OnSelected" ItemSelected="@Selected" />
+				</div>
+			</div>
+            <div class="ml-auto">
+				<AddButton Text="Công việc" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+	<div class="container-table-detail">
+		<div class="container-table-fixed" id="container-table-fixed">
+			<table class="tbl table-form table-detail treeTable" id="table-data">
+				<thead>
+					<tr class="cls_custome_back">
+						<th style="width: 300px" class="row-tr td-left-fixed text-center">
+							Tên công việc
+						</th>
+						<th class="row-tr td-left-fixed text-center" style="width: 90px">
+							Độ ưu tiên
+						</th>
+						<th class="row-tr td-left-fixed scroll-fixed-last text-center" style="width: 80px">
+							Hiển thị menu
+						</th>
+						@if (VuViecs != null && VuViecs.Any() == true)
+						{
+							foreach (var item in VuViecs)
+							{
+								<th align="center" class="row-tr text-center" style="width: 110px">
+									@item.TenVuViec
+								</th>
+							}
+						}
+						<th style="width: 90px" class="row-tr td-left-fixed-r">
+							&nbsp;
+						</th>
+					</tr>
+				</thead>
+				<tbody class="content-table">
+					@if (ChiTietVuViec != null && ChiTietVuViec.Any() == true)
+					{
+						@foreach (var item in ChiTietVuViec)
+						{
+							if (IsVisible(item))
+							{
+								var inputId = $"input-doUuTien-{item.MaCongViec}";
+								<tr id="node-@item.MaCongViec" class="initialized @(item.IsCapCon == 0 ? "parent table-group-header" : "") collapsed">
+									<td style="padding-left:@((item.LevelCay+1) * 16)px!important">
+										<span class="text-gray-500 item-name" @onclick:stopPropagation="true" @onclick="() => Toggle(item.MaCongViec)">
+											@if (HasChildren(item))
+											{
+												<i class="mdi @(expandedIds.Contains(item.MaCongViec!) ? "mdi-chevron-down" : "mdi-chevron-right")"></i>
+											}
+											else
+											{
+												<text><span class="dot-item pl-1"></span></text>
+											}
+										</span>
+										<span>@item.TenCongViec</span>
+									</td>
+
+									<td>
+										<input id="@inputId" type="text" @bind="item.DoUuTien" class="form-control form-control-sm is-numeric"
+											   @onkeydown="@(e => HandleEnterDoUuTien(e, item))" />
+									</td>
+
+									<td class="text-center">
+										<input type="checkbox" @bind="item.HienThiTrenMenu" class="form-check-input" @onclick="() => ChangeHienThi(item.MaCongViec)" />
+									</td>
+
+									@if (item.IsCapCon != 0)
+									{
+										foreach (var vv in VuViecs)
+										{
+											var vvModel = item.vuViecs?.FirstOrDefault(x => x.MaVuViec == vv.MaVuViec && x.MaCongViec == item.MaCongViec);
+											<td class="text-center">
+												@if (vvModel != null)
+												{
+													<input type="checkbox" class="form-check-input"
+														   checked="@vvModel.IsCheckedBool"
+														   @onchange="(e) => OnCheckboxChanged(e, item.MaCongViec!, vv.MaVuViec!)"
+														   disabled="@(vv.MaVuViec == "001")" />
+												}
+												else
+												{
+													<input type="checkbox" class="form-check-input"
+														   @onchange="(e) => OnCheckboxChanged(e, item.MaCongViec!, vv.MaVuViec!)"
+														   disabled="@(vv.MaVuViec == "001")" />
+												}
+												<input type="hidden" name="maCongViec" value="@item.MaCongViec" />
+												<input type="hidden" name="maVuViec" value="@vv.MaVuViec" />
+											</td>
+										}
+									}
+									else
+									{
+										<td colspan="@VuViecs.Count()" class="text-center"></td>
+									}
+
+									<td class="text-center">
+										<div class="d-flex justify-content-center align-items-center flex-column">
+											<div class="icon-button" data-title="Cập nhật" data-position="left">
+												<a href="javascript:void()" @onclick="() => OnEditRecord(item.MaCongViec!)">
+													<span>
+														<i class="mdi mdi-pencil">
+														</i>
+													</span>
+												</a>
+											</div>
+											@if (item.IsCapCon != 0)
+											{
+												<div class="icon-button" data-title="Xóa" data-position="left">
+													<a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item)"><span><i class="mdi mdi-delete "></i></span></a>
+												</div>
+											}
+										</div>
+									</td>
+								</tr>
+							}
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<ConfirmDeleteModal ModalId="confirmDeleteModal" Title="Xác nhận xoá thông tin">
+	<Description>
+		<p class="delete-desc">
+			Bạn có chắc muốn xóa công việc <strong>@selectedMaCongViec?.TenCongViec</strong> không?
+		</p>
+	</Description>
+
+	<DeleteButton>
+		<button type="button" class="btn-delete" @onclick="ConfirmDelete">
+			Xoá vĩnh viễn
+		</button>
+	</DeleteButton>
+</ConfirmDeleteModal>
+@code {
+	private List<CongViecModel> DanhSach = new();
+	private List<CongViecModel> ChiTietVuViec = new();
+	private List<VuViecModel> VuViecs = new();
+	private CongViecModel? Selected = new();
+	private HashSet<string> expandedIds = new();
+	private CongViecModel? selectedMaCongViec = new();
+	private bool IsVisible(CongViecModel item)
+	{
+
+		if (item.LevelCay == 0)
+			return true;
+		var cha = item.MaCha;
+		while (!string.IsNullOrEmpty(cha))
+		{
+			if (!expandedIds.Contains(cha)) return false;
+			cha = ChiTietVuViec.FirstOrDefault(x => x.MaCongViec == cha)?.MaCha;
+		}
+		return true;
+
+	}
+	private bool HasChildren(CongViecModel item) =>
+		ChiTietVuViec.Any(x => x.MaCha == item.MaCongViec);
+	private bool showDropdown = false;
+
+	private void ToggleDropdown() => showDropdown = !showDropdown;
+
+	private void Toggle(string? id)
+	{
+		if (string.IsNullOrEmpty(id)) return;
+		if (expandedIds.Contains(id)) expandedIds.Remove(id);
+		else expandedIds.Add(id);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			await BaseService.CheckPermissionAsync("DMCongViec", VuViec.Xem.GetDescription());
+		}
+		if (ChiTietVuViec.Any())
+		{
+			var config = new List<FixColumnConfig>
+			{
+				new FixColumnConfig { left = 3 },
+				new FixColumnConfig { right = 1 }
+			};
+			await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+
+			var listCopy = ChiTietVuViec.ToList();
+			foreach (var item in listCopy)
+			{
+				var id = $"input-doUuTien-{item.MaCongViec}";
+				await JS.InvokeVoidAsync("InputUtils.makeNumericInputOnlyById", id, false);
+			}
+			await JS.InvokeVoidAsync("setSmartMaxHeightDetail", "container-table-fixed", 50);
+		}
+
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		DanhSach = await CongViecService.GetTreeAllAsync();
+		VuViecs = await CongViecService.GetVuViecAsync();
+		//Selected = DanhSach.FirstOrDefault(); mặc định hệ thống chọn đầu tiên khi load
+		//expandedIds = new(); Toggle(Selected.MaCongViec!);
+		ChiTietVuViec = await CongViecService.GetTreeVuViecByCongViecAsync(string.Empty);
+
+	}
+	private async Task OnSelected(CongViecModel item)
+	{
+		Selected = item;
+		ChiTietVuViec = await CongViecService.GetTreeVuViecByCongViecAsync(item.MaCongViec!);
+		expandedIds = new();
+		expandedIds.Add(item.MaCha);
+		Toggle(item.MaCongViec);
+		if (item.LevelCay == 2)
+		{
+			expandedIds.Add(item.TreeRoot);
+		}
+	}
+
+	private async Task ChangeHienThi(string maCongViec)
+	{
+		var result = await CongViecService.ChangeHienThiCongViecAsync(maCongViec);
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+	}
+
+	private async Task OnCheckboxChanged(ChangeEventArgs e, string maCongViec, string maVuViec)
+	{
+		bool isChecked = (bool?)e.Value == true;
+		var result = await CongViecService.UpdateCheckboxVuViecAsync(maCongViec, maVuViec, isChecked);
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+	}
+
+	private async Task HandleEnterDoUuTien(KeyboardEventArgs e, CongViecModel item)
+	{
+		if (e.Key == "Enter")
+		{
+			var id = $"input-doUuTien-{item.MaCongViec}";
+			var valueStr = await JS.InvokeAsync<string>("getInputValueById", id);
+			if (int.TryParse(valueStr, out int doUuTienMoi))
+			{
+				item.DoUuTien = doUuTienMoi;
+				var result = await CongViecService.ChangeDoUuTienAsync(item);
+				await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+			}
+			else
+			{
+				await JS.InvokeVoidAsync("showToast", "Thông báo", "Giá trị không hợp lệ", false);
+			}
+		}
+	}
+
+	private async Task ShowConfirmDelete(CongViecModel item)
+	{
+		var coQuyen = await BaseService.KiemTraQuyenVuViec("DMCongViec", VuViec.Xoa.GetDescription());
+		if (coQuyen == false)
+		{
+			await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn không có quyền xóa. Xin vui lòng liên hệ quản trị", false);
+			return;
+		}
+		else
+		{
+			selectedMaCongViec = item;
+			await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+		}
+	}
+
+	private async Task ConfirmDelete()
+	{
+		if (selectedMaCongViec == null || string.IsNullOrEmpty(selectedMaCongViec.MaCongViec))
+			return;
+		var result = await CongViecService.DeleteCongViecAsync(selectedMaCongViec.MaCongViec);
+
+		await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+		await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+
+		var item = ChiTietVuViec.FirstOrDefault(x => x.MaCongViec == selectedMaCongViec.MaCongViec);
+		var item2 = DanhSach.FirstOrDefault(x => x.MaCongViec == selectedMaCongViec.MaCongViec);
+		if (item != null)
+		{
+			ChiTietVuViec.Remove(item);
+		}
+		if (item2 != null)
+		{
+			DanhSach.Remove(item2);
+		}
+
+		if (Selected == null || (Selected != null && Selected.MaCongViec == selectedMaCongViec.MaCongViec))
+			Selected = new();
+
+		ChiTietVuViec = await CongViecService.GetTreeVuViecByCongViecAsync(Selected.MaCongViec);
+		selectedMaCongViec = new();
+		StateHasChanged();
+	}
+	private async Task OnEditRecord(string maCongViec)
+	{
+		Nav.NavigateTo($"/congviec/edit/{maCongViec}");
+	}
+	private void Insert()
+	{
+		Nav.NavigateTo("/congviec/create");
+	}
+}

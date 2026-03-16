@@ -1,0 +1,351 @@
+﻿@page "/usersgd"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.NhanVien
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Domain.Model.User
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject NhanVienService NhanVienService
+@inject PhanQuyenService PhanQuyenService
+@inject UserService UserService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Người sử dụng</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn trạng thái"
+                      Items="TrangThaiUser.Select(x => new UiSelect.SelectItem(x.MaTrangThai!, x.TenTrangThai!))"
+                      @bind-Value="selectedTrangThai"
+                      OnChange="OnTrangThaiChanged" />
+
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Người sử dụng" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center">
+                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                        </th>
+                        <th style="width: 60px">
+
+                        </th>
+                        <th style="width: 180px" class="text-center">
+                            Tên đăng nhập
+                        </th>
+                        @if (NhomUser != null && NhomUser.Any() == true)
+                        {
+                            foreach (var item in NhomUser)
+                            {
+                                <th align="center" class="row-tr text-center" style="width: 130px">
+                                    <div class="text-primary">@item.TenNhomUser</div>
+                                </th>
+                            }
+                        }
+                        <th style="width: 90px">
+                            &nbsp;
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (nhanViens != null && nhanViens.Count > 0)
+                    {
+                        @foreach (var item in nhanViens)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@item.IsSelected"
+                                           @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                </td>
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(item.UrlDaiDien))
+                                    {
+                                        <img src="@item.UrlDaiDien" class="avatar-index" />
+                                    }
+                                    else
+                                    {
+                                        <div class="icon-avatar-index"><i class="bi bi-person-fill"></i></div>
+                                    }
+                                </td>
+                                <td>
+                                    <span>@item.HoVaTen</span>
+                                    <div class="item-phieu" @onclick="() => OnEditRecord(item.ID.ToString())">@item.TenDangNhap</div>
+                                </td>
+                                @if (NhomUser != null && NhomUser.Any() == true)
+                                {
+                                    foreach (var vv in NhomUser)
+                                    {
+                                        var vvModel = item.nhomUsers?.FirstOrDefault(x => x.MaNhom == vv.MaNhomUser && x.MaNhanVien == item.MaNhanVien && x.UserId == item.ID);
+                                        <td class="text-center">
+                                            @if (vvModel != null)
+                                            {
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@vvModel.IsCheckedBool"
+                                                       @onchange="(e) => OnCheckboxChanged(e, item.MaNhanVien!, vv.MaNhomUser!, item.ID!)" />
+                                            }
+                                            else
+                                            {
+                                                <input type="checkbox" class="form-check-input"
+                                                       @onchange="(e) => OnCheckboxChanged(e, item.MaNhanVien!, vv.MaNhomUser!, item.ID!)" />
+                                            }
+                                        </td>
+                                    }
+                                }
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center flex-column">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void()" @onclick="() => OnEditRecord(item.ID.ToString())">
+                                                <span>
+                                                    <i class="mdi mdi-pencil">
+                                                    </i>
+                                                </span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (nhanViens == null || !nhanViens.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+</div>
+<ConfirmDeleteModal ModalId="confirmDeleteModal"
+                    Title="Xác nhận xoá thông tin">
+    <Description>
+        <p class="delete-desc">
+            Bạn có chắc muốn xóa người sử dụng <strong>@selectedTenDangNhap</strong> không?
+        </p>
+    </Description>
+
+    <DeleteButton>
+        <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+            Xoá vĩnh viễn
+        </button>
+    </DeleteButton>
+</ConfirmDeleteModal>
+
+<ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                    Title="Xác nhận xoá thông tin">
+    <Description>
+        <p class="delete-desc">
+            Bạn có chắc muốn xóa danh sách người sử dụng này không?
+        </p>
+    </Description>
+
+    <DeleteButton>
+        <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+            Xoá vĩnh viễn
+        </button>
+    </DeleteButton>
+</ConfirmDeleteModal>
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private string? selectedTrangThai;
+    private string? selectedMaUser;
+    private string? selectedTenDangNhap;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    private string? search;
+    List<UserPagingDto> nhanViens = new();
+    private CancellationTokenSource _cts = new();
+    private List<NhomUserModel> NhomUser = new();
+    private List<TrangThaiUserModel> TrangThaiUser = new()
+    {
+        new TrangThaiUserModel{MaTrangThai="1", TenTrangThai="Đang làm việc"},
+        new TrangThaiUserModel{MaTrangThai="0", TenTrangThai="Đã nghỉ việc"},
+    };
+
+    int SelectedCount => nhanViens?.Count(x => x.IsSelected) ?? 0;
+    private bool IsSelectAll = false;
+    private EditContext editContext;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("NguoiSuDungSGD", VuViec.Xem.GetDescription());
+            _dotNetRef = DotNetObjectReference.Create(this);
+            NhomUser = await UserService.GetNhomUserBySanGDAsync();
+            await LoadData();
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "sltTrangThaiUser", "Chọn trạng thái", true);
+            StateHasChanged();
+
+        }
+        if (nhanViens.Any())
+        {
+            var config = new List<FixColumnConfig>
+            {
+                new FixColumnConfig { left = 3 },
+                new FixColumnConfig { right = 1 }
+            };
+            await JS.InvokeVoidAsync("applyStickyColumnsDynamic", "table-data", config);
+        }
+        //StateHasChanged();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            var (data, total) = await UserService.GetUserSanGDPagingAsync(selectedTrangThai, _page, _pageSize, search);
+            nhanViens = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ShowConfirmDelete(UserPagingDto maNV)
+    {
+        selectedMaUser = maNV.ID.ToString();
+        selectedTenDangNhap = maNV.TenDangNhap;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedMaUser == null || string.IsNullOrEmpty(selectedMaUser))
+        {
+            return;
+        }
+        var result = await UserService.DeleteUserAsync(selectedMaUser);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadData();
+        selectedMaUser = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        var selected = nhanViens.Where(d => d.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        var result = await UserService.DeleteListAsync(selected);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private async Task OnTrangThaiChanged(string value)
+    {
+        selectedTrangThai = value;
+        _page = 1;
+        await LoadData();
+    }
+
+    private async Task OnCheckboxChanged(ChangeEventArgs e, string maNhanVien, string maNhomUser, int? userId)
+    {
+        bool isChecked = (bool?)e.Value == true;
+        var result = await UserService.UpdateCheckboxUserAsync(maNhanVien, maNhomUser, userId, isChecked);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+    }
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData();
+    }
+
+    private async Task OnEditRecord(string? id)
+    {
+        Nav.NavigateTo($"/usersgd/edit/{id}");
+    }
+
+    private void Insert()
+    {
+        Nav.NavigateTo("/usersgd/create");
+        return;
+    }
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in nhanViens)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in nhanViens)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(UserPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = nhanViens.All(x => x.IsSelected);
+    }
+}

@@ -1,0 +1,212 @@
+﻿@page "/tang/create"
+@using System.Text.Json
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.Tang
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject BlockService BlockService
+@inject TangService TangService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+<PageTitle>Thêm mới tầng</PageTitle>
+
+<h1 class="legend-title">Tầng</h1>
+<div class="container-form">
+    <div class="container-tabs">
+        <div class="row">
+            <div class="col-md-12">
+                @*  <ul class="tab-element">
+                <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                </div>
+                </ul> *@
+            </div>
+        </div>
+        <MessageErrorForm />
+        <div class="wapper-content-tab">
+            <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                <div class="col-lg-10 mx-auto row">
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                <select id="MaDuAn" name="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                    <option value="">-- Chọn dự án --</option>
+                                    @foreach (var item in ListDA)
+                                    {
+                                        <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                    }
+                                </select>
+                                <span class="error-validation">Vui lòng chọn dự án</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Block <i class="point-validate">*</i></span>
+                                <select id="MaBlock" name="MaBlock" class="form-control input-validation">
+                                    <option value="">-- Chọn block --</option>
+                                    @foreach (var item in ListBlock)
+                                    {
+                                        <option value="@(item.MaBlock)">@item.TenBlock</option>
+                                    }
+                                </select>
+                                <span class="error-validation">Vui lòng chọn block</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Mã tầng <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="MaTang" name="MaTang" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập mã tầng</span>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Tên tầng <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="TenTang" name="TenTang" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập tên tầng</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Hệ số <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="HeSoTang" name="HeSoTang" style="width:40px;text-align:right" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập hệ số</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-6">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">STT <i class="point-validate">*</i></span>
+                                <input class="input-form input-validation" id="STTTang" name="STTTang" style="width:40px;text-align:right" type="text" value="">
+                                <span class="error-validation">Vui lòng nhập STT tầng</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wapper-input col-lg-12">
+                        <div class="row">
+                            <div class="form-group-input">
+                                <span class="title-field">Hình Ảnh</span>
+                                <div class="contatiner-upload-files">
+                                    <FileUploader @ref="uploaderRef1" AllowExtensions="allowedExtensions"
+                                                  MaxFileSize="10485760"
+                                                  AllowMultiple="false"
+                                                  OnFilesChanged="HinhAnhHandleFiles" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-button">
+    <div class="actions-left">
+        <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+    </div>
+    <div class="actions-right">
+        <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+    </div>
+</div>
+@code {
+    private TangModel? Record = new();
+    private List<DaDanhMucBlock> ListBlock = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string[] allowedExtensions = FileTypeSets.Image;
+    private FileUploader uploaderRef1;
+    protected override async Task OnInitializedAsync()
+    {
+        ListDA = await BlockService.GetByDuAnAsync();
+        ListBlock = await TangService.GetByBlockAsync(string.Empty);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("LoTang", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaBlock", "Chọn mã block", true);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "HeSoTang", 18, 2);
+            await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormat", "STTTang", 18, 0);
+            await JS.InvokeVoidAsync("InputUtils.setInputMaPhieu", "MaTang");
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("validateForm", "tab1", dotNetRef);
+
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm(Dictionary<string, JsonElement> data)
+    {
+        var model = new TangModel
+        {
+            MaTang = data.GetValueOrDefault("MaTang").GetString(),
+            TenTang = data.GetValueOrDefault("TenTang").GetString(),
+            MaDuAn = data.GetValueOrDefault("MaDuAn").GetString(),
+            MaBlock = data.GetValueOrDefault("MaBlock").GetString(),
+            HeSo = Convert.ToDecimal(data.GetValueOrDefault("HeSoTang").GetString()),
+            STTTang = Convert.ToInt32(data.GetValueOrDefault("STTTang").GetString()),
+            HinhAnh = Record.HinhAnh,
+        };
+
+        var result = await TangService.SaveTangAsync(model);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/tang/edit/{model.MaTang}");
+            StateHasChanged();
+        }
+    }
+
+    private Task HandleFiles(List<UploadedFileModel> files)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/tang");
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        Record.MaBlock = null;
+        // 1) Hủy instance Select2 cũ của MaBlock
+        await JS.InvokeVoidAsync("select2Helper.destroy", "#MaBlock");
+        ListBlock = await TangService.GetByBlockAsync(Record.MaDuAn);
+
+        // 3) Re-render UI để options mới xuất hiện
+        await InvokeAsync(StateHasChanged);
+
+        // 4) Re-init Select2 & đảm bảo value trống
+        await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaBlock", "Chọn mã block", true);
+        await JS.InvokeVoidAsync("select2Helper.clear", "MaBlock"); // đảm bảo không dính value cũ
+    }
+
+    public void HinhAnhHandleFiles(List<UploadedFileModel> file)
+    {
+        Record.HinhAnh = file;
+    }
+}

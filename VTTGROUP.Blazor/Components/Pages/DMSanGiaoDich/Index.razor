@@ -1,0 +1,352 @@
+﻿@page "/dmsangiaodich"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Paging
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model
+@using VTTGROUP.Domain.Model.DMSanGiaoDich
+@using VTTGROUP.Domain.Model.PhanQuyen
+@using VTTGROUP.Domain.Model.QuyTrinhDuyet
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@inject IBaseService BaseService
+@inject DMSanGiaoDichService DMSanGiaoDichService
+@inject CanHoService CanHoService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IWebHostEnvironment _env
+
+<h1 class="legend-title">Sàn giao dịch</h1>
+<div class="rounded-xl bg-white p-4 space-y-3 wraper-content-page">
+    <div class="relative z-50">
+        <div class="flex flex-wrap items-end gap-3">
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn dự án"
+                      Items="ListDA.Select(x => new UiSelect.SelectItem(x.MaDuAn!, x.TenDuAn!))"
+                      @bind-Value="selectedDuAn"
+                      OnChange="OnDTKHChanged" />
+            <UiSelect Icon="mdi mdi-file-document"
+                      Placeholder="Chọn trạng thái"
+                      Items="TrangThaiUser.Select(x => new UiSelect.SelectItem(x.MaTrangThai!, x.TenTrangThai!))"
+                      @bind-Value="selectedTrangThai"
+                      OnChange="OnTrangThaiChanged" />
+            <div class="ml-auto flex items-center gap-2">
+                <AddButton Text="Sàn GD" OnClick="Insert" />
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-3 my-3">
+        <div class="w-[360px] md:w-[480px]">
+            <InputSearch @bind-Value="search" OnSearch="Search" />
+        </div>
+        <div class="ml-auto h-11 flex items-center">
+            <Pagination Page="@_page"
+                        TotalPages="@totalPage"
+                        TotalItems="@totalCount"
+                        OnPageChanged="HandlePageChanged"
+                        OnPageSizeChanged="HandlePageSizeChanged" />
+        </div>
+    </div>
+    <SelectedDeleteList Count="@SelectedCount" OnRemoveList="RemoveSelectedAsync" OnDeleteList="@DeleteSelectedAsync" />
+    <div class="container-table-detail">
+        <div class="container-table-fixed has-paging">
+            <table class="tbl table-form table-detail treeTable" id="table-data">
+                <thead>
+                    <tr class="cls_custome_back">
+                        <th style="width: 40px" class="text-center">
+                            <input type="checkbox" class="form-check-input" checked="@IsSelectAll"
+                                   @onchange="(e) => OnCheckboxAllChanged(e)" />
+                        </th>
+                        <th style="width: 50px" class="text-center">
+                            STT
+                        </th>
+                        <th style="width: 130px" class="text-center">Hệ thống</th>
+                        <th style="width: 200px" class="text-center">
+                            Sàn giao dịch
+                        </th>
+                        <th style="width: 200px" class="text-center">
+                            Địa chỉ
+                        </th>
+                        <th style="width: 200px" class="text-center">
+                            Điện thoại
+                        </th>
+                        <th style="width: 200px" class="text-center">
+                            Email
+                        </th>
+                        <th style="width: 130px" class="text-center">
+                            Trạng thái
+                        </th>
+                        <th style="width: 90px">
+                            &nbsp;
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="content-table">
+                    @if (listSGD != null && listSGD.Count > 0)
+                    {
+                        @foreach (var item in listSGD)
+                        {
+                            <tr class="initialized">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@item.IsSelected"
+                                           @onchange="(e) => OnCheckboxChanged(item, e)" />
+                                </td>
+                                <td style="text-align:center">
+                                    <span>@item.STT</span>
+                                </td>
+                                <td>                                   
+                                    <div class="item-phieu" @onclick="() => OnEditRecord(item.MaSanGiaoDich.ToString())">@item.MaSanGiaoDich</div>
+                                    <span class="created-label">@item.HoVaTen</span>
+                                    <div class="created-date-label">@string.Format("{0:dd/MM/yyyy}", item.NgayLap)</div>
+                                </td>
+                                <td>
+                                    <span>@item.TenSanGiaoDich</span>
+                                </td>
+                                <td>
+                                    <span>@item.DiaChi</span>
+                                </td>
+                                <td>
+                                    <span>@item.DienThoai</span>
+                                </td>
+                                <td>
+                                    <span>@item.Email</span>
+                                </td>
+                                <td>
+                                    <span>@item.TrangThai</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        <div class="icon-button" data-title="Cập nhật" data-position="left">
+                                            <a href="javascript:void()" @onclick="() => OnEditRecord(item.MaSanGiaoDich!)">
+                                                <span>
+                                                    <i class="mdi mdi-pencil">
+                                                    </i>
+                                                </span>
+                                            </a>
+                                        </div>
+                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                            <a href="javascript:void(0)" @onclick="() => ShowConfirmDelete(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            @if (listSGD == null || !listSGD.Any())
+            {
+                <div class="p-2">Không có dữ liệu</div>
+            }
+        </div>
+    </div>
+
+    <ConfirmDeleteModal ModalId="confirmDeleteModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa sàn giao dịch này <strong>@selectedId</strong> không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDelete">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+    <ConfirmDeleteModal ModalId="confirmDeleteListModal"
+                        Title="Xác nhận xoá thông tin">
+        <Description>
+            <p class="delete-desc">
+                Bạn có chắc muốn xóa danh sách sàn giao dịch này không?
+            </p>
+        </Description>
+
+        <DeleteButton>
+            <button type="button" class="btn-delete" @onclick="ConfirmDeleteList">
+                Xoá vĩnh viễn
+            </button>
+        </DeleteButton>
+    </ConfirmDeleteModal>
+</div>
+@code {
+    private DotNetObjectReference<Index>? _dotNetRef;
+    private string? selectedDuAn;
+    private string? selectedTrangThai = "1";
+    private string? selectedId;
+    private bool isLoading = false;
+    int _page = 1;
+    int _pageSize = 10;
+    int totalPage = 1;
+    int totalCount;
+    string? search;
+    List<SanGiaoDichPagingDto> listSGD = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private string MaCongViec = "DMSanGiaoDich";
+    int SelectedCount => listSGD?.Count(x => x.IsSelected) ?? 0;
+    private bool IsSelectAll = false;
+
+    private List<TrangThaiUserModel> TrangThaiUser = new()
+    {
+        new TrangThaiUserModel{MaTrangThai="1", TenTrangThai="Đang mở"},
+        new TrangThaiUserModel{MaTrangThai="0", TenTrangThai="Đã đóng"},
+    };
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync(MaCongViec, VuViec.Xem.GetDescription());
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "sltTrangThaiUser", "Chọn trạng thái", true);
+            await JS.InvokeVoidAsync("tooltipHelper.init");
+            ListDA = await CanHoService.GetByDuAnAsync();
+            await LoadData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowConfirmDelete(SanGiaoDichPagingDto item)
+    {
+        var coQuyen = await BaseService.KiemTraQuyenVuViec(MaCongViec, VuViec.Xoa.GetDescription());
+        if (coQuyen == false)
+        {
+            await JS.InvokeVoidAsync("showToast", "Thông báo", "Bạn không có quyền xóa. Xin vui lòng liên hệ quản trị", false);
+            return;
+        }
+        selectedId = item.MaSanGiaoDich;
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedId == null)
+        {
+            return;
+        }
+        var result = await DMSanGiaoDichService.DeletePhieuAsync(selectedId);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteModal");
+        await LoadData();
+        selectedId = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task OnDTKHChanged(ChangeEventArgs e)
+    {
+        var newDA = e.Value?.ToString();
+        if (newDA == selectedDuAn || isLoading)
+        {
+            return;
+        }
+        selectedDuAn = newDA;
+        _page = 1;
+        await LoadData();
+    }
+
+    private async Task OnDTKHChanged(string? duAn)
+    {
+        if (isLoading) return;
+        selectedDuAn = string.IsNullOrWhiteSpace(duAn) ? null : duAn;
+        _page = 1;
+        await LoadData();
+    }
+
+    private async Task OnTrangThaiChanged(string value)
+    {
+        selectedTrangThai = value;
+        _page = 1;
+        await LoadData();
+    }
+
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var (data, total) = await DMSanGiaoDichService.GetPagingAsync(selectedDuAn, selectedTrangThai, _page, _pageSize, search);
+            listSGD = data;
+            totalCount = total;
+            totalPage = (int)Math.Ceiling((double)totalCount / _pageSize);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task HandlePageChanged(int newPage)
+    {
+        _page = newPage;
+        await LoadData();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _pageSize = newPageSize;
+        _page = 1;
+        await LoadData();
+    }
+    private async Task Search(string? keyword)
+    {
+        search = keyword;
+        _page = 1;
+        await LoadData();
+    }
+    private async Task OnEditRecord(string maPhieu)
+    {
+        Nav.NavigateTo($"/dmsangiaodich/edit/{maPhieu}");
+    }
+    private void Insert()
+    {
+        Nav.NavigateTo("/dmsangiaodich/create");
+        return;
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        IsSelectAll = false;
+        foreach (var item in listSGD)
+        {
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        await JS.InvokeVoidAsync("bootstrapModal.show", "#confirmDeleteListModal");
+    }
+
+    private async Task ConfirmDeleteList()
+    {
+        var selected = listSGD.Where(d => d.IsSelected).ToList();
+        if (selected.Count == 0) return;
+         var result = await DMSanGiaoDichService.DeleteListAsync(selected);
+          await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        await JS.InvokeVoidAsync("bootstrapModal.hide", "#confirmDeleteListModal");
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private async Task OnCheckboxAllChanged(ChangeEventArgs e)
+    {
+        IsSelectAll = (bool)e.Value;
+        foreach (var item in listSGD)
+        {
+            // if (item.TrangThaiDuyet < 1 && item.NguoiLap == maNhanVienHT)
+            // {
+            //     item.IsSelected = IsSelectAll;
+            // }
+            item.IsSelected = IsSelectAll;
+        }
+    }
+
+    private async Task OnCheckboxChanged(SanGiaoDichPagingDto item, ChangeEventArgs e)
+    {
+        item.IsSelected = (bool)e.Value;
+        IsSelectAll = listSGD.All(x => x.IsSelected);
+    }
+
+}
+

@@ -1,0 +1,476 @@
+﻿@page "/chinhsachbanhang/create"
+@using VTTGROUP.Blazor.Components.CompChilds
+@using VTTGROUP.Blazor.Components.Pages.Uploads
+@using VTTGROUP.Domain.Helpers
+@using VTTGROUP.Domain.Model.ChinhSachBanHang
+@using VTTGROUP.Domain.Model.ChinhSachThanhToan
+@using VTTGROUP.Domain.Model.PhieuDuyetGia
+@using VTTGROUP.Infrastructure.Database
+@using VTTGROUP.Infrastructure.Services
+@using VTTGROUP.Domain.Model
+@inject IBaseService BaseService
+@inject CanHoService CanHoService
+@inject ChinhSachBanHangService ChinhSachBanHangService
+@inject IWebHostEnvironment _env
+@inject IJSRuntime JS
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+@inject LoadingService Loading
+<EditForm id="formDuAn" EditContext="@editContext">
+    <h1 class="legend-title">Chính sách bán hàng</h1>
+    <div class="container-form">
+        <div class="container-tabs">
+            @*  <div class="row">
+                <div class="col-md-12">
+                    <ul class="tab-element">
+                        <li class="tab-item actived-tab" data-id="1" id="linkTab1">Thông tin chung</li>
+                        <li class="tab-item" data-id="2" id="linkTab2">Chi tiết chính sách</li>
+                        <div class="line-bot-nav animated" style="width: 154px; left: 0px;">
+                        </div>
+                    </ul>
+                </div>
+            </div> *@
+            <MessageErrorForm />
+            <div class="wapper-content-tab">
+                <div data-id="1" class="tab-content-item actived-tab" id="tab1">
+                    <div class="col-lg-10 mx-auto row">
+                        <InfoList Items="@InfoItems" />
+                        <!-- Header giống "I Thông tin sản phẩm" -->
+                        <div class="col-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Thông tin chung</span>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Dự án <i class="point-validate">*</i></span>
+                                    <select id="MaDuAn" name="MaDuAn" class="form-control input-validation" @onchange="OnDuAnChanged">
+                                        <option value=""></option>
+                                        @foreach (var item in ListDA)
+                                        {
+                                            <option value="@(item.MaDuAn)">@item.TenDuAn</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn dự án</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-6">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Đợt mở bán <i class="point-validate">*</i></span>
+                                    <select id="MaDot" name="MaDot" class="form-control input-validation" value="@Record.MaDotMB" @onchange="OnDotMoBanChanged">
+                                        <option value=""></option>
+                                        @foreach (var item in ListDMB)
+                                        {
+                                            <option value="@(item.MaDotMoBan)">@item.TenDotMoBan</option>
+                                        }
+                                    </select>
+                                    <span class="error-validation">Vui lòng chọn đợt mở bán</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="wapper-input col-lg-12">
+                            <div class="row">
+                                <div class="form-group-input">
+                                    <span class="title-field">Nội dung</span>
+                                    <textarea class="textarea-input" cols="20" id="GhiChu" @bind="Record.NoiDung" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-10 mx-auto row">
+                        <div class="col-lg-12">
+                            <div class="section-head">
+                                <span class="section-head__text">Chi tiết chính sách</span>
+                            </div>
+                        </div>
+                        <div class="wapper-button-head-table mb-2" style="width: 100%">
+                            <div class="button-action-title" style="margin-left: 0;">
+                                <div class="icon-button" @onclick="AddChinhSachThanhToan">
+                                    <i class="mdi mdi-playlist-plus"></i>
+                                </div>
+                                <span>Chi tiết</span>
+                            </div>
+                            <div style="margin-left: auto; display: flex; align-items: center;">
+                            </div>
+                        </div>
+                        @*Bảng chính sách bán hàng*@
+                        <div class="table-responsive table-responsive-soft">
+                            <table class="tbl table table-form table-detail" id="tblNhanViens">
+                                @*   table-detail-group *@                             
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="text-align: center;width:70px">STT</th>
+                                        <th rowspan="2" style="text-align: center;width:70px">STT ưu tiên</th>
+                                        <th rowspan="2" style="text-align: center;width:250px">Tên chính sách</th>
+                                        <th rowspan="2" style="text-align: center;width:150px">Hình thức khuyến mãi</th>
+                                        <th colspan="4" style="text-align: center;">Điều kiện khuyến mãi</th>
+                                        <th rowspan="2" style="text-align: center;width:150px">Giá trị khuyến mãi</th>
+                                        <th rowspan="2" style="text-align: center;width:70px"></th>
+                                    </tr>
+                                    <tr>
+                                        <th style="text-align: center;width:150px">Loại điều kiện</th>
+                                        <th style="text-align: center;width:100px">Số lượng</th>
+                                        <th style="text-align: center;width:120px">Từ ngày</th>
+                                        <th style="text-align: center;width:120px">Đến ngày</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="content-table">
+                                    @if (Record.ListChinhSachBHs != null && Record.ListChinhSachBHs.Any() == true)
+                                    {
+                                        var i = 0;
+                                        foreach (var item in Record.ListChinhSachBHs)
+                                        {
+                                            <tr class="@(item.IsOld ? "row-old-policy" : "")">
+                                                <td class="text-center">
+                                                    @(i + 1)
+                                                </td>
+                                                <td>
+                                                    <InputCurrency T="int"
+                                                                   Id=@($"SttUuTien{i}")
+                                                                   Format="#,##0"
+                                                                   CssClass="input-form is-right input-currency form-control select-on-click w-100 p-1"
+                                                                   @bind-Value="item.SttUuTien" />
+                                                </td>
+                                                @if (item.IsOld)
+                                                {
+                                                    @* Chính sách cũ: chỉ hiển thị, không cho sửa *@
+                                                    <td><input type="text" class="form-control" value="@item.TenCSBH" disabled /></td>
+                                                    <td class="td-select-eq">
+                                                        <input type="text" class="form-control" value="@item.TenHinhThucKM" disabled />
+                                                    </td>
+                                                    <td class="td-select-eq">
+                                                        <input type="text" class="form-control" value="@item.TenLoaiDieuKienKM" disabled />
+                                                    </td>
+                                                    <td class="text-center"><input type="text" class="form-control is-right text-center" value="@item.SoLuongKM.ToString("#,##0")" disabled /></td>
+                                                    <td class="text-center"><input type="text" class="form-control text-center" value="@item.TuNgay" disabled /></td>
+                                                    <td class="text-center"><input type="text" class="form-control text-center" value="@item.DenNgay" disabled /></td>
+                                                    <td><input type="text" class="form-control is-right" value="@item.GiaTriKM.ToString("#,##0.##")" disabled /></td>
+                                                    <td style="text-align:center">
+                                                        @* Chính sách cũ: không cho xóa *@
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    @* Chính sách mới: cho phép thao tác đầy đủ *@
+                                                    <td><InputText @bind-Value="item.TenCSBH" class="form-control input-validation" /></td>
+                                                    <td class="td-select-eq">
+                                                        <select value="@item.MaHinhThucKM" style="width:100%" id="MaHinhThucKM_@i" class="form-control input-validation" @onchange="e => OnHinhThucKMChanged(e, item)">
+                                                            <option value="">Chọn hình thức khuyến mãi</option>
+                                                            @foreach (var option in ListHTKM)
+                                                            {
+                                                                <option value="@option.MaHinhThucKm">
+                                                                    @option.TenHinhThucKm
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </td>
+                                                    <td class="td-select-eq">
+                                                        <select value="@item.MaLoaiDieuKienKM" style="width:100%" id="MaLoaiDieuKienKM_@i" class="form-control input-validation" @onchange="e => OnDieuKienKMChanged(e, item)">
+                                                            <option value="">Chọn điều kiện khuyến mãi</option>
+                                                            @foreach (var option in ListDKKM)
+                                                            {
+                                                                <option value="@option.MaLoaiDieuKienKm">
+                                                                    @option.TenLoaiDieuKienKm
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <InputCurrency T="int"
+                                                                       Id=@($"SoLuong{i}")
+                                                                       Format="#,##0"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1 text-center"
+                                                                       @bind-Value="item.SoLuongKM" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <FlatpickrInput Id="@($"TuNgay_{i}")" Name="TuNgay" @bind-Value="item.TuNgay"
+                                                                        Placeholder=""
+                                                                        CssClass="form-control input-validation datetime-picker text-center"
+                                                                        Options="dateOptions" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <FlatpickrInput Id="@($"DenNgay_{i}")" Name="DenNgay" @bind-Value="item.DenNgay"
+                                                                        Placeholder=""
+                                                                        CssClass="form-control input-validation datetime-picker text-center"
+                                                                        Options="dateOptions" />
+                                                    </td>
+                                                    <td>
+                                                        <InputCurrency T="decimal"
+                                                                       Id=@($"GiaTriKM{i}")
+                                                                       Format="#,##0.##"
+                                                                       CssClass="input-form is-right input-currency form-control input-validation select-on-click w-100 p-1"
+                                                                       @bind-Value="item.GiaTriKM" />
+                                                    </td>
+                                                    <td style="text-align:center">
+                                                        <div class="icon-button" data-title="Xóa" data-position="left">
+                                                            <a href="javascript:void(0)" @onclick="() => DeleteRow(item)"><span><i class="mdi mdi-delete "></i></span></a>
+                                                        </div>
+                                                    </td>
+                                                }
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="container-button">
+        <div class="actions-left">
+            <UiButton Preset="back" Variant="secondary" OnClick="BackUrl" />
+        </div>
+        <div class="actions-right">
+            <UiButton Preset="save" Variant="primary" OnClick="SubmitFormJs" />
+        </div>
+
+    </div>
+</EditForm>
+@code {
+    private EditContext editContext;
+    private ChinhSachBanHangModel? Record = new();
+    private List<DaDanhMucDuAn> ListDA = new();
+    private List<DaDanhMucDotMoBan> ListDMB = new();
+    private List<HtDmhinhThucKhuyenMai> ListHTKM = new();
+    private List<HtDmloaiDieuKienKhuyenMai> ListDKKM = new();
+    private object dateOptions = new
+    {
+        dateFormat = "d/m/Y",
+        enableTime = false,
+        todayButton = true
+    };
+    private List<InfoItem> InfoItems = new();
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(Record);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BaseService.CheckPermissionAsync("CSBH", VuViec.Them.GetDescription());
+            await JS.InvokeVoidAsync("tabHelper.initTabs");
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDuAn", "Chọn dự án", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", "MaDot", "Chọn đợt mở bán", true);
+            await ReapplyCurrencyFormat();
+            await InitAllSelect2Async();
+            ListDA = await CanHoService.GetByDuAnAsync();
+            var result = await ChinhSachBanHangService.GetByIdAsync(string.Empty);
+            if (result.Status)
+            {
+                Record = (ChinhSachBanHangModel)result.Data;
+                InfoItems = new()
+                {
+                    new() { Text="Mã phiếu", Value=Record.MaPhieu},
+                    new() { Text="Ngày lập", Value=string.Format("{0:dd/MM/yyyy}", Record.NgayLap)},
+                    new() { Text="Người lập", Value=Record.NguoiLap.HoVaTen},
+                };
+                Record.ListChinhSachBHs = new();
+            }
+            else
+            {
+                Record = new ChinhSachBanHangModel();
+                Record.ListChinhSachBHs = new();
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitFormJs()
+    {
+        Loading.Show();
+        try
+        {
+            var dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("validateFormBlazorCSBH", "formDuAn", dotNetRef);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("showToast", "Lỗi", ex.Message, false);
+        }
+        finally
+        {
+            Loading.Hide();
+        }
+    }
+
+    [JSInvokable]
+    public async Task SubmitForm()
+    {
+        var result = await ChinhSachBanHangService.SaveChinhSachTTAsync(Record);
+        await JS.InvokeVoidAsync("showToast", "Thông báo", result.Message, result.Status);
+        if (result.Status)
+        {
+            Nav.NavigateTo($"/chinhsachbanhang/edit/{result.Id}");
+            StateHasChanged();
+        }
+    }
+    public async Task AddChinhSachThanhToan()
+    {
+        int? nextDotTT = Record?.ListChinhSachBHs?.Count + 1; // Tăng theo số dòng
+        Record?.ListChinhSachBHs?.Add(new ChinhSachBanHangChiTietModel
+        {
+            SttUuTien = nextDotTT ?? 1,
+            MaHinhThucKM = string.Empty,        // hoặc "" (tùy type)
+            MaLoaiDieuKienKM = string.Empty
+        });
+        await ReapplyCurrencyFormat();
+        StateHasChanged();
+        await InitAllSelect2Async();
+    }
+    private async Task DeleteRow(ChinhSachBanHangChiTietModel? item)
+    {
+        Record?.ListChinhSachBHs?.Remove(item);
+        RecalculateDotTT();
+        StateHasChanged();
+    }
+
+    //Reset lại đợt thanh toán
+    private void RecalculateDotTT()
+    {
+        for (int i = 0; i < Record?.ListChinhSachBHs?.Count; i++)
+        {
+            Record.ListChinhSachBHs[i].SttUuTien = i + 1;
+        }
+    }
+
+    private async Task OnDuAnChanged(ChangeEventArgs e)
+    {
+        Record.MaDuAn = e.Value?.ToString();
+        ListHTKM = await ChinhSachBanHangService.GetByHinhThucKhuyenMaiAsync(Record.MaDuAn ?? string.Empty);
+        ListDKKM = await ChinhSachBanHangService.GetByLoaiDKKhuyenMaiAsync(Record.MaDuAn ?? string.Empty);
+        // 👉 Reset bảng chính sách thanh toán
+        ListDMB = await ChinhSachBanHangService.GetByDotMoBanAsync(Record.MaDuAn);
+        Record.MaDotMB = string.Empty;
+        Record.ListChinhSachBHs?.Clear();
+        StateHasChanged();
+    }
+
+    private async Task OnDotMoBanChanged(ChangeEventArgs e)
+    {
+        var maDot = e.Value?.ToString() ?? string.Empty;
+        Record.MaDotMB = maDot;
+
+        // Reset bảng trước
+        Record.ListChinhSachBHs = new List<ChinhSachBanHangChiTietModel>();
+
+        if (!string.IsNullOrWhiteSpace(Record.MaDuAn) && !string.IsNullOrWhiteSpace(maDot))
+        {
+            // Load chính sách cũ từ DB
+            var chiSachCu = await ChinhSachBanHangService.GetChinhSachCuByDuAnAndDotAsync(Record.MaDuAn, maDot);
+            if (chiSachCu.Count > 0)
+            {
+                Record.ListChinhSachBHs.AddRange(chiSachCu);
+            }
+        }
+
+        await ReapplyCurrencyFormat();
+        StateHasChanged();
+        await InitAllSelect2Async();
+    }
+
+    private void BackUrl()
+    {
+        Nav.NavigateTo("/chinhsachbanhang");
+    }
+
+    //Format định dạng số thập phân
+    private async Task ReapplyCurrencyFormat()
+    {
+        await JS.InvokeVoidAsync("InputUtils.makeCurrencyFormatByClass", "currency-input", 18, 2);
+    }
+
+    private async Task InitAllSelect2Async()
+    {
+        for (int i = 0; i < Record?.ListChinhSachBHs?.Count; i++)
+        {
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", $"MaHinhThucKM_{i}", "Chọn hình thức khuyến mãi", true);
+            await JS.InvokeVoidAsync("select2Helper.initSelectChange", $"MaLoaiDieuKienKM_{i}", "Chọn điều kiện khuyến mãi", true);
+        }
+    }
+
+    private void OnHinhThucKMChanged(ChangeEventArgs e, ChinhSachBanHangChiTietModel item)
+    {
+        var selectedValue = e.Value?.ToString();
+        item.MaHinhThucKM = selectedValue;
+        var selected = ListHTKM.FirstOrDefault(x => x.MaHinhThucKm == selectedValue);
+        if (selected != null)
+        {
+            item.TenHinhThucKM = selected.TenHinhThucKm;
+        }
+    }
+
+    private void OnDieuKienKMChanged(ChangeEventArgs e, ChinhSachBanHangChiTietModel item)
+    {
+        var selectedValue = e.Value?.ToString();
+        item.MaLoaiDieuKienKM = selectedValue;
+        var selected = ListDKKM.FirstOrDefault(x => x.MaLoaiDieuKienKm == selectedValue);
+        if (selected != null)
+        {
+            item.TenLoaiDieuKienKM = selected.TenLoaiDieuKienKm;
+        }
+    }
+}
+<style>
+    table thead th {
+        text-align: center;
+        vertical-align: middle;
+    }
+    /* input bình thường */
+    .validate {
+        border: 1px solid #ff4d4f !important;
+        box-shadow: 0 0 0 2px rgba(255, 77, 79, .12);
+    }
+
+    /* select2 selection */
+    .select2-selection.validate {
+        border: 1px solid #ff4d4f !important;
+        box-shadow: 0 0 0 2px rgba(255, 77, 79, .12);
+    }
+
+    /* Hover dòng: đường kẻ trái màu xanh + shadow nhẹ, không đổi màu nền */
+    #tblNhanViens tbody tr {
+        transition: box-shadow 0.15s ease, border-left 0.15s ease;
+        border-left: 3px solid transparent;
+    }
+
+    #tblNhanViens tbody tr:hover {
+        border-left: 3px solid #4e73df;
+        box-shadow: inset 0 0 0 9999px rgba(78, 115, 223, 0.04);
+    }
+
+    /* Dòng chính sách cũ: nền xám nhạt + đường kẻ trái màu cam để phân biệt */
+    .row-old-policy {
+        background-color: #fafafa;
+        border-left: 3px solid #e0a800 !important;
+    }
+
+    .row-old-policy:hover {
+        box-shadow: inset 0 0 0 9999px rgba(224, 168, 0, 0.05) !important;
+    }
+
+    .row-old-policy input:disabled,
+    .row-old-policy select:disabled {
+        background-color: transparent;
+        color: #444;
+        cursor: not-allowed;
+        opacity: 1;
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    /* Tạo khoảng cách giữa chữ và mũi tên dropdown trong select2 */
+    #tblNhanViens .select2-container .select2-selection--single .select2-selection__rendered {
+        padding-right: 28px;
+        padding-left: 8px;
+    }
+
+</style>
